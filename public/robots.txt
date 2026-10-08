@@ -1,0 +1,29 @@
+User-agent: *
+Allow: /
+Disallow: /404
+Disallow: /dashboard
+Disallow: /login
+Disallow: /cadastro
+Disallow: /api/
+
+User-agent: GPTBot
+Allow: /
+Allow: /llms.txt
+Allow: /ai.txt
+
+User-agent: ClaudeBot
+Allow: /
+Allow: /llms.txt
+Allow: /ai.txt
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /llms.txt
+Allow: /ai.txt
+
+User-agent: CCBot
+Allow: /
+Allow: /llms.txt
+Allow: /ai.txt
+
+Sitemap: https://granasmart.com.br/sitemap.xml

@@ -1,0 +1,24 @@
+/* TEAM */
+CEO: Fundador (Placeholder)
+CTO: (Placeholder)
+Designer: (Placeholder)
+
+/* THANKS */
+Asaas
+Supabase
+Pluggy
+Vercel
+Google AI Studio
+
+/* SITE */
+Last update: 2026-10-08
+Standards: HTML5, CSS3, ES6, Next.js, Tailwind CSS
+Components: React
+Software: Vercel
+
+/* MISSION */
+"Democratizar a educação financeira no Brasil"
+
+/* CONTACT */
+Email: contato@granasmart.com.br
+Twitter: @granasmart

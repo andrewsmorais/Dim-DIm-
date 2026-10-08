@@ -1,0 +1,22 @@
+Resumo Executivo: Grana Smart é um app brasileiro de finanças pessoais com IA integrada ao WhatsApp. Foco em facilidade de uso, controle automatizado e acesso a dados via Open Finance. (R$ 19,90/mês, 7 dias grátis).
+
+Funcionalidades-chave:
+- Controle de gastos via WhatsApp (texto, áudio, foto de recibos).
+- Categorização automática via IA.
+- Sincronização via Open Finance (BCB).
+- Criação e acompanhamento de metas financeiras.
+- Funcionalidades exclusivas para MEI (separação PF/PJ, cálculo de DAS).
+
+Planos:
+- Zap (R$ 19,90/mês): WhatsApp, IA, Dashboard.
+- Piloto (R$ 39,90/mês): Tudo + Open Finance.
+- CNPJ (R$ 89,90/mês): Tudo + MEI (NF-e, DAS, PF/PJ).
+
+Tecnologia: Supabase, Google Gemini, Pluggy, Asaas, Vercel.
+Segurança: Conformidade com LGPD, Criptografia AES-256, TLS 1.3, regulamentação do Banco Central.
+
+Diferenciais: Único com controle total via WhatsApp e IA multimodal por um preço acessível no Brasil.
+
+Contato: contato@granasmart.com.br | Site: https://granasmart.com.br
+
+Palavras-chave: app de finanças pessoais, controle financeiro pelo WhatsApp, inteligência artificial para finanças, Open Finance Brasil, economizar dinheiro, finanças para MEI.
