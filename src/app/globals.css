@@ -3,22 +3,27 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: #0A0A0A;
-    --surface: #1A1A1A;
-    --surface-light: #2A2A2A;
-    --primary: #00FF88;
-    --primary-dark: #00CC6A;
-    --text: #FFFFFF;
-    --text-secondary: #A0A0A0;
-    --success: #00FF88;
-    --danger: #FF4444;
-    --warning: #FFAA00;
-    --info: #00AAFF;
+  html {
+    scroll-behavior: smooth;
   }
   
   body {
-    background-color: var(--background);
-    color: var(--text);
+    background-color: theme('colors.background.DEFAULT');
+    color: theme('colors.text.DEFAULT');
+  }
+}
+
+@layer utilities {
+  .fade-in-section {
+    opacity: 0;
+    transform: translateY(20px);
+    visibility: hidden;
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    will-change: opacity, visibility;
+  }
+  .fade-in-section.is-visible {
+    opacity: 1;
+    transform: none;
+    visibility: visible;
   }
 }
