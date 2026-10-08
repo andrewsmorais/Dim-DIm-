@@ -10,10 +10,10 @@ const config: Config = {
     extend: {
       colors: {
         background: {
-          DEFAULT: "#F5F5F5", // Fundo claro principal
-          dark: "#0A0A0A",    // Fundo escuro
-          card: "#FFFFFF",    // Card claro
-          cardDark: "#1A1A1A", // Card escuro
+          DEFAULT: "#F5F5F5",
+          dark: "#0A0A0A",
+          card: "#FFFFFF",
+          cardDark: "#1A1A1A",
         },
         primary: {
           DEFAULT: "#00FF88",
@@ -24,6 +24,13 @@ const config: Config = {
           light: "#FFFFFF",
           secondary: "#666666",
           secondaryDark: "#A0A0A0",
+        },
+        brand: {
+          dark: '#0D4722',
+          accent: '#00C853',
+          bg: '#F0F2F5',
+          card: '#FFFFFF',
+          textMuted: '#9CA3AF'
         }
       },
       fontFamily: {

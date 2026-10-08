@@ -1,204 +1,292 @@
 "use client";
 
-import { useState } from "react";
 import { 
-  ArrowUpRight, ArrowDownRight, TrendingUp,
-  ShoppingCart, Car, Briefcase, Send
+  Search, Mail, User, FileText, 
+  BarChart2, UserPlus, Tag 
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
-// Note: In a real app we would use recharts here
 export default function DashboardPage() {
-  const [chatMessage, setChatMessage] = useState("");
-
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20 md:pb-6">
-      {/* Saldo Consolidado */}
-      <div className="bg-surface border border-surface-light p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="max-w-[1200px] mx-auto pb-10">
+      
+      {/* Header */}
+      <div className="flex justify-between items-start mb-8">
         <div>
-          <h3 className="text-text-secondary text-sm font-medium mb-1">Saldo Total</h3>
-          <p className="text-4xl font-bold text-primary">R$ 14.520,00</p>
-          <p className="text-xs text-text-secondary mt-1">Atualizado agora</p>
+          <h1 className="text-[28px] font-bold text-gray-900 tracking-tight mb-1">Sales Report</h1>
+          <p className="text-sm text-gray-500 font-medium">Friday, October 12th 2025</p>
         </div>
-        {/* Placeholder for Mini Chart */}
-        <div className="w-full md:w-48 h-16 bg-surface-light/50 rounded-lg flex items-center justify-center text-xs text-text-secondary border border-dashed border-surface-light">
-          Evolução (7 dias)
+        <div className="flex items-center gap-3">
+          <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-600 shadow-sm hover:bg-gray-50 transition-colors">
+            <Search size={18} />
+          </button>
+          <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-600 shadow-sm relative hover:bg-gray-50 transition-colors">
+            <Mail size={18} />
+            <span className="absolute top-[10px] right-[10px] w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+          </button>
+          <div className="flex items-center gap-3 ml-2 cursor-pointer">
+            <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center shadow-sm">
+              <User className="w-6 h-6 text-gray-400 mt-2" />
+            </div>
+            <div className="hidden sm:block text-left">
+              <p className="text-sm font-bold text-gray-900 leading-none mb-1">Antonio Samuel</p>
+              <p className="text-[10px] font-medium text-gray-500 leading-none">Admin Officer</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-surface border border-surface-light p-5 rounded-2xl">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-success/10 text-success rounded-lg">
-              <ArrowUpRight size={20} />
-            </div>
-            <h3 className="text-text-secondary text-sm font-medium">Entradas do Mês</h3>
-          </div>
-          <p className="text-2xl font-bold mb-1">R$ 8.200,00</p>
-          <p className="text-xs text-success flex items-center gap-1">
-            <TrendingUp size={12} /> +12% vs mês anterior
-          </p>
-        </div>
-        
-        <div className="bg-surface border border-surface-light p-5 rounded-2xl">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-danger/10 text-danger rounded-lg">
-              <ArrowDownRight size={20} />
-            </div>
-            <h3 className="text-text-secondary text-sm font-medium">Saídas do Mês</h3>
-          </div>
-          <p className="text-2xl font-bold mb-1">R$ 3.100,00</p>
-          <p className="text-xs text-success flex items-center gap-1">
-            <TrendingUp size={12} className="rotate-180" /> -5% vs mês anterior
-          </p>
-        </div>
-        
-        <div className="bg-surface border border-surface-light p-5 rounded-2xl">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-primary/10 text-primary rounded-lg">
-              <TrendingUp size={20} />
-            </div>
-            <h3 className="text-text-secondary text-sm font-medium">Economia do Mês</h3>
-          </div>
-          <p className="text-2xl font-bold mb-1">R$ 5.100,00</p>
-          <p className="text-xs text-text-secondary">62% da renda</p>
-        </div>
-      </div>
-
+      {/* Main Layout Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Metas e Transações na mesma linha em desktop */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Metas */}
-          <div className="bg-surface border border-surface-light p-6 rounded-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold">Suas Metas</h3>
-              <Button variant="outline" size="sm">+ Nova Meta</Button>
-            </div>
+        
+        {/* Left Column (Cards + Bar Chart) */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          
+          {/* 4 Top Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             
-            <div className="space-y-4">
-              {[
-                { name: "Viagem", icon: "✈️", current: 2400, target: 5000, color: "bg-primary", text: "Faltam R$ 2.600 · Previsão: 4 meses" },
-                { name: "Reserva de Emergência", icon: "🛡️", current: 8000, target: 15000, color: "bg-info", text: "Faltam R$ 7.000 · Previsão: 8 meses" }
-              ].map((meta, i) => {
-                const percent = Math.round((meta.current / meta.target) * 100);
-                return (
-                  <div key={i} className="bg-background p-4 rounded-xl border border-surface-light">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{meta.icon}</span>
-                        <span className="font-medium">{meta.name}</span>
-                      </div>
-                      <span className="text-sm font-bold">{percent}%</span>
-                    </div>
-                    <div className="w-full bg-surface-light rounded-full h-2 mb-2">
-                      <div className={`${meta.color} h-2 rounded-full`} style={{ width: `${percent}%` }}></div>
-                    </div>
-                    <div className="flex justify-between items-center text-xs text-text-secondary">
-                      <span>R$ {meta.current} / R$ {meta.target}</span>
-                      <span>{meta.text}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Transações Recentes */}
-          <div className="bg-surface border border-surface-light p-6 rounded-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold">Últimas Transações</h3>
-              <select className="bg-background border border-surface-light rounded px-2 py-1 text-sm focus:outline-none focus:border-primary">
-                <option>Todas</option>
-                <option>Entradas</option>
-                <option>Saídas</option>
-              </select>
-            </div>
-            
-            <div className="space-y-4">
-              {[
-                { name: "Supermercado Dia", cat: "Alimentação", icon: ShoppingCart, val: -87.40, date: "Hoje, 14:32", origin: "WhatsApp" },
-                { name: "Uber", cat: "Transporte", icon: Car, val: -32.90, date: "Hoje, 09:15", origin: "Manual" },
-                { name: "Salário", cat: "Trabalho", icon: Briefcase, val: 5200.00, date: "Ontem, 08:00", origin: "Banco" },
-              ].map((t, i) => (
-                <div key={i} className="flex items-center justify-between p-3 hover:bg-background rounded-xl transition-colors border border-transparent hover:border-surface-light">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-surface-light rounded-lg text-text-secondary">
-                      <t.icon size={20} />
-                    </div>
-                    <div>
-                      <p className="font-medium">{t.name}</p>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-text-secondary">
-                        <span>{t.cat}</span>
-                        <span className="w-1 h-1 rounded-full bg-surface-light"></span>
-                        <span className="bg-background px-1.5 py-0.5 rounded border border-surface-light text-[10px] uppercase">
-                          {t.origin}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-bold ${t.val > 0 ? "text-success" : "text-text"}`}>
-                      {t.val > 0 ? "+" : ""}R$ {Math.abs(t.val).toFixed(2).replace(".", ",")}
-                    </p>
-                    <p className="text-xs text-text-secondary mt-1">{t.date}</p>
-                  </div>
+            {/* Total Sales (Dark Green) */}
+            <div className="bg-brand-dark rounded-[24px] p-6 text-white shadow-sm relative overflow-hidden">
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-brand-dark">
+                  <FileText size={24} />
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar Direita (Gráfico e IA) */}
-        <div className="space-y-6">
-          {/* Gráfico Pizza */}
-          <div className="bg-surface border border-surface-light p-6 rounded-2xl">
-            <h3 className="text-lg font-bold mb-6">Gastos por Categoria</h3>
-            <div className="h-48 flex items-center justify-center bg-background rounded-xl border border-dashed border-surface-light mb-4">
-              <span className="text-sm text-text-secondary">Gráfico (Alimentação, Transporte, etc.)</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm"><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-primary"></span>Alimentação</div><span>35%</span></div>
-              <div className="flex justify-between items-center text-sm"><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-info"></span>Transporte</div><span>20%</span></div>
-              <div className="flex justify-between items-center text-sm"><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-warning"></span>Moradia</div><span>20%</span></div>
-            </div>
-          </div>
-
-          {/* Assistente IA */}
-          <div className="bg-surface border border-surface-light p-6 rounded-2xl relative overflow-hidden">
-            {/* Efeito Glow */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl rounded-full"></div>
-            
-            <h3 className="text-lg font-bold mb-4 relative z-10 flex items-center gap-2">
-              <span className="text-2xl">🤖</span> Pergunte ao seu Assistente
-            </h3>
-            
-            <div className="relative z-10">
-              <div className="flex gap-2 mb-4">
-                <input 
-                  type="text" 
-                  value={chatMessage}
-                  onChange={(e) => setChatMessage(e.target.value)}
-                  placeholder="Ex: Quanto gastei com delivery?" 
-                  className="w-full bg-background border border-surface-light rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary transition-colors"
-                />
-                <Button size="icon" className="shrink-0"><Send size={16} /></Button>
+                <div className="bg-brand-accent text-white text-xs font-bold px-2 py-1 rounded-full">
+                  +20.9%
+                </div>
               </div>
-              
-              <div className="flex flex-wrap gap-2">
-                <button className="text-xs bg-background border border-surface-light px-3 py-1.5 rounded-full hover:border-primary transition-colors">
-                  Posso investir R$ 500?
-                </button>
-                <button className="text-xs bg-background border border-surface-light px-3 py-1.5 rounded-full hover:border-primary transition-colors">
-                  Quanto gastei no iFood?
-                </button>
-                <button className="text-xs bg-background border border-surface-light px-3 py-1.5 rounded-full hover:border-primary transition-colors">
-                  Resumo da semana
-                </button>
+              <p className="text-white/70 text-sm font-medium mb-1">Total Sales</p>
+              <div className="flex items-end gap-3">
+                <p className="text-3xl font-bold">$619,000</p>
+                <p className="text-[10px] text-white/50 mb-1 leading-tight">Products vs<br/>Last Month</p>
               </div>
             </div>
+
+            {/* Total Orders (White) */}
+            <div className="bg-white rounded-[24px] p-6 shadow-sm">
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
+                  <BarChart2 size={24} />
+                </div>
+                <div className="bg-brand-accent text-white text-xs font-bold px-2 py-1 rounded-full">
+                  +10.9%
+                </div>
+              </div>
+              <p className="text-gray-500 text-sm font-medium mb-1">Total Orders</p>
+              <div className="flex items-end gap-3">
+                <p className="text-3xl font-bold text-gray-900">1,000</p>
+                <p className="text-[10px] text-gray-400 mb-1 leading-tight">Orders vs<br/>Last Month</p>
+              </div>
+            </div>
+
+            {/* Total Visitors (White) */}
+            <div className="bg-white rounded-[24px] p-6 shadow-sm">
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
+                  <UserPlus size={24} />
+                </div>
+                <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  -10.2%
+                </div>
+              </div>
+              <p className="text-gray-500 text-sm font-medium mb-1">Total Visitors</p>
+              <div className="flex items-end gap-3">
+                <p className="text-3xl font-bold text-gray-900">2003.67</p>
+                <p className="text-[10px] text-gray-400 mb-1 leading-tight">Users vs<br/>Last Month</p>
+              </div>
+            </div>
+
+            {/* Total Products Sold (White) */}
+            <div className="bg-white rounded-[24px] p-6 shadow-sm">
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
+                  <Tag size={24} />
+                </div>
+                <div className="bg-brand-accent text-white text-xs font-bold px-2 py-1 rounded-full">
+                  +20.9%
+                </div>
+              </div>
+              <p className="text-gray-500 text-sm font-medium mb-1">Total Products Sold</p>
+              <div className="flex items-end gap-3">
+                <p className="text-3xl font-bold text-gray-900">3,000</p>
+                <p className="text-[10px] text-gray-400 mb-1 leading-tight">Products vs<br/>Last Month</p>
+              </div>
+            </div>
           </div>
+
+          {/* Bar Chart (Customer Habbits) */}
+          <div className="bg-white rounded-[32px] p-8 shadow-sm flex-1">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-1">Customer Habbits</h3>
+                <p className="text-sm text-gray-500">Track your customers habit</p>
+              </div>
+              <div className="flex items-center gap-1 bg-gray-50 px-3 py-1.5 rounded-full cursor-pointer hover:bg-gray-100 transition-colors">
+                <span className="text-xs font-bold text-gray-700">This year</span>
+                <span className="text-gray-400 text-[10px]">▼</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 mb-8">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-brand-accent"></div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">Seen Products</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-brand-dark"></div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">Sales</span>
+              </div>
+            </div>
+
+            {/* Fake Bar Chart constructed with HTML/CSS for perfect fidelity */}
+            <div className="relative h-48 w-full flex items-end justify-between px-2">
+               {/* Y-axis labels */}
+               <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] font-bold text-gray-400">
+                 <span>40K</span>
+                 <span>30K</span>
+                 <span>20K</span>
+                 <span>10K</span>
+                 <span>0K</span>
+               </div>
+               
+               {/* Bars Container */}
+               <div className="ml-10 w-full h-full flex justify-between items-end pb-6">
+                 {[
+                   { m: "Jan", v1: 55, v2: 100 },
+                   { m: "Feb", v1: 90, v2: 40 },
+                   { m: "Mar", v1: 60, v2: 70 },
+                   { m: "Apr", v1: 30, v2: 20 },
+                   { m: "May", v1: 60, v2: 100 },
+                   { m: "Jun", v1: 85, v2: 40 },
+                 ].map((data, i) => (
+                   <div key={i} className="flex flex-col items-center gap-4 w-full">
+                     <div className="flex items-end gap-1.5 w-full justify-center h-full">
+                       <div className="w-5 bg-brand-accent rounded-full" style={{ height: `${data.v1}%` }}></div>
+                       <div className="w-5 bg-brand-dark rounded-full" style={{ height: `${data.v2}%` }}></div>
+                     </div>
+                     <span className="text-xs font-bold text-gray-400">{data.m}</span>
+                   </div>
+                 ))}
+               </div>
+            </div>
+          </div>
+          
         </div>
+
+        {/* Right Column (Pie Chart + Small Charts) */}
+        <div className="flex flex-col gap-6">
+          
+          {/* Product Statistic Gradient Card */}
+          <div className="bg-gradient-to-b from-[#D4E4D7] to-[#E3EAE4] rounded-[32px] p-8 shadow-sm flex-1 flex flex-col relative overflow-hidden">
+             {/* Fake shadows/glows */}
+             <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-brand-dark/5 rounded-full blur-3xl"></div>
+
+             <div className="flex justify-between items-start mb-2 relative z-10">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-1">Product Statistic</h3>
+                <p className="text-sm text-gray-600">Track your product sales</p>
+              </div>
+              <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm px-3 py-1.5 rounded-full cursor-pointer hover:bg-white/70 transition-colors">
+                <span className="text-xs font-bold text-gray-700">Today</span>
+                <span className="text-gray-400 text-[10px]">▼</span>
+              </div>
+            </div>
+
+            {/* Fake Pie Chart */}
+            <div className="flex-1 flex justify-center items-center py-8 relative z-10">
+               <div className="w-56 h-56 rounded-full bg-brand-dark relative flex items-center justify-center shadow-lg shadow-brand-dark/20 overflow-hidden">
+                  {/* The bright green slice (approx 15-20%) using conic-gradient */}
+                  <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(from 90deg, #0D4722 0%, #0D4722 85%, #00C853 85%, #00C853 100%)` }}></div>
+                  <div className="absolute inset-0 rounded-full border border-white/10"></div>
+                  {/* lines separating slices */}
+                  <div className="absolute w-1/2 h-0.5 bg-[#E3EAE4] right-0 top-1/2 -translate-y-1/2"></div>
+                  <div className="absolute w-1/2 h-0.5 bg-[#E3EAE4] right-0 top-1/2 origin-left rotate-[54deg]"></div>
+               </div>
+            </div>
+
+            {/* List */}
+            <div className="space-y-4 mt-auto relative z-10">
+               <div className="flex justify-between items-center text-sm font-bold text-gray-800">
+                 <span>Electronics</span>
+                 <div className="flex items-center gap-4">
+                   <span>2.487</span>
+                   <span className="bg-brand-accent text-white text-[10px] px-2 py-0.5 rounded-full w-12 text-center">+1.9%</span>
+                 </div>
+               </div>
+               <div className="flex justify-between items-center text-sm font-bold text-gray-800">
+                 <span>Games</span>
+                 <div className="flex items-center gap-4">
+                   <span>1.828</span>
+                   <span className="bg-brand-accent text-white text-[10px] px-2 py-0.5 rounded-full w-12 text-center">+2.9%</span>
+                 </div>
+               </div>
+               <div className="flex justify-between items-center text-sm font-bold text-gray-800">
+                 <span>Furniture</span>
+                 <div className="flex items-center gap-4">
+                   <span>1.463</span>
+                   <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full w-12 text-center">-2.0%</span>
+                 </div>
+               </div>
+            </div>
+          </div>
+
+          {/* Customer Growth */}
+          <div className="bg-white rounded-[32px] p-8 shadow-sm">
+             <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-1">Customer Growth</h3>
+                <p className="text-sm text-gray-500">Track your customers by location</p>
+              </div>
+              <div className="flex items-center gap-1 bg-gray-50 px-3 py-1.5 rounded-full cursor-pointer hover:bg-gray-100 transition-colors">
+                <span className="text-xs font-bold text-gray-700">Today</span>
+                <span className="text-gray-400 text-[10px]">▼</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+               {/* 3 bubbles */}
+               <div className="relative w-28 h-28">
+                  {/* Bubble 1 */}
+                  <div className="absolute top-0 left-0 w-16 h-16 bg-brand-dark rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md z-10 border-2 border-white">
+                    87%
+                  </div>
+                  {/* Bubble 2 */}
+                  <div className="absolute bottom-0 right-4 w-14 h-14 bg-brand-dark rounded-full flex items-center justify-center text-white font-bold text-[10px] shadow-md z-20 border-2 border-white">
+                    57%
+                  </div>
+                  {/* Bubble 3 */}
+                  <div className="absolute top-2 right-0 w-10 h-10 bg-brand-accent rounded-full flex items-center justify-center text-white font-bold text-[8px] shadow-md z-0 border-2 border-white">
+                    17%
+                  </div>
+                  {/* Bubble 4 */}
+                  <div className="absolute bottom-2 left-6 w-10 h-10 bg-brand-accent rounded-full flex items-center justify-center text-white font-bold text-[8px] shadow-md z-30 border-2 border-white">
+                    37%
+                  </div>
+               </div>
+
+               {/* Country list */}
+               <div className="flex-1 ml-6 space-y-4">
+                 {[
+                   { country: "United States", flag: "🇺🇸", fill: 80, color: "bg-brand-dark" },
+                   { country: "Germany", flag: "🇩🇪", fill: 60, color: "bg-red-500" },
+                   { country: "Australia", flag: "🇦🇺", fill: 40, color: "bg-yellow-500" },
+                   { country: "France", flag: "🇫🇷", fill: 30, color: "bg-blue-500" },
+                 ].map((c, i) => (
+                   <div key={i} className="flex items-center gap-2">
+                     <span className="text-sm">{c.flag}</span>
+                     <div className="flex-1">
+                       <p className="text-[10px] font-bold text-gray-600 mb-1">{c.country}</p>
+                       <div className="w-full h-1.5 bg-gray-100 rounded-full">
+                         <div className={`h-full rounded-full ${c.color}`} style={{ width: `${c.fill}%` }}></div>
+                       </div>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+            </div>
+          </div>
+          
+        </div>
+
       </div>
     </div>
   );
