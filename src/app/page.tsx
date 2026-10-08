@@ -406,7 +406,7 @@ export default function LandingPage() {
                   <span className="text-2xl font-bold mb-1">,90</span>
                   <span className="text-text-secondary font-medium mb-1.5">/mês</span>
                 </div>
-                <p className="text-sm text-text-secondary"><strike>R$ 29,90</strike> · preço de turma fundadora</p>
+                <p className="text-sm text-text-secondary"><span className="line-through">R$ 29,90</span> · preço de turma fundadora</p>
               </div>
               
               <ul className="space-y-4 mb-10 text-left font-medium text-text-secondary">
