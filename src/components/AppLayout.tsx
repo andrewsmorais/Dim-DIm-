@@ -120,23 +120,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         </div>
 
-        {/* Upgrade Pro Card */}
-        <div className="p-6 mb-4">
-          <div className="bg-[#051009] dark:bg-black rounded-2xl p-5 text-white flex flex-col relative overflow-hidden border border-transparent dark:border-gray-800">
-             {/* Logo background watermark */}
-             <div className="absolute -bottom-4 -right-4 opacity-10 text-6xl font-serif italic">L</div>
-             <div className="w-8 h-8 rounded-full bg-brand-dark flex items-center justify-center text-white font-serif italic text-sm mb-3 font-light">
-                L
-             </div>
-             <h4 className="font-bold text-lg mb-1 z-10">{t('sidebar.upgrade.title')}</h4>
-             <p className="text-[10px] text-gray-400 mb-4 leading-tight z-10">
-               {t('sidebar.upgrade.desc')}
-             </p>
-             <button className="w-full bg-brand-dark hover:bg-green-900 text-white text-xs font-medium py-2.5 rounded-full transition-colors z-10">
-               {t('sidebar.upgrade.btn')}
-             </button>
-          </div>
-        </div>
       </aside>
 
       {/* Main Content */}
