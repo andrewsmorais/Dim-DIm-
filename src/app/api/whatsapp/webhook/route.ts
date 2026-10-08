@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+import crypto from 'crypto';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -31,7 +33,31 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const rawBody = await request.text();
+    const signature = request.headers.get('x-hub-signature-256');
+    const secret = process.env.META_APP_SECRET;
+
+    if (!secret) {
+      console.error("META_APP_SECRET is not configured");
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+    }
+
+    if (!signature) {
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    }
+
+    const expectedSignature = `sha256=${crypto.createHmac('sha256', secret).update(rawBody).digest('hex')}`;
+    
+    try {
+      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    } catch (error) {
+      console.error("Signature verification error:", error);
+      return NextResponse.json({ error: "Invalid signature format" }, { status: 401 });
+    }
+
+    const body = JSON.parse(rawBody);
 
     if (body.object === "whatsapp_business_account") {
       const entry = body.entry?.[0];
@@ -49,18 +75,13 @@ export async function POST(request: Request) {
         if (message.type === "text") {
           userMessage = message.text.body;
         } else if (message.type === "image") {
-          // Em produção real, você precisaria fazer o download da imagem da Meta usando message.image.id
-          // E depois passar a URL pública temporária para o OpenAI.
-          // Aqui estamos simulando a chamada.
           userMessage = "[FOTO RECEBIDA] Leia este recibo.";
         } else if (message.type === "audio") {
-           // Em produção, baixaria o áudio e enviaria pro Whisper da OpenAI.
           userMessage = "[ÁUDIO RECEBIDO] O usuário enviou um áudio.";
         } else {
           return NextResponse.json({ success: true }); 
         }
 
-        // 1. Chamar a nossa rota de IA para processar
         const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
         const aiResponse = await fetch(`${baseUrl}/api/ai/process-message`, {
           method: 'POST',
@@ -70,29 +91,26 @@ export async function POST(request: Request) {
         
         const aiData = await aiResponse.json();
 
-        // 2. Salvar no Supabase
         if (aiData.success && aiData.data) {
           const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!
           );
 
-          // Buscar usuário pelo telefone
+          // EXACT MATCH FOR SECURITY
           const { data: profile } = await supabase
             .from('profiles')
             .select('id')
-            .filter('whatsapp_number', 'ilike', `%${phone_number.substring(4)}%`)
+            .eq('whatsapp_number', phone_number)
             .single();
 
           if (profile) {
-            // Buscar categoria
             const { data: categoryData } = await supabase
               .from('categories')
               .select('id')
               .ilike('name', aiData.data.category)
               .single();
 
-            // Inserir transação
             await supabase.from('transactions').insert({
               user_id: profile.id,
               amount: aiData.data.amount,
@@ -103,7 +121,6 @@ export async function POST(request: Request) {
               origin: 'whatsapp'
             });
 
-            // Salvar no histórico de chat
             await supabase.from('chat_history').insert([
               { user_id: profile.id, message_role: 'user', content: userMessage },
               { user_id: profile.id, message_role: 'assistant', content: aiData.reply }
@@ -113,7 +130,6 @@ export async function POST(request: Request) {
           }
         }
 
-        // 3. Responder via WhatsApp API
         const WA_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
         const WA_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
