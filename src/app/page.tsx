@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { 
   Camera, Mic, MessageCircle, BarChart2, Bell, Zap, 
-  Plane, Car, Shield, CheckCircle, Smartphone, UserPlus, Send, LayoutDashboard, ChevronDown
+  Plane, Car, Shield, CheckCircle, Smartphone, UserPlus, 
+  Send, LayoutDashboard, ChevronDown, Lock, ShieldCheck, Check
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -100,334 +101,446 @@ export default function LandingPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrganization) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaFAQ) }} />
 
-      <div className="min-h-screen flex flex-col bg-background text-text">
-        {/* Header Semântico */}
-        <header className="flex items-center justify-between p-6 max-w-7xl w-full mx-auto">
+      <div className="min-h-screen flex flex-col bg-[#0A0A0A] text-text font-sans overflow-x-hidden selection:bg-primary selection:text-black">
+        
+        {/* 1. NAV */}
+        <header className="sticky top-0 z-50 flex items-center justify-between p-4 md:px-8 max-w-7xl w-full mx-auto bg-[#0A0A0A]/80 backdrop-blur-md border-b border-white/5">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-background font-bold" aria-hidden="true">G</div>
-            <span className="font-bold text-xl">Grana Smart</span>
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-black font-extrabold text-lg" aria-hidden="true">G</div>
+            <span className="font-bold text-xl tracking-tight">Grana Smart</span>
           </div>
-          <nav aria-label="Navegação principal" className="hidden md:flex gap-6 items-center">
-            <a href="#como-funciona" className="text-text-secondary hover:text-text transition-colors">Como funciona</a>
-            <a href="#precos" className="text-text-secondary hover:text-text transition-colors">Preços</a>
-            <a href="#faq" className="text-text-secondary hover:text-text transition-colors">Dúvidas</a>
+          <nav aria-label="Navegação principal" className="hidden md:flex gap-8 items-center text-sm font-medium">
+            <a href="#funcionalidades" className="text-text-secondary hover:text-white transition-colors">Funcionalidades</a>
+            <a href="#como-funciona" className="text-text-secondary hover:text-white transition-colors">Como funciona</a>
+            <a href="#seguranca" className="text-text-secondary hover:text-white transition-colors">Segurança</a>
+            <a href="#faq" className="text-text-secondary hover:text-white transition-colors">FAQ</a>
             {/* Supabase Auth integration comment: */}
             {/* <Link href="/login"> -> Vai para o fluxo do Supabase Auth */}
-            <Link href="/login" className="text-text-secondary hover:text-text transition-colors">Entrar</Link>
+            <Link href="/login" className="text-text-secondary hover:text-white transition-colors ml-4">Entrar</Link>
             <a href={asaasLink} target="_blank" rel="noopener noreferrer">
-              <Button>7 dias grátis</Button>
+              <Button size="sm" className="font-bold tracking-wide rounded-full px-5">Começar grátis</Button>
             </a>
           </nav>
         </header>
 
         <main className="flex-1">
-          {/* H1 / Hero Section */}
-          <section className="py-20 px-6 max-w-7xl mx-auto flex flex-col items-center text-center">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-5xl mb-6 leading-tight">
-              App de finanças pessoais com IA: converse com sua grana e <span className="text-primary">controle seu futuro</span>
+          {/* 2. HERO */}
+          <section className="relative pt-24 pb-20 px-6 max-w-7xl mx-auto flex flex-col items-center text-center">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-primary/10 blur-[120px] rounded-full pointer-events-none"></div>
+            
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full text-sm font-medium mb-8 backdrop-blur-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              Turma fundadora — 7 dias grátis
+            </div>
+            
+            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight max-w-4xl mb-6 leading-[1.1]">
+              Sua vida financeira organizada <br className="hidden md:block" />começa numa <span className="text-primary italic">conversa.</span>
             </h1>
-            <p className="text-lg md:text-xl text-text-secondary max-w-3xl mb-10 leading-relaxed">
-              Economize tempo e dinheiro com o assistente financeiro que te ajuda a gastar melhor, poupar mais e aumentar seu patrimônio. <strong>Controle tudo pelo WhatsApp.</strong>
+            
+            <p className="text-lg md:text-xl text-text-secondary max-w-2xl mb-12 leading-relaxed">
+              Um agente de IA no seu WhatsApp cuida dos seus gastos, metas e orçamento. 
+              Você só manda mensagem — foto, áudio ou texto. E ele faz o trabalho chato.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 mb-16 w-full justify-center">
-              <a href={asaasLink} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full text-lg px-8 h-14 rounded-full font-bold shadow-[0_0_30px_-5px_rgba(0,255,136,0.4)]">
-                  Quero começar agora – 7 dias grátis
-                </Button>
-              </a>
-              <a href="#como-funciona" className="w-full sm:w-auto">
-                <Button variant="outline" size="lg" className="w-full text-lg px-8 h-14 rounded-full font-bold">
-                  Ver como funciona
-                </Button>
-              </a>
-            </div>
+            
+            <a href={asaasLink} target="_blank" rel="noopener noreferrer" className="relative group mb-20 z-10">
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary to-[#00CC6A] rounded-full blur opacity-40 group-hover:opacity-75 transition duration-200"></div>
+              <Button size="lg" className="relative h-14 px-10 text-lg font-bold rounded-full bg-primary text-black hover:bg-primary-dark transition-all">
+                Começar 7 dias grátis agora
+              </Button>
+            </a>
 
-            {/* Mockup WhatsApp + Dashboard */}
-            <article className="w-full max-w-4xl bg-surface rounded-2xl border border-surface-light overflow-hidden shadow-2xl shadow-primary/10 flex flex-col md:flex-row" aria-label="Demonstração do aplicativo">
-              {/* Fake WhatsApp Side */}
-              <div className="md:w-1/2 p-6 border-b md:border-b-0 md:border-r border-surface-light bg-surface-light/30 flex flex-col gap-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-background">G</div>
-                  <div className="text-left">
-                    <p className="font-bold text-sm">Grana Smart IA</p>
-                    <p className="text-xs text-text-secondary">Online</p>
-                  </div>
+            {/* Mockup WhatsApp Hero */}
+            <div className="w-full max-w-md mx-auto bg-[#1A1A1A] border border-white/10 rounded-[2.5rem] p-2 shadow-2xl relative z-10">
+              <div className="bg-[#0A0A0A] rounded-[2.25rem] overflow-hidden border border-white/5 h-[400px] flex flex-col relative">
+                {/* iPhone Notch */}
+                <div className="absolute top-0 inset-x-0 h-6 flex justify-center z-20">
+                  <div className="w-32 h-6 bg-[#1A1A1A] rounded-b-3xl"></div>
                 </div>
-                <div className="bg-primary/20 text-text p-3 rounded-2xl rounded-tr-none self-end max-w-[85%] text-sm">
-                  Gastei R$ 45 no mercado hoje mais cedo.
-                </div>
-                <div className="bg-surface border border-surface-light text-text-secondary p-3 rounded-2xl rounded-tl-none self-start max-w-[85%] text-sm flex flex-col gap-2">
-                  <p>Pronto! Registrado: R$ 45,00 em 🛒 Alimentação.</p>
-                  <p className="text-xs">Seu saldo atual para essa categoria é de R$ 320,00.</p>
-                </div>
-                {/* Supabase Webhook Comment here for WhatsApp integration */}
-                {/* // Ao receber mensagem no webhook (Pluggy/Twilio), inserir no Supabase DB e retornar via IA. */}
-              </div>
-              {/* Fake Dashboard Side */}
-              <div className="md:w-1/2 p-6 flex flex-col gap-4 justify-center">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-text-secondary">Saldo Total</p>
-                    <p className="text-3xl font-bold text-primary">R$ 14.520,00</p>
-                  </div>
-                  <BarChart2 className="text-primary opacity-50" size={32} />
-                </div>
-                <div className="space-y-3 mt-4">
-                  <div className="flex justify-between items-center bg-surface-light p-3 rounded-xl">
-                    <span className="text-sm">🛒 Alimentação</span>
-                    <span className="text-sm font-bold">-R$ 45,00</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-surface-light p-3 rounded-xl">
-                    <span className="text-sm">⚡ Conta de Luz</span>
-                    <span className="text-sm font-bold">-R$ 120,00</span>
-                  </div>
-                </div>
-              </div>
-            </article>
-          </section>
-
-          {/* H2 / Controle seus gastos pelo WhatsApp */}
-          <section id="controle" className="py-24 px-6 bg-surface border-y border-surface-light">
-            <div className="max-w-7xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Controle seus gastos pelo WhatsApp</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <article className="bg-background border border-surface-light p-8 rounded-2xl">
-                  <Camera className="text-primary mb-4" size={32} aria-hidden="true" />
-                  <h3 className="text-xl font-bold mb-3">Foto do recibo vira lançamento</h3>
-                  <p className="text-text-secondary">Nosso aplicativo para controlar gastos analisa imagens. Mande a foto da nota fiscal e a IA extrai valores, data e categoria instantaneamente.</p>
-                </article>
-                <article className="bg-background border border-surface-light p-8 rounded-2xl">
-                  <Mic className="text-primary mb-4" size={32} aria-hidden="true" />
-                  <h3 className="text-xl font-bold mb-3">Áudio de gastos no dia a dia</h3>
-                  <p className="text-text-secondary">Sem tempo para digitar? Envie um áudio: "Gastei 150 de gasolina". O assistente financeiro transcreve e organiza suas finanças pessoais na hora.</p>
-                </article>
-                <article className="bg-background border border-surface-light p-8 rounded-2xl">
-                  <MessageCircle className="text-primary mb-4" size={32} aria-hidden="true" />
-                  <h3 className="text-xl font-bold mb-3">Texto livre e natural</h3>
-                  <p className="text-text-secondary">Chega de preencher formulários chatos. Escreva como se falasse com um amigo e a inteligência artificial para finanças cuida do resto.</p>
-                </article>
-              </div>
-            </div>
-          </section>
-
-          {/* H2 / Inteligência Artificial */}
-          <section className="py-24 px-6 max-w-7xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Inteligência Artificial que organiza suas finanças</h2>
-            <div className="flex flex-col md:flex-row gap-12 items-center">
-              <div className="md:w-1/2 space-y-8">
-                <div>
-                  <h3 className="text-2xl font-bold flex items-center gap-3 mb-2">
-                    <Zap className="text-primary" size={24} aria-hidden="true" /> Categorização automática de despesas
-                  </h3>
-                  <p className="text-text-secondary">O Grana Smart aprende com seus hábitos de consumo. Suas compras são divididas em categorias precisas sem você levantar um dedo, criando um planejamento financeiro automático.</p>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold flex items-center gap-3 mb-2">
-                    <Bell className="text-primary" size={24} aria-hidden="true" /> Alertas de orçamento em tempo real
-                  </h3>
-                  <p className="text-text-secondary">O orçamento doméstico estourou? Você recebe um aviso no WhatsApp antes de entrar no vermelho, ajudando no controle de gastos mensais e a sair das dívidas.</p>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold flex items-center gap-3 mb-2">
-                    <BarChart2 className="text-primary" size={24} aria-hidden="true" /> Previsão de saldo e sugestões
-                  </h3>
-                  <p className="text-text-secondary">Descubra como economizar dinheiro com dicas proativas da IA baseadas no seu padrão, projetando seu saldo até o fim do mês.</p>
-                </div>
-              </div>
-              <div className="md:w-1/2 bg-surface p-8 rounded-3xl border border-surface-light flex justify-center shadow-lg">
-                <img src="/api/placeholder/400/400" alt="Gráfico circular mostrando categorias do aplicativo de finanças pessoais" className="rounded-xl w-full max-w-[400px] aspect-square object-cover opacity-80" loading="lazy" />
-              </div>
-            </div>
-          </section>
-
-          {/* H2 / Metas Financeiras */}
-          <section className="py-24 px-6 bg-surface border-y border-surface-light">
-            <div className="max-w-7xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold text-center mb-6">Metas financeiras: realize seus sonhos</h2>
-              <p className="text-center text-text-secondary max-w-2xl mx-auto mb-12">A melhor forma de economizar dinheiro é ter um propósito. Acompanhe a evolução do seu patrimônio visualmente.</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <article className="bg-background border border-surface-light p-6 rounded-2xl">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2"><Plane size={24} className="text-primary" /><h3 className="font-bold text-lg">Viagem de Férias</h3></div>
-                    <span className="font-bold">48%</span>
-                  </div>
-                  <div className="w-full bg-surface rounded-full h-2 mb-3"><div className="bg-primary h-2 rounded-full w-[48%]"></div></div>
-                  <p className="text-sm text-text-secondary">R$ 2.400 / R$ 5.000</p>
-                </article>
-
-                <article className="bg-background border border-surface-light p-6 rounded-2xl">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2"><Car size={24} className="text-info" /><h3 className="font-bold text-lg">Trocar o Carro</h3></div>
-                    <span className="font-bold">53%</span>
-                  </div>
-                  <div className="w-full bg-surface rounded-full h-2 mb-3"><div className="bg-info h-2 rounded-full w-[53%]"></div></div>
-                  <p className="text-sm text-text-secondary">R$ 800 / R$ 1.500</p>
-                </article>
-
-                <article className="bg-background border border-surface-light p-6 rounded-2xl">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2"><Shield size={24} className="text-warning" /><h3 className="font-bold text-lg">Reserva de Emergência</h3></div>
-                    <span className="font-bold">53%</span>
-                  </div>
-                  <div className="w-full bg-surface rounded-full h-2 mb-3"><div className="bg-warning h-2 rounded-full w-[53%]"></div></div>
-                  <p className="text-sm text-text-secondary">R$ 8.000 / R$ 15.000</p>
-                </article>
-              </div>
-            </div>
-          </section>
-
-          {/* H2 / Como funciona o Grana Smart */}
-          <section id="como-funciona" className="py-24 px-6 max-w-7xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Como funciona o Grana Smart</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center relative">
-              <div className="hidden lg:block absolute top-10 left-[15%] right-[15%] h-0.5 bg-surface-light -z-10"></div>
-              
-              <div className="flex flex-col items-center">
-                <div className="w-20 h-20 rounded-full bg-surface border-4 border-background flex items-center justify-center text-primary mb-6 relative shadow-lg">
-                  <UserPlus size={32} />
-                </div>
-                <h3 className="font-bold text-xl mb-2">1. Crie sua conta</h3>
-                <p className="text-sm text-text-secondary">Cadastre-se rapidamente com seu e-mail e ative os 7 dias grátis.</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-20 h-20 rounded-full bg-surface border-4 border-background flex items-center justify-center text-primary mb-6 relative shadow-lg">
-                  <Smartphone size={32} />
-                </div>
-                <h3 className="font-bold text-xl mb-2">2. Conecte o WhatsApp</h3>
-                <p className="text-sm text-text-secondary">Vincule seu número para começar a conversar com a inteligência artificial.</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-20 h-20 rounded-full bg-surface border-4 border-background flex items-center justify-center text-primary mb-6 relative shadow-lg">
-                  <Send size={32} />
-                </div>
-                <h3 className="font-bold text-xl mb-2">3. Mande seus gastos</h3>
-                <p className="text-sm text-text-secondary">Envie áudios, textos ou fotos das suas despesas pelo celular a qualquer hora.</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-20 h-20 rounded-full bg-surface border-4 border-background flex items-center justify-center text-primary mb-6 relative shadow-lg">
-                  <LayoutDashboard size={32} />
-                </div>
-                <h3 className="font-bold text-xl mb-2">4. Veja a mágica</h3>
-                <p className="text-sm text-text-secondary">Acesse o dashboard completo para visualizar a gestão de finanças resolvida.</p>
-              </div>
-            </div>
-          </section>
-
-          {/* H2 / Preços */}
-          <section id="precos" className="py-24 px-6 bg-surface border-y border-surface-light">
-            <div className="max-w-xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">Quanto custa o app de finanças Grana Smart</h2>
-              <p className="text-text-secondary mb-12">Assuma o controle financeiro pessoal pelo preço de dois cafés no mês. Sem surpresas.</p>
-              
-              <article className="bg-background border border-primary/30 p-10 rounded-3xl relative shadow-[0_0_50px_-12px_rgba(0,255,136,0.15)]">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-background px-6 py-2 rounded-full text-sm font-bold uppercase tracking-wider shadow-lg">
-                  Plano Único
-                </div>
-                <h3 className="sr-only">Assinatura Mensal Grana Smart</h3>
-                <p className="text-6xl font-extrabold mb-2 mt-4 text-text">R$ 19,90<span className="text-lg text-text-secondary font-normal">/mês</span></p>
-                <p className="text-text-secondary mb-8">Tudo incluso. 7 dias grátis, cancele quando quiser.</p>
                 
-                <ul className="text-left space-y-5 mb-10 text-lg">
-                  {[
-                    'Controle total pelo WhatsApp ilimitado', 
-                    'Inteligência Artificial de categorização', 
-                    'Dashboard financeiro completo web/mobile', 
-                    'Criação de Metas Financeiras',
-                    'Alertas anti-dívidas proativos',
-                    'Suporte humano prioritário'
-                  ].map((feature, i) => (
-                    <li key={i} className="flex items-center gap-3">
-                      <CheckCircle className="text-primary shrink-0" size={24} />
-                      <span className="font-medium text-text-secondary">{feature}</span>
+                {/* Chat Header */}
+                <div className="bg-[#1A1A1A] pt-10 pb-3 px-4 flex items-center gap-3 border-b border-white/5">
+                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-black font-bold">G</div>
+                  <div>
+                    <p className="font-bold text-sm leading-tight text-white">Grana Smart IA</p>
+                    <p className="text-xs text-primary flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Online
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Chat Body */}
+                <div className="flex-1 p-4 flex flex-col gap-4 overflow-hidden relative bg-[#0A0A0A]">
+                  <div className="bg-[#075E54]/30 text-white p-3 rounded-2xl rounded-tr-none self-end max-w-[80%] text-sm border border-[#075E54]/50 backdrop-blur-sm">
+                    Mano, gastei R$ 120 de gasolina hoje e R$ 45 de ifood.
+                  </div>
+                  <div className="bg-[#1A1A1A] border border-white/10 text-white/90 p-3 rounded-2xl rounded-tl-none self-start max-w-[85%] text-sm shadow-lg">
+                    <p className="font-bold text-primary mb-1">Tudo anotado! ✍️</p>
+                    <p>🚗 Transporte: -R$ 120,00</p>
+                    <p>🍔 Alimentação: -R$ 45,00</p>
+                    <div className="mt-2 text-xs text-text-secondary border-t border-white/10 pt-2">
+                      Saldo livre no mês: R$ 850,00
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Chat Input */}
+                <div className="bg-[#1A1A1A] p-3 flex items-center gap-2 border-t border-white/5">
+                  <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"><Camera size={16} className="text-white/50" /></div>
+                  <div className="flex-1 h-9 bg-white/5 rounded-full border border-white/10 px-3 flex items-center">
+                    <span className="text-white/30 text-xs">Mensagem...</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><Mic size={16} className="text-black" /></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 3. SELOS DE CONFIANÇA */}
+          <section id="seguranca" className="py-10 border-y border-white/5 bg-[#0D0D0D]">
+            <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center md:justify-between items-center gap-6 opacity-60 grayscale hover:grayscale-0 transition-all duration-500 text-sm font-medium">
+              <div className="flex items-center gap-2"><CheckCircle size={18} className="text-primary" /> Homologado pela Meta</div>
+              <div className="flex items-center gap-2"><Lock size={18} className="text-primary" /> Open Finance (em breve)</div>
+              <div className="flex items-center gap-2"><ShieldCheck size={18} className="text-primary" /> Conta Verificada no WhatsApp</div>
+              <div className="flex items-center gap-2"><Shield size={18} className="text-primary" /> Acesso leitura • LGPD</div>
+            </div>
+          </section>
+
+          {/* 4. PROBLEMA */}
+          <section className="py-24 px-6 max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl md:text-5xl font-bold leading-tight mb-6">
+              Vive esquecendo onde foi parar o dinheiro? <br className="hidden md:block" />
+              <span className="text-text-secondary">Mande uma mensagem ou áudio e deixe tudo organizado.</span>
+            </h2>
+            <p className="text-lg text-text-secondary max-w-2xl mx-auto">
+              Planilhas são chatas, anotar em caderninho não funciona e abrir app de banco toda hora cansa. 
+              Você só precisa do WhatsApp que você já usa todo dia.
+            </p>
+          </section>
+
+          {/* 5. PERSONA DO AGENTE + DASHBOARD */}
+          <section className="py-24 px-6 max-w-7xl mx-auto">
+            <div className="bg-[#121212] rounded-3xl border border-white/10 p-8 md:p-12 flex flex-col lg:flex-row items-center gap-12 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[100px] rounded-full pointer-events-none"></div>
+              
+              <div className="lg:w-1/2 z-10">
+                <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                  Pare de tentar organizar tudo sozinho. <br/>
+                  Conheça o Grana, seu assessor financeiro com IA.
+                </h2>
+                <p className="text-text-secondary text-lg mb-8">
+                  Ele tira dúvidas sobre seu saldo, alerta quando o orçamento da semana apertar e consolida seus números em um painel lindo.
+                </p>
+                <ul className="space-y-4">
+                  {['Lê fotos de notas fiscais e comprovantes', 'Entende áudios longos perfeitamente', 'Te manda um resumo diário ou semanal'].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-white/90">
+                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                        <Check size={14} className="text-primary" />
+                      </div>
+                      {item}
                     </li>
                   ))}
                 </ul>
-                
-                <a href={asaasLink} target="_blank" rel="noopener noreferrer" className="block w-full">
-                  <Button className="w-full h-16 text-xl rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
-                    Assinar agora por R$ 19,90
-                  </Button>
-                </a>
-              </article>
+              </div>
+
+              <div className="lg:w-1/2 w-full z-10">
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 shadow-2xl">
+                  <div className="flex justify-between items-center mb-6">
+                    <p className="font-medium text-white/70">Visão Geral</p>
+                    <p className="text-xs bg-white/10 px-2 py-1 rounded">Outubro</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/5">
+                      <p className="text-xs text-white/50 mb-1">Entradas</p>
+                      <p className="text-xl font-bold text-primary">R$ 8.240</p>
+                    </div>
+                    <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/5">
+                      <p className="text-xs text-white/50 mb-1">Saídas</p>
+                      <p className="text-xl font-bold text-red-400">R$ 3.930</p>
+                    </div>
+                  </div>
+                  <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/5">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>Meta: Viagem</span>
+                      <span className="text-primary">48%</span>
+                    </div>
+                    <div className="w-full bg-black rounded-full h-1.5"><div className="bg-primary h-1.5 rounded-full w-[48%]"></div></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
-          {/* H2 / FAQ com Schema */}
-          <section id="faq" className="py-24 px-6 max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Perguntas frequentes</h2>
-            <div className="space-y-6">
+          {/* 6. TIMELINE */}
+          <section className="py-24 px-6 max-w-4xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-sm font-bold text-primary tracking-widest uppercase mb-3">Um dia normal</h2>
+              <h3 className="text-3xl font-bold">Só que alguém cuidou de tudo por você.</h3>
+            </div>
+            
+            <div className="relative border-l border-white/10 ml-4 md:ml-12 space-y-12 pb-8">
+              {[
+                { time: "07:12", icon: Mic, color: "text-blue-400", bg: "bg-blue-400/10", title: "Áudio: \"gastei 12 reais no café\"", desc: "A IA transcreve, identifica o valor e lança na categoria Alimentação automaticamente." },
+                { time: "12:30", icon: Camera, color: "text-purple-400", bg: "bg-purple-400/10", title: "Foto do cupom fiscal do almoço", desc: "Apenas mandou a foto. O Grana leu o CNPJ, o total de R$ 68,90 e registrou tudo." },
+                { time: "18:05", icon: Zap, color: "text-primary", bg: "bg-primary/10", title: "O salário caiu na conta", desc: "Alerta no Zap: 'Opa, entraram R$ 5.000! Que tal guardar R$ 500 na meta da Viagem?'" },
+                { time: "21:00", icon: BarChart2, color: "text-orange-400", bg: "bg-orange-400/10", title: "Resumo do dia", desc: "Você recebe um mini-relatório pra fechar o dia com a cabeça tranquila." }
+              ].map((item, i) => (
+                <div key={i} className="relative pl-10 md:pl-16">
+                  <div className="absolute -left-[21px] top-1 w-10 h-10 rounded-full bg-[#1A1A1A] border border-white/10 flex items-center justify-center">
+                    <item.icon size={18} className={item.color} />
+                  </div>
+                  <div className="text-sm font-mono text-white/50 mb-1">{item.time}</div>
+                  <h4 className="text-xl font-bold mb-2">{item.title}</h4>
+                  <p className="text-text-secondary">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 7. NUVEM DE EXEMPLOS */}
+          <section id="funcionalidades" className="py-24 px-6 bg-[#121212] border-y border-white/5 overflow-hidden">
+            <div className="max-w-5xl mx-auto text-center">
+              <h2 className="text-3xl md:text-4xl font-bold mb-12 max-w-2xl mx-auto">
+                Se você sabe mandar mensagem no WhatsApp, <span className="text-primary">já sabe usar o Grana Smart.</span>
+              </h2>
+              
+              <div className="relative h-[400px] w-full flex items-center justify-center">
+                {/* Simulated floating chat bubbles */}
+                <div className="absolute top-10 left-0 md:left-[10%] bg-[#075E54]/40 border border-[#075E54] p-3 rounded-2xl rounded-bl-none text-sm shadow-xl rotate-[-5deg] animate-pulse">
+                  🎤 Áudio: 0:15
+                </div>
+                <div className="absolute top-[40%] right-0 md:right-[5%] bg-[#1A1A1A] border border-white/10 p-3 rounded-2xl rounded-br-none text-sm shadow-xl rotate-[3deg]">
+                  Comprei um tênis na Nike por 350
+                </div>
+                <div className="absolute bottom-10 left-[10%] md:left-[20%] bg-[#075E54]/40 border border-[#075E54] p-3 rounded-2xl rounded-bl-none text-sm shadow-xl rotate-[2deg]">
+                  📷 [Foto do Cupom do Mercado]
+                </div>
+                <div className="absolute bottom-[30%] right-[15%] md:right-[25%] bg-[#1A1A1A] border border-primary/30 p-3 rounded-2xl rounded-br-none text-sm shadow-[0_0_20px_rgba(0,255,136,0.2)]">
+                  <span className="text-primary font-bold">Grana:</span> Tudo registrado! ✅
+                </div>
+                
+                <div className="z-10 w-48 h-48 rounded-full bg-gradient-to-br from-primary to-[#006633] flex items-center justify-center shadow-[0_0_80px_rgba(0,255,136,0.3)]">
+                  <MessageCircle size={64} className="text-black" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 8. OPEN FINANCE */}
+          <section className="py-24 px-6 max-w-7xl mx-auto text-center">
+            <div className="inline-block bg-white/5 border border-white/10 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-8 text-white/70">
+              ⚡ Em Breve — Entre na lista de espera
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold mb-8 max-w-3xl mx-auto">
+              Saiba exatamente para onde vai seu dinheiro sem somar faturas manualmente.
+            </h2>
+            <p className="text-lg text-text-secondary max-w-2xl mx-auto mb-12">
+              Conexão Open Finance via Banco Central. Seus cartões e contas sincronizados 
+              com segurança de nível bancário. Leitura automática.
+            </p>
+            <div className="flex flex-wrap justify-center gap-6 opacity-50 grayscale">
+              {/* Fake bank logos with text */}
+              {['Nubank', 'Itaú', 'Bradesco', 'Santander', 'Banco do Brasil', 'Inter'].map(b => (
+                <div key={b} className="bg-white/5 px-6 py-3 rounded-xl border border-white/10 font-bold tracking-tight">
+                  {b}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 9. PAINEL IA */}
+          <section className="py-24 px-6 bg-[#0D0D0D] border-y border-white/5">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
+              <div className="md:w-1/2">
+                <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                  Quer ver só os números que importam? <br/>
+                  <span className="text-text-secondary">Peça pro Grana e ele monta seu painel.</span>
+                </h2>
+                <p className="text-text-secondary mb-8 text-lg">
+                  Além do WhatsApp, você tem acesso a um Web App completo. Visualize gráficos, exporte planilhas (se quiser) e acompanhe seu fluxo de caixa mensal sem enrolação.
+                </p>
+              </div>
+              <div className="md:w-1/2 w-full">
+                <div className="bg-[#121212] border border-white/10 rounded-2xl p-6 shadow-2xl">
+                  <div className="grid grid-cols-3 gap-2 mb-6">
+                    <div className="bg-white/5 p-3 rounded-lg text-center">
+                      <p className="text-[10px] text-white/50 uppercase">Entradas</p>
+                      <p className="text-sm font-bold text-primary">R$ 18.240</p>
+                    </div>
+                    <div className="bg-white/5 p-3 rounded-lg text-center">
+                      <p className="text-[10px] text-white/50 uppercase">Saídas</p>
+                      <p className="text-sm font-bold text-red-400">R$ 13.930</p>
+                    </div>
+                    <div className="bg-white/5 p-3 rounded-lg text-center">
+                      <p className="text-[10px] text-white/50 uppercase">Saldo</p>
+                      <p className="text-sm font-bold text-white">R$ 4.310</p>
+                    </div>
+                  </div>
+                  <div className="h-40 flex items-center justify-center border border-white/5 bg-white/[0.02] rounded-xl border-dashed">
+                    {/* Placeholder gráfico Donut */}
+                    <div className="w-24 h-24 rounded-full border-[8px] border-primary/20 border-t-primary border-r-blue-500 border-l-warning flex items-center justify-center">
+                      <span className="text-xs text-white/50">Gráfico</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 10. METAS */}
+          <section className="py-24 px-6 max-w-7xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Metas que saem do papel</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { i: "✈️", n: "Viagem pra Europa", p: "48%", v: "R$ 2.400 / R$ 5.000", c: "bg-primary" },
+                { i: "🚗", n: "Manutenção do Carro", p: "25%", v: "R$ 800 / R$ 3.200", c: "bg-blue-400" },
+                { i: "🛡️", n: "Reserva de Emergência", p: "80%", v: "R$ 8.000 / R$ 10.000", c: "bg-orange-400" }
+              ].map((m, i) => (
+                <div key={i} className="bg-[#121212] border border-white/10 p-6 rounded-2xl hover:border-white/20 transition-colors">
+                  <div className="text-4xl mb-4">{m.i}</div>
+                  <h3 className="font-bold text-lg mb-4">{m.n}</h3>
+                  <div className="flex justify-between text-sm mb-2 text-white/70">
+                    <span>{m.v}</span>
+                    <span className="font-bold text-white">{m.p}</span>
+                  </div>
+                  <div className="w-full bg-black rounded-full h-2">
+                    <div className={`${m.c} h-2 rounded-full`} style={{ width: m.p }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 11. TEASER MEI */}
+          <section className="py-8 px-6 bg-primary/10 border-y border-primary/20 text-center">
+            <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4">
+              <span className="bg-primary text-black font-bold text-xs px-2 py-1 rounded uppercase tracking-wider">Novo</span>
+              <p className="font-medium">
+                É MEI? Em breve: DAS automático, nota fiscal e separação PF/PJ. 
+                <a href="#" className="text-primary ml-2 hover:underline">Entre na lista de espera do plano CNPJ &rarr;</a>
+              </p>
+            </div>
+          </section>
+
+          {/* 12. PREÇO */}
+          <section id="precos" className="py-24 px-6 max-w-lg mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Seu assessor financeiro completo</h2>
+              <p className="text-text-secondary">Simplifique sua vida hoje.</p>
+            </div>
+            
+            <div className="bg-[#121212] border border-primary/40 rounded-3xl p-8 relative shadow-[0_0_50px_-15px_rgba(0,255,136,0.2)]">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <p className="text-text-secondary line-through text-sm">de R$ 29,90</p>
+                  <p className="text-5xl font-extrabold text-white mt-1">R$ 19,90<span className="text-lg text-white/50 font-normal">/mês</span></p>
+                </div>
+                <div className="bg-primary/20 text-primary text-xs font-bold px-3 py-1 rounded-full">
+                  7 dias grátis
+                </div>
+              </div>
+              
+              <ul className="space-y-4 mb-8">
+                {[
+                  'WhatsApp ilimitado com IA', 
+                  'Lê fotos de cupons e áudios', 
+                  'Dashboard financeiro web completo', 
+                  'Criação de Metas Financeiras',
+                  'Alertas de orçamento no Zap',
+                  'Suporte VIP via e-mail'
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <Check size={20} className="text-primary shrink-0 mt-0.5" />
+                    <span className="text-white/80">{item}</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <a href={asaasLink} target="_blank" rel="noopener noreferrer" className="block w-full">
+                <Button className="w-full h-14 text-lg rounded-xl font-bold bg-primary text-black hover:bg-primary-dark">
+                  Assinar agora
+                </Button>
+              </a>
+              <p className="text-center text-xs text-white/40 mt-4">Cancele quando quiser, a um clique.</p>
+            </div>
+          </section>
+
+          {/* 13. PROVA SOCIAL */}
+          <section className="py-24 px-6 bg-[#0A0A0A] border-t border-white/5">
+            <h2 className="text-3xl font-bold text-center mb-16">Gente que você conhece já organiza a grana com o Grana.</h2>
+            <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { name: "Lucas M.", role: "Desenvolvedor", text: "Eu odeio planilhas. O Grana Smart foi a única coisa que me fez anotar os gastos pq é só mandar um áudio no trânsito e pronto." },
+                { name: "Mariana S.", role: "Freelancer", text: "A IA entende até quando eu mando foto de recibo amassado do almoço! Mudou meu controle financeiro completamente." },
+                { name: "Roberto T.", role: "Empreendedor", text: "Receber o resumo no fim do dia pelo Zap é bizarro de bom. Sinto que finalmente tenho controle da minha vida financeira." }
+              ].map((dep, i) => (
+                <div key={i} className="bg-[#121212] border border-white/10 p-6 rounded-2xl">
+                  <div className="flex text-primary mb-4">{'★'.repeat(5)}</div>
+                  <p className="text-white/80 mb-6 text-sm leading-relaxed">"{dep.text}"</p>
+                  <div>
+                    <p className="font-bold">{dep.name}</p>
+                    <p className="text-xs text-text-secondary">{dep.role} • Beta Tester</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 14. FAQ GIGANTE */}
+          <section id="faq" className="py-24 px-6 max-w-3xl mx-auto">
+            <h2 className="text-3xl font-bold text-center mb-12">Perguntas frequentes</h2>
+            <div className="space-y-4">
               {faqs.map((faq, index) => (
-                <details key={index} className="group bg-surface border border-surface-light rounded-xl overflow-hidden [&_summary::-webkit-details-marker]:hidden">
-                  <summary className="flex items-center justify-between p-6 cursor-pointer font-bold text-lg hover:text-primary transition-colors">
+                <details key={index} className="group bg-[#121212] border border-white/5 rounded-xl overflow-hidden [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex items-center justify-between p-5 cursor-pointer font-medium hover:bg-white/[0.02] transition-colors">
                     {faq.q}
-                    <ChevronDown className="transition-transform group-open:rotate-180 text-text-secondary" size={20} />
+                    <ChevronDown className="transition-transform group-open:rotate-180 text-white/50 shrink-0" size={20} />
                   </summary>
-                  <div className="px-6 pb-6 text-text-secondary text-base leading-relaxed">
+                  <div className="px-5 pb-5 text-white/60 text-sm leading-relaxed border-t border-white/5 pt-4">
                     {faq.a}
                   </div>
                 </details>
               ))}
             </div>
           </section>
-
-          {/* CTA Final */}
-          <section className="py-24 px-6 bg-primary/10 border-t border-primary/20 text-center relative overflow-hidden">
-            {/* Glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/20 blur-[100px] rounded-full -z-10"></div>
-            
-            <h2 className="text-4xl md:text-5xl font-extrabold mb-6 max-w-3xl mx-auto">Comece a tomar o controle da sua grana hoje</h2>
-            <p className="text-xl text-text-secondary mb-10 max-w-2xl mx-auto">
-              Junte-se a milhares de brasileiros que transformaram a planilha de gastos em uma conversa inteligente.
-            </p>
-            <div className="inline-block relative">
-              <div className="absolute -top-4 -right-6 bg-warning text-background text-xs font-bold px-3 py-1 rounded-full shadow-lg transform rotate-12 z-10">
-                7 DIAS GRÁTIS
-              </div>
-              <a href={asaasLink} target="_blank" rel="noopener noreferrer">
-                <Button size="lg" className="h-16 px-10 text-xl font-bold rounded-full shadow-[0_0_40px_-10px_rgba(0,255,136,0.5)]">
-                  Criar conta grátis agora
-                </Button>
-              </a>
-            </div>
-          </section>
         </main>
 
-        {/* FOOTER */}
-        <footer className="bg-background py-16 px-6 border-t border-surface-light">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
-            <div className="max-w-xs">
+        {/* 15. FOOTER */}
+        <footer className="bg-[#0A0A0A] py-16 px-6 border-t border-white/10">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
+            <div className="max-w-sm">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-background font-bold" aria-hidden="true">G</div>
-                <span className="font-bold text-xl">Grana Smart</span>
+                <div className="w-6 h-6 rounded bg-primary flex items-center justify-center text-black font-bold text-xs" aria-hidden="true">G</div>
+                <span className="font-bold text-lg">Grana Smart</span>
               </div>
-              <p className="text-sm text-text-secondary leading-relaxed">
-                O app de finanças pessoais que simplifica o controle financeiro, te ajuda a economizar dinheiro e a alcançar suas metas através do WhatsApp.
+              <p className="text-sm text-text-secondary mb-6">
+                Seu assessor financeiro com IA pelo WhatsApp. Instale como app no seu celular (PWA) e tenha o painel na tela inicial.
               </p>
+              <a href={asaasLink} target="_blank" rel="noopener noreferrer">
+                <Button size="sm" className="bg-white/10 text-white hover:bg-white/20 border-0">Instalar App (PWA)</Button>
+              </a>
             </div>
             
-            <div className="flex gap-12">
+            <div className="flex flex-wrap gap-12 md:gap-24">
               <div className="flex flex-col gap-3 text-sm">
-                <span className="font-bold text-text mb-2">Produto</span>
-                <Link href="#como-funciona" className="text-text-secondary hover:text-primary transition-colors">Como funciona</Link>
-                <Link href="#precos" className="text-text-secondary hover:text-primary transition-colors">Preços</Link>
-                <Link href="#faq" className="text-text-secondary hover:text-primary transition-colors">Perguntas Frequentes</Link>
+                <span className="font-bold text-white mb-2">Plataforma</span>
+                <Link href="/login" className="text-white/50 hover:text-primary transition-colors">Entrar</Link>
+                <Link href="#precos" className="text-white/50 hover:text-primary transition-colors">Preços</Link>
+                <Link href="#funcionalidades" className="text-white/50 hover:text-primary transition-colors">Funcionalidades</Link>
               </div>
               <div className="flex flex-col gap-3 text-sm">
-                <span className="font-bold text-text mb-2">Legal</span>
-                <Link href="/termos-de-uso" className="text-text-secondary hover:text-primary transition-colors">Termos de Uso</Link>
-                <Link href="/politica-de-privacidade" className="text-text-secondary hover:text-primary transition-colors">Privacidade</Link>
+                <span className="font-bold text-white mb-2">Legal</span>
+                <Link href="/termos-de-uso" className="text-white/50 hover:text-primary transition-colors">Termos de Uso</Link>
+                <Link href="/politica-de-privacidade" className="text-white/50 hover:text-primary transition-colors">Privacidade</Link>
               </div>
             </div>
           </div>
           
-          <div className="max-w-7xl mx-auto pt-8 border-t border-surface-light flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="text-sm text-text-secondary">
-              © {new Date().getFullYear()} Grana Smart. Feito com ❤️ no Brasil.
-            </div>
-            <div className="text-xs text-text-secondary/70 flex items-center gap-2">
-              <span>Ambiente Open Finance Regulamentado Banco Central do Brasil</span>
-            </div>
+          <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/40">
+            <div>© {new Date().getFullYear()} Grana Smart. Todos os direitos reservados.</div>
+            <div className="flex items-center gap-1">Feito no Brasil 🇧🇷</div>
           </div>
         </footer>
       </div>
