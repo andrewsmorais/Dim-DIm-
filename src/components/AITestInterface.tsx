@@ -8,7 +8,8 @@ export function AITestInterface() {
   const [message, setMessage] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [result, setResult] = useState<{ error?: string; reply?: string; data?: any } | null>(null);
 
   const handleTest = async () => {
     if (!message && !imageUrl) return;

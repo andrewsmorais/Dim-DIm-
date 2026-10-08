@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Instagram, Linkedin, Youtube } from "lucide-react";
 
 export function Footer() {
   return (
@@ -17,10 +16,10 @@ export function Footer() {
           <Link href="/contato" className="text-white/60 hover:text-white transition-colors">Contato</Link>
         </div>
         
-        <div className="flex gap-6 mb-12 text-white/40">
-          <a href="#" className="hover:text-primary transition-colors"><Instagram size={24} /></a>
-          <a href="#" className="hover:text-primary transition-colors"><Linkedin size={24} /></a>
-          <a href="#" className="hover:text-primary transition-colors"><Youtube size={24} /></a>
+        <div className="flex gap-6 mb-12 text-white/40 font-medium text-sm">
+          <a href="#" className="hover:text-primary transition-colors">Instagram</a>
+          <a href="#" className="hover:text-primary transition-colors">LinkedIn</a>
+          <a href="#" className="hover:text-primary transition-colors">YouTube</a>
         </div>
         
         <div className="text-xs text-white/40 text-center flex flex-col items-center gap-2">

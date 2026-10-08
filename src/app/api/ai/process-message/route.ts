@@ -20,7 +20,8 @@ export async function POST(request: Request) {
     const systemPromptText = fs.readFileSync(promptPath, 'utf8');
 
     // Monta o array de conteúdo dinamicamente se tiver imagem (Vision)
-    const contentArray: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const contentArray: any[] = [];
     
     if (message) {
       contentArray.push({ type: "text", text: `Hoje é ${new Date().toISOString().split('T')[0]}.\nMensagem do usuário: "${message}"` });
