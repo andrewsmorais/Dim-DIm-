@@ -15,7 +15,7 @@ export function CTAButton({ text, size = "default", className = "", href }: CTAB
     <a href={finalHref} target="_blank" rel="noopener noreferrer" className="inline-block group">
       <Button 
         size={size} 
-        className={`bg-primary text-black font-bold rounded-full hover:bg-primary-dark hover:scale-105 hover:shadow-[0_0_20px_rgba(0,255,136,0.4)] transition-all duration-300 ${className}`}
+        className={`bg-brand-dark text-white font-bold rounded-full hover:bg-green-900 hover:scale-105 hover:shadow-lg hover:shadow-brand-dark/30 transition-all duration-300 ${className}`}
       >
         {text}
       </Button>

@@ -22,6 +22,8 @@ export const metadata: Metadata = {
     description: "Cuidar das contas dava trabalho. Agora é automático.",
     images: ["https://granasmart.com.br/twitter-card.jpg"],
   },
+  manifest: "/manifest.webmanifest",
+  authors: [{ name: "Grana Capital", url: "https://granasmart.com.br" }],
 };
 
 export default function RootLayout({
