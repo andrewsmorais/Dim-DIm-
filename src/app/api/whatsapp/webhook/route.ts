@@ -1,5 +1,33 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    
+    const mode = searchParams.get("hub.mode");
+    const token = searchParams.get("hub.verify_token");
+    const challenge = searchParams.get("hub.challenge");
+
+    const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
+
+    if (mode === "subscribe" && token === VERIFY_TOKEN) {
+      return new NextResponse(challenge, { 
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+      });
+    } else {
+      return new NextResponse("Token de verificação inválido", { status: 403 });
+    }
+  } catch (error) {
+    console.error("WhatsApp Verify Error:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   try {
