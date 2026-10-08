@@ -1,9 +1,14 @@
 import { AppLayout } from "@/components/AppLayout";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <AppLayout>{children}</AppLayout>;
+  return (
+    <SettingsProvider>
+      <AppLayout>{children}</AppLayout>
+    </SettingsProvider>
+  );
 }
