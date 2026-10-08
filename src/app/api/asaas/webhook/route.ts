@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Webhook Error:', error);
     return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
   }

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const systemPromptText = fs.readFileSync(promptPath, 'utf8');
 
     // Monta o array de conteúdo dinamicamente se tiver imagem (Vision)
-    let contentArray: any[] = [];
+    const contentArray: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
     
     if (message) {
       contentArray.push({ type: "text", text: `Hoje é ${new Date().toISOString().split('T')[0]}.\nMensagem do usuário: "${message}"` });
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       }, { status: 200 });
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('OpenAI Error:', error);
     return NextResponse.json({ error: 'Erro interno ao processar IA' }, { status: 500 });
   }

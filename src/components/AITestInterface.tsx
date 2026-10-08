@@ -8,7 +8,7 @@ export function AITestInterface() {
   const [message, setMessage] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
 
   const handleTest = async () => {
     if (!message && !imageUrl) return;
@@ -25,8 +25,8 @@ export function AITestInterface() {
 
       const data = await res.json();
       setResult(data);
-    } catch (err: any) {
-      setResult({ error: err.message || "Erro de conexão" });
+    } catch (err) {
+      setResult({ error: err instanceof Error ? err.message : "Erro de conexão" });
     } finally {
       setLoading(false);
     }

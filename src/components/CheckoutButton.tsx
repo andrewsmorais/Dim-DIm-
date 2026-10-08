@@ -45,8 +45,8 @@ export function CheckoutButton({ userEmail, userName, cpfCnpj, whatsapp, classNa
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro desconhecido");
     } finally {
       setLoading(false);
     }

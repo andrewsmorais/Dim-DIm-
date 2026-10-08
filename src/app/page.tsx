@@ -325,7 +325,7 @@ export default function LandingPage() {
                 { text: "Sem limite de conta e cartão. Esse foi o diferencial.", author: "Claudio R." }
               ].map((dep, i) => (
                 <div key={i} className="bg-[#1A1A1A] border border-white/5 p-10 rounded-[2rem] flex flex-col justify-between">
-                  <p className="text-lg leading-relaxed text-white/90 font-medium mb-8">"{dep.text}"</p>
+                  <p className="text-lg leading-relaxed text-white/90 font-medium mb-8">&quot;{dep.text}&quot;</p>
                   <p className="text-text-secondaryDark font-bold">— {dep.author}</p>
                 </div>
               ))}

@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       paymentUrl: paymentLink 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Asaas Checkout Error:', error);
     return NextResponse.json({ error: 'Erro interno ao processar assinatura.' }, { status: 500 });
   }

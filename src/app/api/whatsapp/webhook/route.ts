@@ -16,7 +16,7 @@ export async function POST(request: Request) {
         const phone_number = contact.wa_id;
         
         let userMessage = "";
-        let imageUrl = undefined;
+        const imageUrl = undefined;
 
         if (message.type === "text") {
           userMessage = message.text.body;

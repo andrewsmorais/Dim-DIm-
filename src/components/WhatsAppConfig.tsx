@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Smartphone, CheckCircle, Copy, MessageCircle } from "lucide-react";
+import { CheckCircle, Copy, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function WhatsAppConfig() {
@@ -50,11 +50,11 @@ export function WhatsAppConfig() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="bg-white/5 p-3 rounded-lg border border-white/5">
             <p className="text-xs text-white/50 mb-1">Exemplo 1 (Gasto)</p>
-            <p className="text-sm italic">"Comprei um lanche por 35 no cartão"</p>
+            <p className="text-sm italic">&quot;Comprei um lanche por 35 no cartão&quot;</p>
           </div>
           <div className="bg-white/5 p-3 rounded-lg border border-white/5">
             <p className="text-xs text-white/50 mb-1">Exemplo 2 (Entrada)</p>
-            <p className="text-sm italic">"Caiu o salário de 4200"</p>
+            <p className="text-sm italic">&quot;Caiu o salário de 4200&quot;</p>
           </div>
         </div>
       </div>
