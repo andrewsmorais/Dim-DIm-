@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const token = searchParams.get("hub.verify_token");
     const challenge = searchParams.get("hub.challenge");
 
-    const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
+    const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN;
 
     if (mode === "subscribe" && token === VERIFY_TOKEN) {
       return new NextResponse(challenge, { 
@@ -68,87 +68,36 @@ export async function POST(request: Request) {
 
       if (message && contact) {
         const phone_number = contact.wa_id;
-        
-        let userMessage = "";
-        const imageUrl = undefined;
+        const wamid = message.id; // Correct extraction of wamid
 
-        if (message.type === "text") {
-          userMessage = message.text.body;
-        } else if (message.type === "image") {
-          userMessage = "[FOTO RECEBIDA] Leia este recibo.";
-        } else if (message.type === "audio") {
-          userMessage = "[ÁUDIO RECEBIDO] O usuário enviou um áudio.";
-        } else {
-          return NextResponse.json({ success: true }); 
+        if (!wamid) {
+           return NextResponse.json({ error: "Missing message ID" }, { status: 400 });
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-        const aiResponse = await fetch(`${baseUrl}/api/ai/process-message`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: userMessage, imageUrl })
-        });
-        
-        const aiData = await aiResponse.json();
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
 
-        if (aiData.success && aiData.data) {
-          const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-          );
+        // Atomic Insert into the Queue
+        const { error: dbError } = await supabase
+          .from('whatsapp_inbox')
+          .insert({
+            wamid: wamid,
+            phone_number: phone_number,
+            raw_payload: body
+          });
 
-          // EXACT MATCH FOR SECURITY
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('whatsapp_number', phone_number)
-            .single();
-
-          if (profile) {
-            const { data: categoryData } = await supabase
-              .from('categories')
-              .select('id')
-              .ilike('name', aiData.data.category)
-              .single();
-
-            await supabase.from('transactions').insert({
-              user_id: profile.id,
-              amount: aiData.data.amount,
-              description: aiData.data.description,
-              category_id: categoryData?.id || null,
-              type: aiData.data.type,
-              date: aiData.data.date,
-              origin: 'whatsapp'
-            });
-
-            await supabase.from('chat_history').insert([
-              { user_id: profile.id, message_role: 'user', content: userMessage },
-              { user_id: profile.id, message_role: 'assistant', content: aiData.reply }
-            ]);
+        if (dbError) {
+          // If the error is a UNIQUE constraint violation (code 23505), it's a duplicate retry from Meta.
+          // We must return 200 OK to stop Meta from retrying.
+          if (dbError.code === '23505') {
+             console.log(`Duplicate webhook received for wamid: ${wamid}. Ignoring.`);
           } else {
-            aiData.reply = "Seu número não está cadastrado. Acesse o painel do Grana Smart e ative seu WhatsApp! 📱";
+             console.error("Queue insert error:", dbError);
+             return NextResponse.json({ error: "Database error" }, { status: 500 });
           }
         }
-
-        const WA_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
-        const WA_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-
-        if (WA_TOKEN && WA_PHONE_ID) {
-          await fetch(`https://graph.facebook.com/v17.0/${WA_PHONE_ID}/messages`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${WA_TOKEN}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              messaging_product: "whatsapp",
-              to: phone_number,
-              type: "text",
-              text: { body: aiData.reply }
-            })
-          });
-        }
-
       }
       return NextResponse.json({ success: true }, { status: 200 });
     } else {

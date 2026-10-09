@@ -2,9 +2,30 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
+    // Internal Worker Auth (System-to-System)
+    const authHeader = request.headers.get('authorization');
+    const workerSecret = process.env.WORKER_SECRET;
+    const isInternal = workerSecret && authHeader === `Bearer ${workerSecret}`;
+
+    // Validar sessão de usuário logado (Web App Auth)
+    let isWebAuthenticated = false;
+    if (!isInternal) {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        isWebAuthenticated = true;
+      }
+    }
+
+    if (!isInternal && !isWebAuthenticated) {
+      console.error('[SECURITY] Unauthorized access attempt to AI endpoint.');
+      return NextResponse.json({ error: 'Unauthorized access' }, { status: 401 });
+    }
+
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
