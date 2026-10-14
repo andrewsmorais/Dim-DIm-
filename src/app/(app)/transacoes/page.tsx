@@ -99,7 +99,7 @@ export default function TransacoesPage() {
 
       <Card>
         {loading ? <Empty>Carregando...</Empty> : shown.length === 0 ? <Empty>Nenhuma transação neste período.</Empty> : (
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+          <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
             {shown.map((t) => (
               <li key={t.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0">

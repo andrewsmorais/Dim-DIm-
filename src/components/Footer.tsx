@@ -5,9 +5,7 @@ export function Footer() {
     <footer className="bg-brand-dark pt-20 pb-10 px-6 border-t border-brand-dark">
       <div className="max-w-7xl mx-auto flex flex-col items-center">
         <Link href="/" className="mb-12 flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-brand-dark font-serif italic text-xl font-light">
-            L
-          </div>
+          <img src="/logo.png" alt="Jakash" className="w-10 h-10 rounded-xl object-cover" />
           <span className="font-bold text-3xl tracking-tight text-white">
             Jakash
           </span>

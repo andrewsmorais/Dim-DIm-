@@ -75,7 +75,7 @@ export default function ContasPage() {
 
       <Card>
         {bills.length === 0 ? <Empty>Nenhuma conta pendente.</Empty> : (
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+          <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
             {bills.map((b) => {
               const d = daysUntil(b.due_date);
               const label = d < 0 ? `Vencida há ${-d} dia(s)` : d === 0 ? "Vence hoje" : `Vence em ${d} dia(s)`;

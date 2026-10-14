@@ -105,7 +105,7 @@ export default function DividasPage() {
 
       <Card className="mb-6">
         {debts.length === 0 ? <Empty>Nenhuma dívida cadastrada. 🎉</Empty> : (
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+          <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
             {debts.map((d) => (
               <li key={d.id} className="py-3 flex flex-wrap items-center justify-between gap-3">
                 <div>

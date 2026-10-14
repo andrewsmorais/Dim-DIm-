@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { InstallButton } from "@/components/PWA";
 import {
   Home, Send, FileText, Gauge, CalendarClock, Landmark, Target, ShieldCheck,
   Calculator, Settings, type LucideIcon,
@@ -49,14 +50,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  if (!mounted) return <div className="min-h-screen bg-[#EEF0FB] dark:bg-gray-900" />;
+  if (!mounted) return <div className="min-h-screen bg-[#EEF0FB] dark:bg-black" />;
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#EEF0FB] via-[#E4E8FA] to-[#EADFFB] dark:from-gray-900 dark:to-gray-900 flex flex-col md:flex-row font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-[#EEF0FB] via-[#E4E8FA] to-[#EADFFB] dark:from-black dark:via-black dark:to-black flex flex-col md:flex-row font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
       {/* Sidebar - Desktop */}
-      <aside className="w-64 bg-white/70 dark:bg-gray-800 backdrop-blur-xl hidden md:flex flex-col h-screen sticky top-0 rounded-r-[32px] shadow-[0_8px_30px_rgba(91,91,240,0.10)] z-20 border-r border-white/80 dark:border-gray-700">
+      <aside className="w-64 bg-white/70 dark:bg-[#0B0B0B] backdrop-blur-xl hidden md:flex flex-col h-screen sticky top-0 rounded-r-[32px] shadow-[0_8px_30px_rgba(91,91,240,0.10)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.45)] z-20 border-r border-white/80 dark:border-white/5">
         <div className="p-8 flex items-center gap-3">
           <img src="/logo.png" alt="Jakash" className="w-10 h-10 rounded-xl object-cover" />
           <span className="font-bold text-lg text-black dark:text-white tracking-tight">Jakash</span>
@@ -75,8 +76,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       className={`flex items-center gap-3 px-4 py-3 rounded-full transition-colors ${
                         active
-                          ? "bg-gradient-to-r from-brand-dark to-brand-accent text-white font-bold shadow-lg shadow-brand-dark/30"
-                          : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                          ? "bg-gradient-to-r from-brand-dark to-brand-accent text-white font-bold shadow-lg shadow-brand-dark/30 dark:from-[#8B5CFF] dark:to-[#8B5CFF] dark:shadow-none"
+                          : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#262626] hover:text-gray-900 dark:hover:text-white"
                       }`}
                     >
                       <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
@@ -88,10 +89,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </div>
+        <div className="p-6"><InstallButton className="w-full" /></div>
       </aside>
 
       {/* Navegação - Mobile */}
-      <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-gray-800 backdrop-blur-xl shadow-sm">
+      <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-[#0B0B0B] backdrop-blur-xl shadow-sm">
         <div className="flex items-center gap-2 px-4 pt-3">
           <img src="/logo.png" alt="Jakash" className="w-8 h-8 rounded-lg object-cover" />
           <span className="font-bold text-black dark:text-white">Jakash</span>
@@ -104,7 +106,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-bold ${
-                  active ? "bg-gradient-to-r from-brand-dark to-brand-accent text-white" : "bg-white/70 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                  active ? "bg-gradient-to-r from-brand-dark to-brand-accent dark:from-[#8B5CFF] dark:to-[#8B5CFF] text-white" : "bg-white/70 dark:bg-[#262626] text-gray-600 dark:text-gray-300"
                 }`}
               >
                 <item.icon size={16} />

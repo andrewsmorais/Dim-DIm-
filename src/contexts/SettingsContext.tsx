@@ -49,7 +49,6 @@ const translations = {
     "settings.appearance": "Aparência",
     "settings.theme.light": "Claro",
     "settings.theme.dark": "Escuro",
-    "settings.theme.system": "Sistema",
     "settings.language": "Idioma",
     "settings.language.pt": "Português (Brasil)",
     "settings.language.en": "Inglês",
@@ -92,7 +91,6 @@ const translations = {
     "settings.appearance": "Appearance",
     "settings.theme.light": "Light",
     "settings.theme.dark": "Dark",
-    "settings.theme.system": "System",
     "settings.language": "Language",
     "settings.language.pt": "Portuguese (Brazil)",
     "settings.language.en": "English",
@@ -135,7 +133,6 @@ const translations = {
     "settings.appearance": "Apariencia",
     "settings.theme.light": "Claro",
     "settings.theme.dark": "Oscuro",
-    "settings.theme.system": "Sistema",
     "settings.language": "Idioma",
     "settings.language.pt": "Portugués (Brasil)",
     "settings.language.en": "Inglés",
@@ -172,7 +169,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
+    <NextThemesProvider attribute="class" defaultTheme="light" enableSystem={false} themes={["light", "dark"]} storageKey="jakash-theme">
       <SettingsContext.Provider value={{ language, setLanguage, t }}>
         {children}
       </SettingsContext.Provider>
