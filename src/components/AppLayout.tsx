@@ -43,7 +43,7 @@ const SECTIONS: Section[] = [
     items: [
       { icon: Sparkles, label: "Chat IA", href: "/chat" },
       { icon: Calculator, label: "Simulador", href: "/simulador" },
-      { icon: FileUp, label: "Importar extrato", href: "/importar" },
+      { icon: FileUp, label: "Importar arquivo", href: "/importar" },
       { icon: Settings, label: "Configurações", href: "/configuracoes" },
     ],
   },

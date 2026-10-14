@@ -11,7 +11,7 @@ export type ParsedRow = {
 };
 
 export type ParseResult = {
-  format: "ofx" | "csv";
+  format: "ofx" | "csv" | "xlsx" | "ai";
   kind?: "bank" | "card"; // só o OFX informa
   rows: ParsedRow[];
   skipped: number; // linhas sem data/valor (cabeçalhos, saldos, totais)
@@ -244,11 +244,11 @@ export function parseCSV(text: string): ParseResult {
   return { format: "csv", rows, skipped };
 }
 
-/** Lê o arquivo enviado (OFX ou CSV). PDF não é suportado. */
+/** Lê OFX ou CSV. PDF, foto e planilha passam por lib/fileImport. */
 export function parseStatement(buf: ArrayBuffer): ParseResult {
   const head = new Uint8Array(buf.slice(0, 5));
   if (head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46) {
-    throw new Error("PDF ainda não é suportado. No app ou site do seu banco, baixe o extrato/fatura em OFX ou CSV.");
+    throw new Error("Este PDF precisa ser lido pela IA. Envie-o pela tela de importação.");
   }
   const text = decodeText(buf);
   const res = /<OFX>|<STMTTRN>/i.test(text) ? parseOFX(text) : parseCSV(text);
