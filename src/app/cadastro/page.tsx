@@ -49,11 +49,6 @@ export default function CadastroPage() {
 
   return (
     <AuthShell title="Crie sua conta">
-      <div className="space-y-3">
-        <GoogleButton onClick={() => social("google")} busy={busy} />
-        <AppleButton onClick={() => social("apple")} busy={busy} />
-      </div>
-      <Divider />
       <form onSubmit={submit} className="space-y-5">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-600 mb-1.5">Nome completo</label>
@@ -70,6 +65,11 @@ export default function CadastroPage() {
         {error && <Notice kind="error">{error}</Notice>}
         <button type="submit" disabled={busy} className={authBtn}>{busy ? "Criando..." : "Cadastrar"}</button>
       </form>
+      <Divider />
+      <div className="space-y-3">
+        <GoogleButton onClick={() => social("google")} busy={busy} />
+        <AppleButton onClick={() => social("apple")} busy={busy} />
+      </div>
       <div className="mt-8 text-center text-sm font-medium text-gray-500">
         Já tem uma conta? <Link href="/login" className="text-[#00A152] hover:underline">Entrar</Link>
       </div>
