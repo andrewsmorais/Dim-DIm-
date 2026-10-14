@@ -60,42 +60,51 @@ export async function POST(request: Request) {
     const body = JSON.parse(rawBody);
 
     if (body.object === "whatsapp_business_account") {
-      const entry = body.entry?.[0];
-      const changes = entry?.changes?.[0];
-      const value = changes?.value;
-      const message = value?.messages?.[0];
-      const contact = value?.contacts?.[0];
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
 
-      if (message && contact) {
-        const phone_number = contact.wa_id;
-        const wamid = message.id; // Correct extraction of wamid
+      // A Meta pode agrupar várias mensagens (e vários entries/changes) num único POST.
+      for (const entry of body.entry ?? []) {
+        for (const change of entry?.changes ?? []) {
+          const value = change?.value;
+          for (const message of value?.messages ?? []) {
+            const wamid = message?.id;
+            const phone_number = value?.contacts?.[0]?.wa_id ?? message?.from;
 
-        if (!wamid) {
-           return NextResponse.json({ error: "Missing message ID" }, { status: 400 });
-        }
+            if (!wamid || !phone_number) {
+              console.warn("WhatsApp webhook: mensagem sem id ou remetente. Ignorando.");
+              continue;
+            }
 
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!
-        );
+            // raw_payload guarda SÓ esta mensagem, no mesmo formato que o worker já lê
+            // (entry[0].changes[0].value.messages[0]).
+            const singlePayload = {
+              object: body.object,
+              entry: [{
+                id: entry.id,
+                changes: [{
+                  field: change.field,
+                  value: { ...value, messages: [message] },
+                }],
+              }],
+            };
 
-        // Atomic Insert into the Queue
-        const { error: dbError } = await supabase
-          .from('whatsapp_inbox')
-          .insert({
-            wamid: wamid,
-            phone_number: phone_number,
-            raw_payload: body
-          });
+            // Atomic Insert into the Queue
+            const { error: dbError } = await supabase
+              .from('whatsapp_inbox')
+              .insert({ wamid, phone_number, raw_payload: singlePayload });
 
-        if (dbError) {
-          // If the error is a UNIQUE constraint violation (code 23505), it's a duplicate retry from Meta.
-          // We must return 200 OK to stop Meta from retrying.
-          if (dbError.code === '23505') {
-             console.log(`Duplicate webhook received for wamid: ${wamid}. Ignoring.`);
-          } else {
-             console.error("Queue insert error:", dbError);
-             return NextResponse.json({ error: "Database error" }, { status: 500 });
+            if (dbError) {
+              // 23505 = wamid duplicado (reenvio da Meta): ok, responde 200 para ela parar de tentar.
+              if (dbError.code === '23505') {
+                console.log(`Duplicate webhook received for wamid: ${wamid}. Ignoring.`);
+              } else {
+                console.error("Queue insert error:", dbError);
+                return NextResponse.json({ error: "Database error" }, { status: 500 });
+              }
+            }
           }
         }
       }
