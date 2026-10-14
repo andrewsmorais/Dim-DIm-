@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
 interface CheckoutButtonProps {
-  userEmail?: string;
-  userName?: string;
-  cpfCnpj?: string;
-  whatsapp?: string;
+  plan: "cpf" | "mei";
+  cpfCnpj: string;
   className?: string;
 }
 
-export function CheckoutButton({ userEmail, userName, cpfCnpj, whatsapp, className }: CheckoutButtonProps) {
+const PLAN_LABEL = { cpf: "Assinar por R$ 19,90", mei: "Assinar por R$ 39,90" } as const;
+
+export function CheckoutButton({ plan, cpfCnpj, className }: CheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,18 +21,11 @@ export function CheckoutButton({ userEmail, userName, cpfCnpj, whatsapp, classNa
       setLoading(true);
       setError(null);
 
-      // No mundo real, usaríamos os dados reais do usuário vindo do Supabase Auth
-      const payload = {
-        email: userEmail || "teste@granasmart.com",
-        name: userName || "Usuário Teste",
-        cpfCnpj: cpfCnpj || "",
-        whatsapp_number: whatsapp || ""
-      };
-
+      // Usuário vem da sessão no servidor; o valor vem do plano no servidor.
       const res = await fetch("/api/asaas/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ plan, cpfCnpj }),
       });
 
       const data = await res.json();
@@ -66,7 +59,7 @@ export function CheckoutButton({ userEmail, userName, cpfCnpj, whatsapp, classNa
             Processando...
           </>
         ) : (
-          "Assinar agora por R$ 19,90"
+          PLAN_LABEL[plan]
         )}
       </Button>
       {error && (

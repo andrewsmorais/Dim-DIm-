@@ -1,54 +1,55 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
+import { createAdminClient } from '@/lib/supabase/admin';
+
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
+}
 
 export async function POST(request: Request) {
   try {
-    const ASAAS_WEBHOOK_TOKEN = process.env.ASAAS_WEBHOOK_TOKEN;
-    const authHeader = request.headers.get('asaas-access-token');
+    const expected = process.env.ASAAS_WEBHOOK_TOKEN;
+    const received = request.headers.get('asaas-access-token') ?? '';
 
-    // Validação de Segurança
-    if (!ASAAS_WEBHOOK_TOKEN || authHeader !== ASAAS_WEBHOOK_TOKEN) {
+    if (!expected || !safeEqual(received, expected)) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { event, payment } = body;
+    const event: string = body.event;
+    const supabase = createAdminClient();
 
-    // Inicializa Supabase Admin (Service Role)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Eventos de cobrança trazem body.payment; eventos de assinatura trazem body.subscription
+    const customerId: string | undefined = body.payment?.customer ?? body.subscription?.customer;
+    if (!customerId) {
+      return NextResponse.json({ received: true, ignored: 'sem customer' }, { status: 200 });
+    }
+
+    let update: Record<string, unknown> | null = null;
 
     if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') {
-      // Busca o profile atrelado ao customer do Asaas
-      const customerId = payment.customer;
-      
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('asaas_customer_id', customerId)
-        .single();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+      update = { subscription_status: 'active', subscription_expires_at: expiresAt.toISOString() };
+    } else if (event === 'PAYMENT_OVERDUE') {
+      update = { subscription_status: 'past_due' };
+    } else if (event === 'PAYMENT_REFUNDED' || event === 'SUBSCRIPTION_DELETED' || event === 'SUBSCRIPTION_INACTIVATED') {
+      update = { subscription_status: 'canceled' };
+    }
 
-      if (profile) {
-        // Renova a assinatura por +30 dias
-        const newExpiration = new Date();
-        newExpiration.setDate(newExpiration.getDate() + 30);
-
-        await supabase
-          .from('profiles')
-          .update({ 
-            subscription_status: 'active',
-            subscription_expires_at: newExpiration.toISOString()
-          })
-          .eq('id', profile.id);
-      }
-    } 
-    else if (event === 'PAYMENT_OVERDUE') {
-      const customerId = payment.customer;
-      await supabase
+    if (update) {
+      const { error } = await supabase
         .from('profiles')
-        .update({ subscription_status: 'past_due' })
+        .update(update)
         .eq('asaas_customer_id', customerId);
+
+      // Erro => 500 para o Asaas tentar de novo
+      if (error) {
+        console.error('Asaas webhook: falha ao atualizar perfil', error);
+        return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ received: true }, { status: 200 });

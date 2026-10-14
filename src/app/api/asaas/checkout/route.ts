@@ -1,92 +1,130 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { PLANS, isPlanId } from '@/lib/plans';
+
+// Sandbox por padrão. Em produção defina ASAAS_API_URL=https://api.asaas.com/v3
+const ASAAS_URL = process.env.ASAAS_API_URL || 'https://sandbox.asaas.com/api/v3';
+
+type AsaasError = { description?: string };
+type AsaasResponse = {
+  id?: string;
+  data?: Array<{ id?: string; invoiceUrl?: string }>;
+  errors?: AsaasError[];
+};
+
+async function asaas(path: string, apiKey: string, init?: RequestInit): Promise<AsaasResponse> {
+  const res = await fetch(`${ASAAS_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      access_token: apiKey,
+      ...(init?.headers || {}),
+    },
+  });
+  return (await res.json()) as AsaasResponse;
+}
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { email, name, cpfCnpj, whatsapp_number } = body;
-
-    if (!email || !name) {
-      return NextResponse.json({ error: 'Email e Nome são obrigatórios' }, { status: 400 });
+    // 1. Exige usuário logado
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !user.email) {
+      return NextResponse.json({ error: 'Faça login para assinar' }, { status: 401 });
     }
 
-    const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
-    if (!ASAAS_API_KEY) {
+    const apiKey = process.env.ASAAS_API_KEY;
+    if (!apiKey) {
       return NextResponse.json({ error: 'Configuração do Asaas ausente no servidor' }, { status: 500 });
     }
 
-    // 1. Tentar encontrar ou criar cliente no Asaas
-    let customerId = '';
-    
-    // Busca cliente por email
-    const searchRes = await fetch(`https://sandbox.asaas.com/api/v3/customers?email=${email}`, {
-      headers: { 'access_token': ASAAS_API_KEY }
-    });
-    const searchData = await searchRes.json();
-
-    if (searchData.data && searchData.data.length > 0) {
-      customerId = searchData.data[0].id;
-    } else {
-      // Cria novo cliente
-      const createCustomerRes = await fetch('https://sandbox.asaas.com/api/v3/customers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'access_token': ASAAS_API_KEY
-        },
-        body: JSON.stringify({
-          name: name,
-          email: email,
-          cpfCnpj: cpfCnpj,
-          mobilePhone: whatsapp_number
-        })
-      });
-      const newCustomer = await createCustomerRes.json();
-      if (newCustomer.errors) {
-        return NextResponse.json({ error: newCustomer.errors[0].description }, { status: 400 });
-      }
-      customerId = newCustomer.id;
+    // 2. Plano e CPF/CNPJ (o valor NUNCA vem do navegador)
+    const body = await request.json();
+    const planId: unknown = body.plan;
+    if (!isPlanId(planId)) {
+      return NextResponse.json({ error: 'Plano inválido' }, { status: 400 });
+    }
+    const plan = PLANS[planId];
+    const cpfCnpj = String(body.cpfCnpj ?? '').replace(/\D/g, '');
+    if (cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
+      return NextResponse.json({ error: 'Informe um CPF ou CNPJ válido' }, { status: 400 });
     }
 
-    // 2. Criar a assinatura (R$ 19,90)
-    const nextDueDate = new Date();
-    nextDueDate.setDate(nextDueDate.getDate() + 7); // 7 dias de trial
+    const admin = createAdminClient();
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('full_name, whatsapp_number, asaas_customer_id, subscription_status')
+      .eq('id', user.id)
+      .single();
 
-    const subscriptionRes = await fetch('https://sandbox.asaas.com/api/v3/subscriptions', {
+    if (!profile) {
+      return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 });
+    }
+    if (profile.subscription_status === 'active') {
+      return NextResponse.json({ error: 'Você já tem uma assinatura ativa' }, { status: 409 });
+    }
+
+    // 3. Cliente no Asaas (reaproveita o do perfil; senão busca por externalReference; senão cria)
+    let customerId: string | undefined = profile.asaas_customer_id ?? undefined;
+    if (!customerId) {
+      const found = await asaas(`/customers?externalReference=${encodeURIComponent(user.id)}`, apiKey);
+      customerId = found.data?.[0]?.id;
+    }
+    if (!customerId) {
+      const created = await asaas('/customers', apiKey, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: profile.full_name,
+          email: user.email,
+          cpfCnpj,
+          mobilePhone: profile.whatsapp_number ?? undefined,
+          externalReference: user.id,
+        }),
+      });
+      if (created.errors?.length || !created.id) {
+        return NextResponse.json({ error: created.errors?.[0]?.description || 'Não foi possível criar o cliente' }, { status: 400 });
+      }
+      customerId = created.id;
+    }
+
+    // 4. Grava o vínculo ANTES de criar a assinatura (o webhook acha o perfil por asaas_customer_id)
+    const { error: saveError } = await admin
+      .from('profiles')
+      .update({ asaas_customer_id: customerId, cpf_cnpj: cpfCnpj, subscription_plan: planId })
+      .eq('id', user.id);
+    if (saveError) {
+      console.error('Checkout: falha ao salvar perfil', saveError);
+      return NextResponse.json({ error: 'Erro interno ao processar assinatura.' }, { status: 500 });
+    }
+
+    // 5. Assinatura mensal com 7 dias de teste
+    const nextDueDate = new Date();
+    nextDueDate.setDate(nextDueDate.getDate() + 7);
+    const subscription = await asaas('/subscriptions', apiKey, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'access_token': ASAAS_API_KEY
-      },
       body: JSON.stringify({
         customer: customerId,
-        billingType: "UNDEFINED", // Deixa o usuário escolher (Cartão, Pix, Boleto)
-        value: 19.90,
+        billingType: 'UNDEFINED', // usuário escolhe Pix, cartão ou boleto
+        value: plan.value,
         nextDueDate: nextDueDate.toISOString().split('T')[0],
-        cycle: "MONTHLY",
-        description: "Assinatura Grana Smart - Plano Zap"
-      })
+        cycle: 'MONTHLY',
+        description: `Assinatura ${plan.name}`,
+        externalReference: user.id,
+      }),
     });
-
-    const subscriptionData = await subscriptionRes.json();
-    if (subscriptionData.errors) {
-      return NextResponse.json({ error: subscriptionData.errors[0].description }, { status: 400 });
+    if (subscription.errors?.length || !subscription.id) {
+      return NextResponse.json({ error: subscription.errors?.[0]?.description || 'Não foi possível criar a assinatura' }, { status: 400 });
     }
 
-    // Retorna a URL de pagamento ou invoiceUrl (no Asaas, invoiceUrl da primeira cobrança)
-    // O Asaas não retorna a URL do checkout da assinatura diretamente, 
-    // mas retorna o ID. Você precisa redirecionar o usuário para gerenciar ou pagar a primeira fatura.
-    // Em produção real, você usa invoiceUrl ou redireciona pro checkout configurado.
-    
-    // Aqui enviamos a URL para onde a interface deverá redirecionar.
-    // Caso seja gerado um link de fatura avulso ou link da assinatura.
-    const paymentLink = `https://sandbox.asaas.com/c/${subscriptionData.id}`;
+    // 6. Link real da primeira cobrança (invoiceUrl)
+    const payments = await asaas(`/subscriptions/${subscription.id}/payments`, apiKey);
+    const paymentUrl = payments.data?.[0]?.invoiceUrl;
+    if (!paymentUrl) {
+      return NextResponse.json({ error: 'Cobrança ainda sendo gerada. Tente novamente em instantes.' }, { status: 502 });
+    }
 
-    return NextResponse.json({ 
-      success: true, 
-      subscriptionId: subscriptionData.id,
-      paymentUrl: paymentLink 
-    });
-
+    return NextResponse.json({ success: true, subscriptionId: subscription.id, paymentUrl });
   } catch (error: unknown) {
     console.error('Asaas Checkout Error:', error);
     return NextResponse.json({ error: 'Erro interno ao processar assinatura.' }, { status: 500 });

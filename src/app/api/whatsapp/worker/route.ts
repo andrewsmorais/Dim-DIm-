@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       ai_response = await aiFetchRes.json();
 
       // Persist AI Response using fencing token and strict lease validation
-      const { error: updateAiError, count: aiUpdateCount } = await supabase
+      const { error: updateAiError, data: aiUpdated } = await supabase
         .from('whatsapp_inbox')
         .update({ ai_response })
         .eq('id', taskId)
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
         .gte('locked_until', new Date().toISOString())
         .select('id');
 
-      if (updateAiError || !aiUpdateCount || aiUpdateCount === 0) {
+      if (updateAiError || !aiUpdated || aiUpdated.length === 0) {
         return NextResponse.json({ error: "Lease expired or task lost at Checkpoint 1" }, { status: 409 });
       }
     }
@@ -121,9 +121,9 @@ export async function POST(request: Request) {
            ]);
            if (chatError) return await failTask(`Chat commit failed: ${chatError.message}`);
            
-           const { error: updateSyncError, count: syncCount } = await supabase.from('whatsapp_inbox').update({ db_synced: true })
+           const { error: updateSyncError, data: syncUpdated } = await supabase.from('whatsapp_inbox').update({ db_synced: true })
             .eq('id', taskId).eq('worker_id', workerId).gte('locked_until', new Date().toISOString()).select('id');
-           if (updateSyncError || !syncCount || syncCount === 0) return NextResponse.json({ error: "Lease expired at CP2" }, { status: 409 });
+           if (updateSyncError || !syncUpdated || syncUpdated.length === 0) return NextResponse.json({ error: "Lease expired at CP2" }, { status: 409 });
            
            db_synced = true;
         } else {
@@ -198,7 +198,7 @@ export async function POST(request: Request) {
       }
 
       // Mark as completed securely
-      const { count: finishCount } = await supabase
+      const { data: finished } = await supabase
         .from('whatsapp_inbox')
         .update({ wa_replied: true, status: 'completed', worker_id: null, locked_until: null })
         .eq('id', taskId)
@@ -206,7 +206,7 @@ export async function POST(request: Request) {
         .gte('locked_until', new Date().toISOString())
         .select('id');
         
-      if (!finishCount || finishCount === 0) {
+      if (!finished || finished.length === 0) {
          console.warn(`[Worker ${workerId}] Task finished but lease was lost at Checkpoint 3.`);
       }
     }
