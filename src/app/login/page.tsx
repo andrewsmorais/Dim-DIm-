@@ -37,11 +37,6 @@ function LoginForm() {
 
   return (
     <AuthShell title="Acesse sua conta">
-      <div className="space-y-3">
-        <GoogleButton onClick={() => social("google")} busy={busy} />
-        <AppleButton onClick={() => social("apple")} busy={busy} />
-      </div>
-      <Divider />
       <form onSubmit={submit} className="space-y-5">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-1.5">E-mail</label>
@@ -58,6 +53,11 @@ function LoginForm() {
         {info && <Notice kind="ok">{info}</Notice>}
         <button type="submit" disabled={busy} className={authBtn}>{busy ? "Entrando..." : "Entrar"}</button>
       </form>
+      <Divider />
+      <div className="space-y-3">
+        <GoogleButton onClick={() => social("google")} busy={busy} />
+        <AppleButton onClick={() => social("apple")} busy={busy} />
+      </div>
       <div className="mt-8 text-center text-sm font-medium text-gray-500">
         Não tem uma conta? <Link href="/cadastro" className="text-[#00A152] hover:underline">Criar conta</Link>
       </div>
