@@ -10,7 +10,7 @@ import { ReferralSync } from "@/components/Referral";
 import { useUsageType } from "@/lib/useUsageType";
 import {
   Home, Send, FileText, Gauge, CalendarClock, Landmark, Target, ShieldCheck,
-  Calculator, FileUp, Briefcase, Gift, CalendarRange, Settings, Landmark as Bank, Plus, Menu as MenuIcon, CreditCard, TrendingUp, Sparkles, type LucideIcon,
+  Calculator, FileUp, Briefcase, CalendarRange, Settings, Landmark as Bank, Plus, Menu as MenuIcon, CreditCard, TrendingUp, Sparkles, type LucideIcon,
 } from "lucide-react";
 
 type Item = { icon: LucideIcon; label: string; href: string };
@@ -33,7 +33,7 @@ const SECTIONS: Section[] = [
       { icon: CalendarRange, label: "Planejamento", href: "/planejamento" },
       { icon: Gauge, label: "Limites", href: "/limites" },
       { icon: CalendarClock, label: "Contas a pagar", href: "/contas" },
-      { icon: Landmark, label: "Dívidas", href: "/dividas" },
+      { icon: Landmark, label: "Despesas", href: "/dividas" },
       { icon: Target, label: "Objetivos", href: "/metas" },
       { icon: ShieldCheck, label: "Reserva", href: "/reserva" },
       { icon: TrendingUp, label: "Investimentos", href: "/investimentos" },
@@ -45,7 +45,6 @@ const SECTIONS: Section[] = [
       { icon: Sparkles, label: "Chat IA", href: "/chat" },
       { icon: Calculator, label: "Simulador", href: "/simulador" },
       { icon: FileUp, label: "Importar extrato", href: "/importar" },
-      { icon: Gift, label: "Indicar amigos", href: "/configuracoes/indicar" },
       { icon: Settings, label: "Configurações", href: "/configuracoes" },
     ],
   },
