@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, ChevronRight, Database, Globe, LogOut, MessageCircle, Palette, Sparkles, User, Users, type LucideIcon } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { BackTitle, Card } from "@/components/ui/page";
-import { InstallAppButton } from "@/components/PWA";
 import { InstallGuide } from "@/components/InstallGuide";
 
 const ITEMS: { icon: LucideIcon; title: string; desc: string; href?: string; soon?: boolean }[] = [
@@ -23,7 +21,6 @@ const ITEMS: { icon: LucideIcon; title: string; desc: string; href?: string; soo
 export default function ConfiguracoesPage() {
   const router = useRouter();
   const { supabase } = useSupabase();
-  const [signal, setSignal] = useState(0);
 
   async function logout() {
     await supabase.auth.signOut();
@@ -33,15 +30,6 @@ export default function ConfiguracoesPage() {
   return (
     <div className="max-w-2xl mx-auto pb-20">
       <BackTitle title="Configurações" subtitle="Ajuste o Jakash do seu jeito." href="/menu" />
-      <Card className="mb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-          <div>
-            <p className="font-extrabold">Instale o Jakash no celular</p>
-            <p className="text-xs text-gray-500">Abre com um toque, em tela cheia, como um app.</p>
-          </div>
-          <InstallAppButton className="sm:min-w-[170px]" onFallback={() => { setSignal((n) => n + 1); document.getElementById("como-instalar")?.scrollIntoView({ behavior: "smooth", block: "start" }); }} />
-        </div>
-      </Card>
       <Card className="!p-2">
         <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
           {ITEMS.map((it) => {
@@ -59,7 +47,7 @@ export default function ConfiguracoesPage() {
           })}
         </ul>
       </Card>
-      <Card className="mt-4"><InstallGuide openSignal={signal} /></Card>
+      <Card className="mt-4"><InstallGuide /></Card>
       <button onClick={logout} className="mt-6 w-full flex items-center justify-center gap-2 rounded-full border border-red-500/30 text-red-500 font-bold py-3 text-sm"><LogOut size={16} /> Sair da conta</button>
     </div>
   );

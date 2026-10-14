@@ -64,20 +64,17 @@ export function PWARegister() {
 
 const btnCls = "flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid px-4 py-2.5 text-sm font-bold text-white";
 
-/** Botão do menu lateral: só aparece quando o navegador oferece a instalação direta. */
-export function InstallButton({ className = "" }: { className?: string }) {
-  const { canPrompt, prompt } = useInstall();
-  if (!canPrompt) return null;
-  return <button onClick={() => { void prompt(); }} className={`${btnCls} ${className}`}><Download size={16} /> Instalar app</button>;
-}
-
-/** Botão das Configurações: sempre aparece. Instala direto quando dá; senão leva ao passo a passo ilustrado. */
-export function InstallAppButton({ onFallback, className = "" }: { onFallback: () => void; className?: string }) {
+/** Botão das Configurações (fica embaixo do passo a passo). Instala direto quando o navegador permite; senão lembra de seguir os passos. */
+export function InstallAppButton({ className = "" }: { className?: string }) {
   const { canPrompt, installed, prompt } = useInstall();
+  const [hint, setHint] = useState(false);
   if (installed) return <p className={`text-sm font-bold text-brand-dark dark:text-brand-soft ${className}`}>✓ O Jakash já está instalado neste aparelho.</p>;
   return (
-    <button onClick={async () => { if (canPrompt) { const ok = await prompt(); if (!ok) onFallback(); } else onFallback(); }} className={`${btnCls} ${className}`}>
-      <Download size={16} /> Instalar app
-    </button>
+    <>
+      <button onClick={async () => { if (canPrompt) { const ok = await prompt(); if (!ok) setHint(true); } else setHint(true); }} className={`${btnCls} ${className}`}>
+        <Download size={16} /> Instalar app
+      </button>
+      {hint && <p role="status" className="text-xs text-gray-500 text-center max-w-xs">{canPrompt ? "Instalação cancelada. Você pode tentar de novo quando quiser." : "Este navegador não instala com um toque. Siga os passos acima."}</p>}
+    </>
   );
 }
