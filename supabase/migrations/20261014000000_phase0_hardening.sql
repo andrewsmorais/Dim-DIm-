@@ -31,3 +31,9 @@ CREATE INDEX IF NOT EXISTS idx_transactions_user_date
 --    (Os valores antigos zap/piloto/cnpj continuam no enum; nao da para remover valor de enum com seguranca.)
 ALTER TYPE public.subscription_plan ADD VALUE IF NOT EXISTS 'cpf';
 ALTER TYPE public.subscription_plan ADD VALUE IF NOT EXISTS 'mei';
+
+-- 7. Funcoes de gatilho nao devem ser chamaveis pela API, e precisam de search_path fixo.
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
+ALTER FUNCTION public.handle_new_user() SET search_path = public;
+ALTER FUNCTION public.update_updated_at_column() SET search_path = public;
+ALTER FUNCTION public.update_goal_current_amount() SET search_path = public;
