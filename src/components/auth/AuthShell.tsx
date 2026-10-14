@@ -32,6 +32,16 @@ export function GoogleButton({ onClick, busy }: { onClick: () => void; busy: boo
   );
 }
 
+export function AppleButton({ onClick, busy }: { onClick: () => void; busy: boolean }) {
+  return (
+    <button type="button" onClick={onClick} disabled={busy}
+      className="w-full h-12 flex items-center justify-center gap-3 rounded-full bg-black hover:bg-gray-900 disabled:opacity-60 font-semibold text-white transition-colors">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 1.43c0 1.14-.46 2.22-1.2 3-.8.86-2.1 1.52-3.17 1.43-.14-1.1.4-2.25 1.12-3 .8-.84 2.17-1.47 3.25-1.43zM20.5 17.3c-.55 1.27-.82 1.84-1.53 2.96-1 1.56-2.4 3.5-4.13 3.52-1.54.02-1.94-1-4.03-.99-2.09.01-2.53 1.01-4.07.99-1.73-.02-3.06-1.77-4.06-3.33C-.2 16.1-.5 10.9 1.2 8.3c1.2-1.85 3.1-2.93 4.88-2.93 1.82 0 2.96 1 4.46 1 1.46 0 2.35-1 4.45-1 1.58 0 3.26.86 4.46 2.35-3.92 2.15-3.28 7.74.55 9.58z"/></svg>
+      Continuar com Apple
+    </button>
+  );
+}
+
 export const Divider = () => (
   <div className="flex items-center gap-3 my-5 text-xs text-gray-400"><span className="flex-1 h-px bg-gray-200" />ou<span className="flex-1 h-px bg-gray-200" /></div>
 );

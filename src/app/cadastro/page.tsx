@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { AuthShell, authBtn, authInput, Divider, GoogleButton, Notice } from "@/components/auth/AuthShell";
+import { AuthShell, authBtn, authInput, Divider, AppleButton, GoogleButton, Notice } from "@/components/auth/AuthShell";
 import { authError } from "@/lib/authUtil";
 
 export default function CadastroPage() {
@@ -29,10 +29,10 @@ export default function CadastroPage() {
     setSent(true); setBusy(false);
   }
 
-  async function google() {
+  async function social(provider: "google" | "apple") {
     setBusy(true); setError("");
     const { error: err } = await createClient().auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: { redirectTo: `${window.location.origin}/auth/callback?next=/dashboard` },
     });
     if (err) { setError(authError(err.message)); setBusy(false); }
@@ -49,7 +49,10 @@ export default function CadastroPage() {
 
   return (
     <AuthShell title="Crie sua conta">
-      <GoogleButton onClick={google} busy={busy} />
+      <div className="space-y-3">
+        <GoogleButton onClick={() => social("google")} busy={busy} />
+        <AppleButton onClick={() => social("apple")} busy={busy} />
+      </div>
       <Divider />
       <form onSubmit={submit} className="space-y-5">
         <div>

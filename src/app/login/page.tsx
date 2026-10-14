@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { AuthShell, authBtn, authInput, Divider, GoogleButton, Notice } from "@/components/auth/AuthShell";
+import { AuthShell, authBtn, authInput, Divider, AppleButton, GoogleButton, Notice } from "@/components/auth/AuthShell";
 import { authError, safeNext } from "@/lib/authUtil";
 
 function LoginForm() {
@@ -26,10 +26,10 @@ function LoginForm() {
     router.refresh();
   }
 
-  async function google() {
+  async function social(provider: "google" | "apple") {
     setBusy(true); setError("");
     const { error: err } = await createClient().auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
     });
     if (err) { setError(authError(err.message)); setBusy(false); }
@@ -37,7 +37,10 @@ function LoginForm() {
 
   return (
     <AuthShell title="Acesse sua conta">
-      <GoogleButton onClick={google} busy={busy} />
+      <div className="space-y-3">
+        <GoogleButton onClick={() => social("google")} busy={busy} />
+        <AppleButton onClick={() => social("apple")} busy={busy} />
+      </div>
       <Divider />
       <form onSubmit={submit} className="space-y-5">
         <div>
