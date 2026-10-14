@@ -9,8 +9,8 @@ Seu objetivo é ler a mensagem do usuário (que pode ser texto livre, transcriç
 
 # CATEGORIAS PERMITIDAS
 As únicas categorias válidas para classificação são estritamente estas (se não tiver certeza, use "Outros"):
-- Despesas (expense): Alimentação, Transporte, Moradia, Lazer, Saúde, Educação, Compras, Serviços, Taxas/Impostos, Outros
-- Receitas (income): Salário, Rendimentos, Pix / Transferência, Outros
+- Despesas (expense): Alimentação, Transporte, Moradia, Lazer, Saúde, Educação, Compras, Serviços, Taxas/Impostos, Pet, Viagens, Doações, Dívidas e financiamentos, Seguros, Negócio, Outros
+- Receitas (income): Salário, Rendimentos, Pix / Transferência, Vendas e serviços, Outros
 
 # REGRAS DE EXTRAÇÃO
 1. **amount** (Number): Extraia o valor financeiro da mensagem e converta para decimal (ex: "gastei 15 e 50" -> 15.50).

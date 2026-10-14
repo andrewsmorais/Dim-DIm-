@@ -47,6 +47,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: "try{var a=localStorage.getItem('jakash-accent');if(a)document.documentElement.dataset.accent=a}catch(e){}" }} />
+      </head>
       <body className={`${jakarta.variable} font-sans antialiased overflow-x-hidden selection:bg-primary selection:text-white`}>
         <PWARegister />
         {children}

@@ -46,3 +46,27 @@ export function daysUntil(iso: string): number {
   const target = new Date(iso + "T00:00:00").getTime();
   return Math.round((target - today) / 86_400_000);
 }
+
+const MONTHS_PT = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+export function monthLabel(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  const name = MONTHS_PT[m - 1] ?? "";
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} de ${y}`;
+}
+
+export function shiftMonth(month: string, delta: number): string {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+}
+
+// Fração do mês já decorrida (0..1) para o marcador "Hoje"; 0 para meses futuros, 1 para passados.
+export function monthProgress(month: string): number {
+  const cur = currentMonth();
+  if (month < cur) return 1;
+  if (month > cur) return 0;
+  const d = new Date();
+  const days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return d.getDate() / days;
+}

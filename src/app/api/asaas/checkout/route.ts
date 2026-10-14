@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const { data: profile } = await admin
       .from('profiles')
-      .select('full_name, whatsapp_number, asaas_customer_id, subscription_status')
+      .select('full_name, whatsapp_number, asaas_customer_id, asaas_subscription_id, subscription_status')
       .eq('id', user.id)
       .single();
 
@@ -98,6 +98,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Erro interno ao processar assinatura.' }, { status: 500 });
     }
 
+    // Já existe assinatura em teste ou em aberto: devolve o link da cobrança em vez de criar outra
+    if (profile.asaas_subscription_id && ['trial', 'past_due', 'unpaid'].includes(String(profile.subscription_status))) {
+      const existing = await asaas(`/subscriptions/${profile.asaas_subscription_id}/payments`, apiKey);
+      const existingUrl = existing.data?.[0]?.invoiceUrl;
+      if (existingUrl) return NextResponse.json({ success: true, paymentUrl: existingUrl });
+    }
+
     // 5. Assinatura mensal com 7 dias de teste
     const nextDueDate = new Date();
     nextDueDate.setDate(nextDueDate.getDate() + 7);
@@ -116,6 +123,16 @@ export async function POST(request: Request) {
     if (subscription.errors?.length || !subscription.id) {
       return NextResponse.json({ error: subscription.errors?.[0]?.description || 'Não foi possível criar a assinatura' }, { status: 400 });
     }
+
+    // Guarda a assinatura e marca o período de teste (o webhook muda para "active" quando pagar)
+    await admin
+      .from('profiles')
+      .update({
+        asaas_subscription_id: subscription.id,
+        subscription_status: 'trial',
+        subscription_expires_at: nextDueDate.toISOString(),
+      })
+      .eq('id', user.id);
 
     // 6. Link real da primeira cobrança (invoiceUrl)
     const payments = await asaas(`/subscriptions/${subscription.id}/payments`, apiKey);

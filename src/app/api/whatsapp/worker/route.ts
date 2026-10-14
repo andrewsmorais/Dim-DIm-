@@ -172,6 +172,7 @@ export async function POST(request: Request) {
                     .from('categories')
                     .select('id')
                     .ilike('name', String(tx.category))
+                    .is('parent_id', null)
                     .or(`user_id.eq.${profile.id},is_default.eq.true`)
                     .limit(1);
                   categoryId = categoryData?.[0]?.id || null;

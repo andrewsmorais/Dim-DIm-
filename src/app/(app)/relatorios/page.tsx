@@ -17,16 +17,22 @@ export default function RelatoriosPage() {
   const load = useCallback(async () => {
     const { start, end } = monthRange(month);
     const [c, t] = await Promise.all([
-      supabase.from("categories").select("id,name"),
+      supabase.from("categories").select("id,name,parent_id"),
       supabase.from("transactions").select("description,amount,type,date,category_id").gte("date", start).lt("date", end).order("date"),
     ]);
     if (c.error || t.error) { setError("Não foi possível carregar o relatório."); return; }
     setError(null);
-    const names = new Map((c.data ?? []).map((x) => [x.id, x.name]));
+    const byId = new Map((c.data ?? []).map((x) => [x.id, x]));
+    const names = new Map((c.data ?? []).map((x) => [x.id, byId.get(x.parent_id ?? "")?.name ?? x.name]));
     setRows((t.data ?? []).map((x) => ({ description: x.description, amount: Number(x.amount), type: x.type, date: x.date, category: names.get(x.category_id) ?? "Sem categoria" })));
   }, [supabase, month]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
+  useEffect(() => {
+    const h = () => load();
+    window.addEventListener("jakash:changed", h);
+    return () => window.removeEventListener("jakash:changed", h);
+  }, [load]);
 
   const income = rows.filter((r) => r.type === "income").reduce((s, r) => s + r.amount, 0);
   const expense = rows.filter((r) => r.type === "expense").reduce((s, r) => s + r.amount, 0);

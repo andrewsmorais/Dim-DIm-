@@ -31,7 +31,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen font-sans bg-[#EEF0FB]">
+    <div className="flex flex-col min-h-screen font-sans bg-[var(--bg-1)]">
       <Header />
 
       <main>
@@ -54,7 +54,7 @@ export default function LandingPage() {
               </h1>
               
               <p className="text-lg md:text-xl text-gray-500 mb-10 leading-relaxed max-w-xl font-medium">
-                Seu novo assistente financeiro com Inteligência Artificial. O Jakash importa dados via Open Finance, categoriza gastos automaticamente e te avisa no WhatsApp sobre faturas e saldo.
+                Seu assistente financeiro com Inteligência Artificial. Mande “gastei 45 no mercado” no WhatsApp e o Jakash lança, categoriza e mostra no painel para onde vai o seu dinheiro.
               </p>
               
               <CTAButton text="Testar 7 dias grátis →" size="lg" className="h-16 px-10 text-lg w-full sm:w-auto" />
@@ -89,7 +89,7 @@ export default function LandingPage() {
         </section>
 
         {/* 3. SEÇÃO "QUEM FAZ" (Light/Gray) */}
-        <section className="py-24 px-6 bg-[#EEF0FB] text-gray-900">
+        <section className="py-24 px-6 bg-[var(--bg-1)] text-gray-900">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 fade-in-section">
             <div className="lg:w-1/2">
               <SectionBadge text="✓ QUEM FAZ" />
@@ -111,10 +111,10 @@ export default function LandingPage() {
                 jakash
               </div>
               <div className="bg-white border border-gray-100 shadow-sm p-8 rounded-[24px] flex items-center justify-center font-bold text-xl h-32 text-gray-900">
-                Open Finance
+                WhatsApp
               </div>
               <div className="bg-white border border-gray-100 shadow-sm p-8 rounded-[24px] flex items-center justify-center font-bold text-lg text-center h-32 text-gray-900">
-                Banco Central<br/>do Brasil
+                Inteligência<br/>Artificial
               </div>
               <div className="bg-white border border-gray-100 shadow-sm p-8 rounded-[24px] flex flex-col items-center justify-center h-32 text-gray-400">
                 <Lock size={24} className="mb-2" />
@@ -133,7 +133,7 @@ export default function LandingPage() {
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-[#EEF0FB] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
+              <div className="bg-[var(--bg-1)] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
                 <div className="w-16 h-16 bg-white text-brand-dark rounded-2xl flex items-center justify-center mb-8 shadow-sm">
                   <CalendarDays size={32} />
                 </div>
@@ -141,7 +141,7 @@ export default function LandingPage() {
                 <p className="text-gray-500 font-medium leading-relaxed">Fatura, boleto, assinatura. A IA alerta no WhatsApp para você não pagar juros.</p>
               </div>
               
-              <div className="bg-[#EEF0FB] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
+              <div className="bg-[var(--bg-1)] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
                 <div className="w-16 h-16 bg-white text-brand-dark rounded-2xl flex items-center justify-center mb-8 shadow-sm">
                   <StickyNote size={32} />
                 </div>
@@ -149,7 +149,7 @@ export default function LandingPage() {
                 <p className="text-gray-500 font-medium leading-relaxed">Isso só funciona no primeiro dia. Depois, o mês fica em aberto. Deixe o app categorizar para você.</p>
               </div>
               
-              <div className="bg-[#EEF0FB] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
+              <div className="bg-[var(--bg-1)] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
                 <div className="w-16 h-16 bg-white text-brand-dark rounded-2xl flex items-center justify-center mb-8 shadow-sm">
                   <Calculator size={32} />
                 </div>
@@ -161,7 +161,7 @@ export default function LandingPage() {
         </section>
 
         {/* 5. SEÇÃO "AUTOMAÇÃO" (Light/Gray) */}
-        <section className="py-32 px-6 bg-[#EEF0FB] text-gray-900 overflow-hidden">
+        <section className="py-32 px-6 bg-[var(--bg-1)] text-gray-900 overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 fade-in-section">
             <div className="lg:w-1/2">
               <SectionBadge text="✓ AUTOMAÇÃO" />
@@ -236,17 +236,17 @@ export default function LandingPage() {
             <div className="lg:w-1/2">
               <SectionBadge text="✓ DADOS" />
               <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-                Sincronização Segura via <span className="text-brand-dark">Open Finance (Banco Central)</span>
+                Registro rápido, <span className="text-brand-dark">sem planilha</span>
               </h2>
               <p className="text-lg text-gray-500 font-medium mb-8 leading-relaxed">
-                Por isso o Jakash começa pelos dados: recebe o extrato bruto de cada banco e entrega só o que você precisa ver. Sem atraso, sem duplicação, sem precisar digitar na mão.
+                Você conta o que gastou ou recebeu e o Jakash organiza: categoria, data e valor no lugar certo, com saldo, limites e objetivos sempre atualizados.
               </p>
               <ul className="space-y-4 mb-10">
                 {[
-                  'Sem duplicar',
-                  'IA que categoriza e se aperfeiçoa a cada transação',
-                  'Nomes que você reconhece, não códigos',
-                  'Todo dia, todas as contas'
+                  'Lançamentos pelo WhatsApp, em texto',
+                  'IA que categoriza para você',
+                  'Categorias e subcategorias que você edita',
+                  'Painel com saldo, limites e objetivos'
                 ].map((item, i) => (
                    <li key={i} className="flex items-center gap-3 font-bold text-gray-800">
                     <div className="w-6 h-6 rounded-full bg-brand-accent/20 flex items-center justify-center shrink-0">
@@ -309,7 +309,7 @@ export default function LandingPage() {
         </section>
 
         {/* 9. SEÇÃO "INÍCIO" (Light) */}
-        <section id="como-funciona" className="py-32 px-6 bg-[#EEF0FB] text-gray-900 text-center">
+        <section id="como-funciona" className="py-32 px-6 bg-[var(--bg-1)] text-gray-900 text-center">
           <div className="max-w-6xl mx-auto fade-in-section">
             <SectionBadge text="✓ INÍCIO" />
             <h2 className="text-4xl md:text-5xl font-bold mb-20">
@@ -337,7 +337,7 @@ export default function LandingPage() {
                    </div>
                 </div>
                 <h3 className="font-bold text-xl mb-2 text-brand-dark">Passo 2</h3>
-                <p className="text-gray-500 font-medium">Conecte seus bancos de forma segura pelo Open Finance.</p>
+                <p className="text-gray-500 font-medium">Cadastre suas contas e defina seus limites e objetivos.</p>
               </div>
 
               <div className="bg-white rounded-[2rem] p-8 flex flex-col items-center shadow-sm">
@@ -364,7 +364,7 @@ export default function LandingPage() {
             </h2>
             
             <div className="flex justify-center mb-12">
-              <div className="bg-[#EEF0FB] p-1 rounded-full inline-flex border border-gray-200">
+              <div className="bg-[var(--bg-1)] p-1 rounded-full inline-flex border border-gray-200">
                 <button className="px-6 py-2 rounded-full font-bold bg-white text-brand-dark shadow-sm">Anual</button>
                 <button className="px-6 py-2 rounded-full font-medium text-gray-500">Mensal</button>
               </div>
@@ -384,7 +384,7 @@ export default function LandingPage() {
                 <p className="text-sm font-bold text-gray-400"><span className="line-through">R$ 29,90</span> · preço de turma fundadora</p>
               </div>
               
-              <ul className="space-y-4 mb-10 text-left font-medium text-gray-600 bg-[#EEF0FB] p-6 rounded-[24px]">
+              <ul className="space-y-4 mb-10 text-left font-medium text-gray-600 bg-[var(--bg-1)] p-6 rounded-[24px]">
                 {[
                   'Conexões ilimitadas',
                   'Insights sobre suas finanças',
@@ -410,7 +410,7 @@ export default function LandingPage() {
         </section>
 
         {/* 11. SEÇÃO "RESPOSTAS" (Light/Gray) */}
-        <section id="faq" className="py-24 px-6 bg-[#EEF0FB] text-gray-900">
+        <section id="faq" className="py-24 px-6 bg-[var(--bg-1)] text-gray-900">
           <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-16 fade-in-section">
             <div className="md:w-1/3">
               <SectionBadge text="✓ RESPOSTAS" />
@@ -422,19 +422,19 @@ export default function LandingPage() {
               <FAQItem 
                 isOpenDefault
                 question="Qual o melhor aplicativo de controle financeiro via WhatsApp?" 
-                answer="O Jakash é considerado a melhor opção do mercado pois integra Inteligência Artificial com o WhatsApp e o Open Finance (regulado pelo Banco Central). Ele elimina o trabalho manual de planilhas ao importar e categorizar seus gastos 100% de forma automática." 
+                answer="O Jakash une Inteligência Artificial e WhatsApp: você manda uma mensagem com o gasto ou a receita e ele registra e categoriza para você, sem precisar abrir planilhas." 
               />
               <FAQItem 
                 question="Como a Inteligência Artificial ajuda na minha organização financeira?" 
-                answer="A IA atua de duas formas: (1) categorizando com precisão as suas compras, identificando nomes reais de lojas em vez de siglas do banco, e (2) lendo suas metas e orçamentos para conversar com você no WhatsApp, alertando sobre faturas a vencer, aumento no valor de assinaturas e se você vai fechar o mês no vermelho." 
+                answer="A IA entende suas mensagens no WhatsApp, identifica valor, categoria e data e lança tudo para você. No painel você acompanha saldo, limites de gastos, contas a pagar, dívidas e objetivos." 
               />
               <FAQItem 
-                question="É seguro conectar minhas contas em um gestor de finanças automáticas?" 
-                answer="Sim! O Jakash utiliza a infraestrutura oficial do Open Finance, homologada pelo Banco Central do Brasil. A conexão é 'somente leitura', ou seja, o aplicativo apenas lê os dados de transações e saldos, sendo impossível realizar transferências, pagamentos ou PIX." 
+                question="Meus dados financeiros estão seguros no Jakash?" 
+                answer="O Jakash não pede senha do seu banco e não movimenta dinheiro. Seus dados ficam protegidos por login e por regras de acesso individuais no banco de dados, e você pode exportar ou apagar tudo quando quiser, direto nas configurações." 
               />
               <FAQItem 
                 question="Funciona com o meu banco?" 
-                answer="Sim! O Jakash conecta-se com todas as grandes instituições via Open Finance: Nubank, Itaú, Bradesco, Santander, Caixa Econômica, Banco do Brasil, Inter, C6 Bank, entre dezenas de outros." 
+                answer="Funciona com qualquer banco, porque você registra os lançamentos pelo WhatsApp ou pelo app e informa o saldo das suas contas. A conexão automática com bancos (Open Finance) ainda não está disponível." 
               />
               <FAQItem 
                 question="O aplicativo de controle financeiro Jakash é gratuito?" 

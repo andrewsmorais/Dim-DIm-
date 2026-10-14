@@ -27,6 +27,11 @@ export default function ReservaPage() {
   }, [supabase]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
+  useEffect(() => {
+    const h = () => load();
+    window.addEventListener("jakash:changed", h);
+    return () => window.removeEventListener("jakash:changed", h);
+  }, [load]);
 
   const [manual, setManual] = useState("");
   const manualN = parseMoney(manual);
