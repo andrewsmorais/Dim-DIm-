@@ -30,7 +30,8 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isProtected = PROTECTED.some((p) => path === p || path.startsWith(p + '/'));
-  if (isProtected && !user) {
+  // Bloqueio das telas só com NEXT_PUBLIC_REQUIRE_LOGIN=1 (por enquanto o login é de entrada livre).
+  if (isProtected && !user && process.env.NEXT_PUBLIC_REQUIRE_LOGIN === '1') {
     const login = new URL('/login', request.url);
     login.searchParams.set('next', path + request.nextUrl.search);
     return NextResponse.redirect(login);

@@ -7,8 +7,9 @@ export function AuthShell({ title, children }: { title: string; children: React.
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F3F4F6] p-6 font-sans">
       <Link href="/" className="flex items-center gap-3 mb-10">
-        <div className="w-10 h-10 rounded-[10px] bg-[#00E676] flex items-center justify-center text-white font-bold text-xl shadow-sm">G</div>
-        <span className="font-bold text-[22px] text-gray-900 tracking-tight">Jakash</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/jacare.jpg" alt="Jakash" width={56} height={56} className="w-14 h-14 rounded-2xl shadow-sm object-cover" />
+        <span className="font-bold text-[26px] text-gray-900 tracking-tight">Jakash</span>
       </Link>
       <div className="w-full max-w-[420px] bg-white border border-gray-100 p-8 sm:p-10 rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <h1 className="text-2xl font-bold mb-8 text-center text-gray-900">{title}</h1>

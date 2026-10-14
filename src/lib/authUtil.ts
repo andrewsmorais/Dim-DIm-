@@ -14,3 +14,7 @@ export function authError(message: string): string {
   if (m.includes("same password") || m.includes("different from the old")) return "Escolha uma senha diferente da anterior.";
   return "Não foi possível concluir. Tente novamente.";
 }
+
+// Entrada provisória: com os campos vazios, "Entrar" abre o app sem login (as telas abrem, mas sem dados da conta).
+// Desligue quando o login for fechado, junto com NEXT_PUBLIC_REQUIRE_LOGIN=1 (ativa o bloqueio das telas no middleware).
+export const LOGIN_BYPASS = true;

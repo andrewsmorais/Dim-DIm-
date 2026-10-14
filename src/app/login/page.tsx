@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuthShell, authBtn, authInput, Divider, AppleButton, GoogleButton, Notice } from "@/components/auth/AuthShell";
-import { authError, safeNext } from "@/lib/authUtil";
+import { authError, LOGIN_BYPASS, safeNext } from "@/lib/authUtil";
 
 function LoginForm() {
   const router = useRouter();
@@ -19,6 +19,7 @@ function LoginForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (LOGIN_BYPASS && !email.trim() && !password) { router.replace(next); return; }
     setBusy(true); setError("");
     const { error: err } = await createClient().auth.signInWithPassword({ email: email.trim(), password });
     if (err) { setError(authError(err.message)); setBusy(false); return; }
@@ -40,11 +41,11 @@ function LoginForm() {
       <form onSubmit={submit} className="space-y-5">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-1.5">E-mail</label>
-          <input id="email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} placeholder="seu@email.com" />
+          <input id="email" type="email" required={!LOGIN_BYPASS} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} placeholder="seu@email.com" />
         </div>
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-600 mb-1.5">Senha</label>
-          <input id="password" type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} placeholder="••••••••" />
+          <input id="password" type="password" required={!LOGIN_BYPASS} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} placeholder="••••••••" />
         </div>
         <div className="flex justify-end">
           <Link href="/esqueci-senha" className="text-sm text-[#00A152] font-medium hover:underline">Esqueci minha senha</Link>
