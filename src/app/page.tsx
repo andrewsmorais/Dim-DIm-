@@ -54,7 +54,7 @@ export default function LandingPage() {
               </h1>
               
               <p className="text-lg md:text-xl text-gray-500 mb-10 leading-relaxed max-w-xl font-medium">
-                Seu novo assistente financeiro com Inteligência Artificial. O Grana Smart importa dados via Open Finance, categoriza gastos automaticamente e te avisa no WhatsApp sobre faturas e saldo.
+                Seu novo assistente financeiro com Inteligência Artificial. O Jakash importa dados via Open Finance, categoriza gastos automaticamente e te avisa no WhatsApp sobre faturas e saldo.
               </p>
               
               <CTAButton text="Testar 7 dias grátis →" size="lg" className="h-16 px-10 text-lg w-full sm:w-auto" />
@@ -69,17 +69,17 @@ export default function LandingPage() {
                  <div className="flex-1 bg-[#F5F5F5] p-4 flex flex-col gap-4 pt-16">
                     {/* Floating Notifications */}
                     <div className="bg-white border border-gray-100 p-3 rounded-2xl shadow-sm relative -left-8 w-[110%]">
-                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Grana Smart - agora</span></div>
+                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Jakash - agora</span></div>
                       <p className="text-sm text-gray-700 font-medium">Sua fatura do Itaú vence amanhã: <span className="font-bold text-brand-dark">R$ 1.247,90</span></p>
                     </div>
 
                     <div className="bg-white border border-gray-100 p-3 rounded-2xl shadow-sm relative left-4 w-[100%]">
-                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Grana Smart - há 12 min</span></div>
+                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Jakash - há 12 min</span></div>
                       <p className="text-sm text-gray-700 font-medium">Sua assinatura da Netflix subiu para <span className="font-bold text-yellow-600">R$ 59,90</span></p>
                     </div>
 
                     <div className="bg-white border border-gray-100 p-3 rounded-2xl shadow-sm relative -left-4 w-[105%]">
-                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Grana Smart - há 1h</span></div>
+                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Jakash - há 1h</span></div>
                       <p className="text-sm text-gray-700 font-medium">Seu saldo no Nubank ficou negativo: <span className="font-bold text-red-500">-R$ 120,00</span></p>
                     </div>
                  </div>
@@ -94,10 +94,10 @@ export default function LandingPage() {
             <div className="lg:w-1/2">
               <SectionBadge text="✓ QUEM FAZ" />
               <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-                O Gestor de Finanças Automáticas da <span className="text-brand-dark">Grana Capital</span>
+                O Gestor de Finanças Automáticas da <span className="text-brand-dark">Jakash</span>
               </h2>
               <p className="text-lg text-gray-500 font-medium mb-8 leading-relaxed">
-                No mercado desde 2019, Grana Capital cuida do Imposto de Renda de quem investe. Agora, traz essa experiência para o seu dia a dia: o Grana Smart organiza suas contas sem nunca movimentar o seu dinheiro.
+                No mercado desde 2019, Jakash cuida do Imposto de Renda de quem investe. Agora, traz essa experiência para o seu dia a dia: o Jakash organiza suas contas sem nunca movimentar o seu dinheiro.
               </p>
               <div className="flex flex-wrap gap-4 text-sm font-bold">
                 <span className="bg-white shadow-sm border border-gray-100 px-4 py-2 rounded-full">Indicada pela B3</span>
@@ -108,7 +108,7 @@ export default function LandingPage() {
             
             <div className="lg:w-1/2 w-full grid grid-cols-2 gap-4">
               <div className="bg-white border border-gray-100 shadow-sm p-8 rounded-[24px] flex items-center justify-center font-extrabold text-2xl h-32 text-brand-dark">
-                grana
+                jakash
               </div>
               <div className="bg-white border border-gray-100 shadow-sm p-8 rounded-[24px] flex items-center justify-center font-bold text-xl h-32 text-gray-900">
                 Open Finance
@@ -154,7 +154,7 @@ export default function LandingPage() {
                   <Calculator size={32} />
                 </div>
                 <h3 className="text-xl font-bold mb-4">Conferência unificada de contas</h3>
-                <p className="text-gray-500 font-medium leading-relaxed">Abrir cada app de banco, somar, comparar. Quando sobra tempo, o mês já acabou. O Grana Smart unifica tudo.</p>
+                <p className="text-gray-500 font-medium leading-relaxed">Abrir cada app de banco, somar, comparar. Quando sobra tempo, o mês já acabou. O Jakash unifica tudo.</p>
               </div>
             </div>
           </div>
@@ -239,7 +239,7 @@ export default function LandingPage() {
                 Sincronização Segura via <span className="text-brand-dark">Open Finance (Banco Central)</span>
               </h2>
               <p className="text-lg text-gray-500 font-medium mb-8 leading-relaxed">
-                Por isso o Grana Smart começa pelos dados: recebe o extrato bruto de cada banco e entrega só o que você precisa ver. Sem atraso, sem duplicação, sem precisar digitar na mão.
+                Por isso o Jakash começa pelos dados: recebe o extrato bruto de cada banco e entrega só o que você precisa ver. Sem atraso, sem duplicação, sem precisar digitar na mão.
               </p>
               <ul className="space-y-4 mb-10">
                 {[
@@ -270,7 +270,7 @@ export default function LandingPage() {
                 A <span className="text-brand-accent italic">Inteligência Artificial</span> que responde sobre o seu dinheiro
               </h2>
               <p className="text-lg text-white/70 font-medium mb-8 leading-relaxed">
-                Com tudo importado e categorizado, o WhatsApp vira o lugar onde o Grana Smart avisa e responde: cobrança estranha, resumo da semana, quanto foi de delivery.
+                Com tudo importado e categorizado, o WhatsApp vira o lugar onde o Jakash avisa e responde: cobrança estranha, resumo da semana, quanto foi de delivery.
               </p>
               <ul className="space-y-4 mb-10">
                 {[
@@ -297,7 +297,7 @@ export default function LandingPage() {
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white p-6 rounded-3xl shadow-2xl animate-float text-gray-900">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center text-white font-bold text-xs">W</div>
-                    <span className="font-bold text-sm text-gray-500">Grana Smart - agora</span>
+                    <span className="font-bold text-sm text-gray-500">Jakash - agora</span>
                   </div>
                   <p className="text-gray-900 text-[15px] font-medium leading-relaxed">
                     Você gastou R$ 312 em delivery este mês. Ainda está abaixo do orçamento: sobram R$ 88 para usar. 🍔
@@ -422,7 +422,7 @@ export default function LandingPage() {
               <FAQItem 
                 isOpenDefault
                 question="Qual o melhor aplicativo de controle financeiro via WhatsApp?" 
-                answer="O Grana Smart é considerado a melhor opção do mercado pois integra Inteligência Artificial com o WhatsApp e o Open Finance (regulado pelo Banco Central). Ele elimina o trabalho manual de planilhas ao importar e categorizar seus gastos 100% de forma automática." 
+                answer="O Jakash é considerado a melhor opção do mercado pois integra Inteligência Artificial com o WhatsApp e o Open Finance (regulado pelo Banco Central). Ele elimina o trabalho manual de planilhas ao importar e categorizar seus gastos 100% de forma automática." 
               />
               <FAQItem 
                 question="Como a Inteligência Artificial ajuda na minha organização financeira?" 
@@ -430,15 +430,15 @@ export default function LandingPage() {
               />
               <FAQItem 
                 question="É seguro conectar minhas contas em um gestor de finanças automáticas?" 
-                answer="Sim! O Grana Smart utiliza a infraestrutura oficial do Open Finance, homologada pelo Banco Central do Brasil. A conexão é 'somente leitura', ou seja, o aplicativo apenas lê os dados de transações e saldos, sendo impossível realizar transferências, pagamentos ou PIX." 
+                answer="Sim! O Jakash utiliza a infraestrutura oficial do Open Finance, homologada pelo Banco Central do Brasil. A conexão é 'somente leitura', ou seja, o aplicativo apenas lê os dados de transações e saldos, sendo impossível realizar transferências, pagamentos ou PIX." 
               />
               <FAQItem 
                 question="Funciona com o meu banco?" 
-                answer="Sim! O Grana Smart conecta-se com todas as grandes instituições via Open Finance: Nubank, Itaú, Bradesco, Santander, Caixa Econômica, Banco do Brasil, Inter, C6 Bank, entre dezenas de outros." 
+                answer="Sim! O Jakash conecta-se com todas as grandes instituições via Open Finance: Nubank, Itaú, Bradesco, Santander, Caixa Econômica, Banco do Brasil, Inter, C6 Bank, entre dezenas de outros." 
               />
               <FAQItem 
-                question="O aplicativo de controle financeiro Grana Smart é gratuito?" 
-                answer="O Grana Smart oferece 7 dias de teste totalmente gratuitos, sem a necessidade de cadastrar um cartão de crédito. Após esse período, para continuar desfrutando da gestão financeira automática e da IA no WhatsApp, o valor é de apenas R$ 19,90/mês, que pode ser cancelado a qualquer momento." 
+                question="O aplicativo de controle financeiro Jakash é gratuito?" 
+                answer="O Jakash oferece 7 dias de teste totalmente gratuitos, sem a necessidade de cadastrar um cartão de crédito. Após esse período, para continuar desfrutando da gestão financeira automática e da IA no WhatsApp, o valor é de apenas R$ 19,90/mês, que pode ser cancelado a qualquer momento." 
               />
             </div>
           </div>
@@ -454,7 +454,7 @@ export default function LandingPage() {
               Depois, apenas R$ 19,90/mês. Cancele quando quiser, sem multa.
             </p>
             <CTAButton text="Comece agora, é grátis →" size="lg" className="h-16 px-12 text-xl bg-brand-accent text-white hover:bg-green-600" />
-            <p className="mt-12 text-sm text-white/50 font-bold">Grana Smart, feito no Brasil 🇧🇷</p>
+            <p className="mt-12 text-sm text-white/50 font-bold">Jakash, feito no Brasil 🇧🇷</p>
           </div>
         </section>
       </main>

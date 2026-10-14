@@ -1,6 +1,6 @@
 # 🚀 Guia de Teste da Inteligência Artificial (OpenAI)
 
-Este documento explica como testar o cérebro financeiro do Grana Smart sem precisar plugar o WhatsApp imediatamente.
+Este documento explica como testar o cérebro financeiro do Jakash sem precisar plugar o WhatsApp imediatamente.
 
 ## 1. Configuração de Ambiente
 Certifique-se de que o arquivo `.env.local` na raiz do projeto contenha a sua chave da OpenAI válida e com saldo ativo ($5.00):

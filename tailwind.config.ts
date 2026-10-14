@@ -17,8 +17,8 @@ const config: Config = {
           cardDark: "#1A1A1A",
         },
         primary: {
-          DEFAULT: "#00FF88",
-          dark: "#00CC6A",
+          DEFAULT: "#8B5CF6",
+          dark: "#5B5BF0",
         },
         text: {
           DEFAULT: "#000000",
@@ -27,15 +27,15 @@ const config: Config = {
           secondaryDark: "#A0A0A0",
         },
         brand: {
-          dark: '#0D4722',
-          accent: '#00C853',
-          bg: '#F0F2F5',
+          dark: '#5B5BF0',
+          accent: '#8B5CF6',
+          bg: '#EEF0FB',
           card: '#FFFFFF',
           textMuted: '#9CA3AF'
         }
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'sans-serif'],
+        sans: ['var(--font-jakarta)', 'sans-serif'],
       },
       animation: {
         'float': 'float 6s ease-in-out infinite',

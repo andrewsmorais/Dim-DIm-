@@ -1,5 +1,5 @@
 -- ==========================================
--- GRANA SMART - SUPABASE SCHEMA COMPLETÃO
+-- JAKASH - SUPABASE SCHEMA COMPLETÃO
 -- ==========================================
 
 -- 1. ENUMS
@@ -155,7 +155,7 @@ BEGIN
   INSERT INTO public.profiles (id, full_name, whatsapp_number)
   VALUES (
       new.id, 
-      COALESCE(new.raw_user_meta_data->>'full_name', 'Usuário Grana Smart'),
+      COALESCE(new.raw_user_meta_data->>'full_name', 'Usuário Jakash'),
       new.raw_user_meta_data->>'whatsapp_number'
   );
   RETURN new;

@@ -3,14 +3,12 @@ import { CTAButton } from "./CTAButton";
 
 export function Header() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#F0F2F5]/80 backdrop-blur-md border-b border-gray-200 transition-all duration-300">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#EEF0FB]/80 backdrop-blur-md border-b border-gray-200 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-brand-dark flex items-center justify-center text-white font-serif italic text-lg font-light">
-            L
-          </div>
+          <img src="/logo.png" alt="Jakash" className="w-8 h-8 rounded-lg object-cover" />
           <span className="font-bold text-xl tracking-tight text-gray-900">
-            Grana <span className="text-brand-accent">Smart</span>
+            Jakash
           </span>
         </Link>
         

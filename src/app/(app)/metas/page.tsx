@@ -1,69 +1,118 @@
-import { Plus, Edit2, Trash2, PlusCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
+import { useSupabase } from "@/lib/useSupabase";
+import { brl, parseMoney, formatDateBR } from "@/lib/format";
+import { GOAL_TYPES, monthsBetween, requiredMonthly, type GoalType } from "@/lib/planner";
+import { PageHeader, Card, Label, Progress, Empty, ErrorNote, Disclaimer, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
+
+type Goal = { id: string; name: string; icon: string | null; type: GoalType; target_amount: number; current_amount: number; deadline: string | null; status: string };
 
 export default function MetasPage() {
-  const metas = [
-    { name: "Viagem para Europa", icon: "✈️", current: 2400, target: 5000, color: "bg-primary", date: "Dez/2026", desc: "Viagem de férias com a família" },
-    { name: "Manutenção do Carro", icon: "🚗", current: 800, target: 1500, color: "bg-warning", date: "Nov/2026", desc: "Revisão dos 50.000km" },
-    { name: "Reserva de Emergência", icon: "🛡️", current: 8000, target: 15000, color: "bg-info", date: "Jun/2027", desc: "6 meses de custo de vida" },
-  ];
+  const { supabase, userId, ready } = useSupabase();
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({ type: "viagem" as GoalType, name: "", target: "", current: "", deadline: "" });
+  const [contrib, setContrib] = useState<Record<string, string>>({});
+
+  const load = useCallback(async () => {
+    const { data, error: err } = await supabase.from("goals").select("id,name,icon,type,target_amount,current_amount,deadline,status").neq("status", "cancelled").order("created_at");
+    if (err) { setError("Não foi possível carregar os objetivos."); return; }
+    setError(null);
+    setGoals((data ?? []).map((g) => ({ ...g, target_amount: Number(g.target_amount), current_amount: Number(g.current_amount ?? 0) })) as Goal[]);
+  }, [supabase]);
+
+  useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    const target = parseMoney(form.target);
+    const current = form.current ? parseMoney(form.current) : 0;
+    if (!(target > 0) || Number.isNaN(current)) { setError("Informe um valor-alvo válido."); return; }
+    const meta = GOAL_TYPES[form.type];
+    const { error: err } = await supabase.from("goals").insert({
+      user_id: userId, name: form.name.trim() || meta.label, icon: meta.icon, type: form.type,
+      target_amount: target, current_amount: current, deadline: form.deadline || null,
+    });
+    if (err) { setError("Não foi possível criar o objetivo."); return; }
+    setForm({ ...form, name: "", target: "", current: "", deadline: "" });
+    load();
+  }
+
+  async function addContribution(g: Goal) {
+    const v = parseMoney(contrib[g.id] ?? "");
+    if (!(v > 0)) { setError("Informe um valor de aporte válido."); return; }
+    const newTotal = g.current_amount + v;
+    const [c, u] = await Promise.all([
+      supabase.from("goal_contributions").insert({ goal_id: g.id, amount: v }),
+      supabase.from("goals").update({ current_amount: newTotal, status: newTotal >= g.target_amount ? "completed" : "in_progress" }).eq("id", g.id),
+    ]);
+    if (c.error || u.error) { setError("Não foi possível registrar o aporte."); return; }
+    setContrib({ ...contrib, [g.id]: "" });
+    load();
+  }
+
+  async function remove(id: string) {
+    const { error: err } = await supabase.from("goals").delete().eq("id", id);
+    if (err) setError("Não foi possível excluir."); else load();
+  }
+
+  const tips = GOAL_TYPES[form.type].tips;
 
   return (
-    <div className="max-w-6xl mx-auto pb-20 md:pb-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Suas Metas Financeiras</h1>
-          <p className="text-text-secondary">Acompanhe seus objetivos</p>
-        </div>
-        <Button className="gap-2"><Plus size={18} /> Criar Nova Meta</Button>
-      </div>
+    <div className="max-w-5xl mx-auto pb-20">
+      <PageHeader title="Objetivos" subtitle="Viagem, bebê, reserva, carro... defina o valor, a data e veja quanto guardar por mês" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {metas.map((meta, i) => {
-          const percent = Math.round((meta.current / meta.target) * 100);
-          return (
-            <div key={i} className="bg-surface border border-surface-light p-6 rounded-2xl flex flex-col h-full">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex gap-3">
-                  <div className="text-4xl">{meta.icon}</div>
-                  <div>
-                    <h3 className="font-bold text-lg leading-tight">{meta.name}</h3>
-                    <p className="text-xs text-text-secondary mt-1">Até {meta.date}</p>
+      <Card className="mb-6">
+        <div className="flex flex-wrap gap-2 mb-4">
+          {(Object.keys(GOAL_TYPES) as GoalType[]).map((k) => (
+            <button key={k} type="button" onClick={() => setForm({ ...form, type: k })} className={form.type === k ? btnCls : btnGhostCls}>
+              {GOAL_TYPES[k].icon} {GOAL_TYPES[k].label}
+            </button>
+          ))}
+        </div>
+        <form onSubmit={add} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          <div><Label>Nome</Label><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={GOAL_TYPES[form.type].label} /></div>
+          <div><Label>Valor-alvo</Label><input className={inputCls} inputMode="decimal" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} placeholder="0,00" /></div>
+          <div><Label>Já guardado</Label><input className={inputCls} inputMode="decimal" value={form.current} onChange={(e) => setForm({ ...form, current: e.target.value })} placeholder="0,00" /></div>
+          <div><Label>Data-alvo</Label><input type="date" className={inputCls} value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></div>
+          <div className="md:col-span-4"><button className={btnCls} type="submit">Criar objetivo</button></div>
+        </form>
+        <ul className="mt-4 text-xs text-gray-500 list-disc pl-5 space-y-1">{tips.map((t) => <li key={t}>{t}</li>)}</ul>
+        <ErrorNote message={error} />
+      </Card>
+
+      {goals.length === 0 ? <Card><Empty>Nenhum objetivo ainda. Escolha um tipo acima e comece.</Empty></Card> : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {goals.map((g) => {
+            const pct = g.target_amount > 0 ? (g.current_amount / g.target_amount) * 100 : 0;
+            const monthly = g.deadline ? requiredMonthly(g.target_amount, g.current_amount, monthsBetween(new Date(), g.deadline)) : null;
+            return (
+              <Card key={g.id}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex gap-3">
+                    <span className="text-3xl">{g.icon ?? "🎯"}</span>
+                    <div>
+                      <p className="font-extrabold leading-tight">{g.name}</p>
+                      <p className="text-xs text-gray-500">{g.deadline ? `até ${formatDateBR(g.deadline)}` : "sem data-alvo"}{g.status === "completed" && " · ✅ concluído"}</p>
+                    </div>
                   </div>
+                  <button onClick={() => remove(g.id)} aria-label="Excluir" className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
                 </div>
-                <div className="flex gap-1">
-                  <button className="p-1.5 text-text-secondary hover:text-text transition-colors">
-                    <Edit2 size={16} />
-                  </button>
-                  <button className="p-1.5 text-text-secondary hover:text-danger transition-colors">
-                    <Trash2 size={16} />
-                  </button>
+                <Progress value={pct} />
+                <p className="text-sm text-gray-500 mt-2">{brl(g.current_amount)} de {brl(g.target_amount)} ({Math.round(pct)}%)</p>
+                {monthly !== null && g.status !== "completed" && <p className="text-sm font-bold mt-1">Guarde {brl(monthly)} por mês</p>}
+                <div className="flex gap-2 mt-4">
+                  <input className={inputCls} inputMode="decimal" placeholder="Novo aporte" value={contrib[g.id] ?? ""} onChange={(e) => setContrib({ ...contrib, [g.id]: e.target.value })} />
+                  <button onClick={() => addContribution(g)} className={btnGhostCls}>Aportar</button>
                 </div>
-              </div>
-              
-              <p className="text-sm text-text-secondary mb-6 flex-1">{meta.desc}</p>
-              
-              <div>
-                <div className="flex justify-between items-end mb-2">
-                  <div>
-                    <p className="text-2xl font-bold text-text">R$ {meta.current}</p>
-                    <p className="text-xs text-text-secondary">de R$ {meta.target}</p>
-                  </div>
-                  <span className="text-sm font-bold text-primary">{percent}%</span>
-                </div>
-                
-                <div className="w-full bg-background rounded-full h-3 mb-4 border border-surface-light overflow-hidden">
-                  <div className={`${meta.color} h-full rounded-full`} style={{ width: `${percent}%` }}></div>
-                </div>
-                
-                <Button variant="outline" className="w-full gap-2 text-primary border-primary/30 hover:bg-primary/10">
-                  <PlusCircle size={16} /> Adicionar Valor
-                </Button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+      <Disclaimer />
     </div>
   );
 }

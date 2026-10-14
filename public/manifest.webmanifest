@@ -1,11 +1,11 @@
 {
-  "name": "Grana Smart",
-  "short_name": "Grana Smart",
+  "name": "Jakash",
+  "short_name": "Jakash",
   "description": "Seu assistente financeiro no WhatsApp",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#F0F2F5",
-  "theme_color": "#0D4722",
+  "background_color": "#EEF0FB",
+  "theme_color": "#5B5BF0",
   "icons": [
     {
       "src": "/icon-192.png",

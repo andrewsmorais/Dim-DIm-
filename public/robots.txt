@@ -18,4 +18,4 @@ Allow: /
 User-agent: Omgili
 Allow: /
 
-Sitemap: https://granasmart.com.br/sitemap.xml
+Sitemap: https://www.jakash.app/sitemap.xml

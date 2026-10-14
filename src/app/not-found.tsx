@@ -3,7 +3,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
 export const metadata = {
-  title: 'Página Não Encontrada | Grana Smart',
+  title: 'Página Não Encontrada | Jakash',
   robots: {
     index: false,
     follow: false,
