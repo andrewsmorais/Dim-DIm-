@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { monthLabel, shiftMonth } from "@/lib/format";
 
 export const inputCls =
@@ -63,12 +63,66 @@ export function Disclaimer() {
   );
 }
 
-export function MonthNav({ month, onChange }: { month: string; onChange: (m: string) => void }) {
+const MONTHS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+/** Seletor de período: setas mês a mês e, ao tocar no título, um calendário para escolher ano, mês e (opcional) o dia. */
+export function MonthNav({ month, onChange, day, onDayChange }: { month: string; onChange: (m: string) => void; day?: string | null; onDayChange?: (d: string | null) => void }) {
+  const [open, setOpen] = React.useState(false);
+  const [y, m] = month.split("-").map(Number);
+  const [viewYear, setViewYear] = React.useState(y);
+  React.useEffect(() => { setViewYear(y); }, [y, open]);
+  const withDay = Boolean(onDayChange);
+  const daysIn = new Date(y, m, 0).getDate();
+  const offset = new Date(y, m - 1, 1).getDay();
+  const label = day ? `${Number(day.slice(8, 10))} de ${monthLabel(day.slice(0, 7)).toLowerCase()}` : monthLabel(month);
+  const step = (delta: number) => { onDayChange?.(null); onChange(shiftMonth(month, delta)); };
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+
   return (
-    <div className="flex items-center justify-between gap-3 rounded-full bg-white/75 dark:bg-[#161616] border border-white/80 dark:border-white/5 px-2 py-1.5">
-      <button onClick={() => onChange(shiftMonth(month, -1))} aria-label="Mês anterior" className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-brand-dark/10 dark:hover:bg-[#262626]"><ChevronLeft size={18} /></button>
-      <span className="font-extrabold text-sm md:text-base">{monthLabel(month)}</span>
-      <button onClick={() => onChange(shiftMonth(month, 1))} aria-label="Próximo mês" className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-brand-dark/10 dark:hover:bg-[#262626]"><ChevronRight size={18} /></button>
+    <div className="relative">
+      <div className="flex items-center justify-between gap-3 rounded-full bg-white/75 dark:bg-[#161616] border border-white/80 dark:border-white/5 px-2 py-1.5">
+        <button onClick={() => step(-1)} aria-label="Mês anterior" className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-brand-dark/10 dark:hover:bg-[#262626]"><ChevronLeft size={18} /></button>
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="dialog" className="flex-1 flex items-center justify-center gap-2 font-extrabold text-sm md:text-base rounded-full py-1.5 hover:bg-brand-dark/5 dark:hover:bg-[#1E1E1E]">
+          <CalendarDays size={16} className="text-brand-dark dark:text-brand-soft" /> {label}
+        </button>
+        <button onClick={() => step(1)} aria-label="Próximo mês" className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-brand-dark/10 dark:hover:bg-[#262626]"><ChevronRight size={18} /></button>
+      </div>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div role="dialog" aria-label="Escolher período" className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-[min(92vw,340px)] rounded-3xl bg-white dark:bg-[#161616] border border-gray-200 dark:border-white/10 shadow-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <button onClick={() => setViewYear((v) => v - 1)} aria-label="Ano anterior" className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-brand-dark/10"><ChevronLeft size={16} /></button>
+              <span className="font-extrabold">{viewYear}</span>
+              <button onClick={() => setViewYear((v) => v + 1)} aria-label="Próximo ano" className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-brand-dark/10"><ChevronRight size={16} /></button>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {MONTHS_SHORT.map((name, i) => {
+                const val = `${viewYear}-${pad2(i + 1)}`;
+                const on = val === month;
+                return <button key={name} onClick={() => { onDayChange?.(null); onChange(val); if (!withDay) setOpen(false); }} aria-pressed={on}
+                  className={`py-2 rounded-xl text-sm font-bold ${on ? "bg-brand-dark text-white" : "hover:bg-brand-dark/10"}`}>{name}</button>;
+              })}
+            </div>
+            {withDay && (
+              <>
+                <p className="mt-4 mb-2 text-xs font-bold text-gray-500">Dia em {monthLabel(month)}</p>
+                <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-gray-400 mb-1">{["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => <span key={i}>{d}</span>)}</div>
+                <div className="grid grid-cols-7 gap-1">
+                  {Array.from({ length: offset }).map((_, i) => <span key={`b${i}`} />)}
+                  {Array.from({ length: daysIn }).map((_, i) => {
+                    const val = `${month}-${pad2(i + 1)}`;
+                    const on = val === day;
+                    return <button key={val} onClick={() => { onDayChange?.(on ? null : val); setOpen(false); }} aria-pressed={on}
+                      className={`h-8 rounded-lg text-xs font-bold ${on ? "bg-brand-dark text-white" : "hover:bg-brand-dark/10"}`}>{i + 1}</button>;
+                  })}
+                </div>
+                <button onClick={() => { onDayChange?.(null); setOpen(false); }} className="mt-3 w-full text-xs font-bold text-brand-dark dark:text-brand-soft py-2 rounded-xl hover:bg-brand-dark/5">Ver o mês inteiro</button>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

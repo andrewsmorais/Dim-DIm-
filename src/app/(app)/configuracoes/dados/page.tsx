@@ -9,7 +9,7 @@ import { BackTitle, Card, ErrorNote, Label, inputCls, btnCls, btnGhostCls } from
 const RESET_OPTIONS = [
   { id: "transactions", label: "Lançamentos" },
   { id: "bills", label: "Contas a pagar e receber" },
-  { id: "debts", label: "Dívidas" },
+  { id: "debts", label: "Despesas" },
   { id: "goals", label: "Objetivos" },
   { id: "budgets", label: "Limites de gastos" },
   { id: "accounts", label: "Contas bancárias" },

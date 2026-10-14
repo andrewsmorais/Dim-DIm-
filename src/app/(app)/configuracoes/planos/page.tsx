@@ -22,7 +22,7 @@ const INVOICE_STATUS: Record<string, string> = {
   PENDING: "Aguardando pagamento", RECEIVED: "Paga", CONFIRMED: "Paga", OVERDUE: "Vencida", REFUNDED: "Estornada", RECEIVED_IN_CASH: "Paga",
 };
 const FEATURES = {
-  cpf: ["Lançamentos ilimitados pelo WhatsApp (texto)", "Painel com gráficos, limites e objetivos", "Dívidas, reserva de emergência e contas a pagar", "Categorias e subcategorias personalizáveis"],
+  cpf: ["Lançamentos ilimitados pelo WhatsApp (texto)", "Painel com gráficos, limites e objetivos", "Despesas, reserva de emergência e contas a pagar", "Categorias e subcategorias personalizáveis"],
   mei: ["Tudo do plano CPF", "Categorias de negócio e de receitas de vendas", "Contas recorrentes (ex.: DAS) com lembrete", "Pensado para MEI e autônomo"],
 } as const;
 

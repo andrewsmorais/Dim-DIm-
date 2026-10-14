@@ -81,7 +81,7 @@ export default function PlanejamentoPage() {
     if (err) setError("Não foi possível criar o lembrete."); else window.dispatchEvent(new Event("jakash:changed"));
   }
 
-  const commitData = commit.map((c) => ({ label: shortMonth(c.month), Faturas: c.invoices, Contas: c.bills, Dívidas: c.debts }));
+  const commitData = commit.map((c) => ({ label: shortMonth(c.month), Faturas: c.invoices, Contas: c.bills, Despesas: c.debts }));
   const flowData = flow.points.map((p) => ({ label: p.date.slice(8, 10) + "/" + p.date.slice(5, 7), Saldo: p.balance }));
   const upcoming = flow.events.slice(0, 8);
   const noData = !loading && !cardsLoading && cash === 0 && bills.length === 0 && invoices.length === 0 && debts.length === 0;
@@ -90,7 +90,7 @@ export default function PlanejamentoPage() {
     <div className="max-w-4xl mx-auto pb-20 space-y-6">
       <PageHeader title="Planejamento" subtitle="O que já está comprometido, quanto sobra por dia e onde o saldo aperta. Usa só o que você já cadastrou." />
       <ErrorNote message={error} />
-      {loading || cardsLoading ? <Empty>Carregando…</Empty> : noData ? (
+      {ready && !userId ? <Card><Empty>Você está sem login. <Link href="/login" className="font-bold text-brand-dark dark:text-brand-soft">Entre na sua conta</Link> para ver o planejamento.</Empty></Card> : loading || cardsLoading ? <Empty>Carregando…</Empty> : noData ? (
         <Card><Empty>Cadastre contas bancárias, contas a pagar ou cartões para ver o planejamento aqui.</Empty></Card>
       ) : (
         <>
@@ -123,12 +123,12 @@ export default function PlanejamentoPage() {
                   <Tooltip formatter={(v) => brl(Number(v))} contentStyle={{ borderRadius: 12 }} />
                   <Bar dataKey="Faturas" stackId="a" fill="#5B5BF0" />
                   <Bar dataKey="Contas" stackId="a" fill="#F59E0B" />
-                  <Bar dataKey="Dívidas" stackId="a" fill="#EF4444" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="Despesas" stackId="a" fill="#EF4444" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mt-1">
-              <span><i className="inline-block w-2.5 h-2.5 rounded-full bg-[#5B5BF0] mr-1" />Faturas</span><span><i className="inline-block w-2.5 h-2.5 rounded-full bg-[#F59E0B] mr-1" />Contas</span><span><i className="inline-block w-2.5 h-2.5 rounded-full bg-[#EF4444] mr-1" />Dívidas</span>
+              <span><i className="inline-block w-2.5 h-2.5 rounded-full bg-[#5B5BF0] mr-1" />Faturas</span><span><i className="inline-block w-2.5 h-2.5 rounded-full bg-[#F59E0B] mr-1" />Contas</span><span><i className="inline-block w-2.5 h-2.5 rounded-full bg-[#EF4444] mr-1" />Despesas</span>
             </div>
             <ul className="divide-y divide-gray-100 dark:divide-[#262626] mt-3">
               {commit.map((c) => (
@@ -214,14 +214,14 @@ export default function PlanejamentoPage() {
           <Card>
             <h2 className="font-extrabold text-lg flex items-center gap-2"><TrendingDown size={18} /> Estratégia para quitar dívidas</h2>
             {!debts.some((d) => d.balance > 0) ? (
-              <p className="text-sm text-gray-500 mt-1">Sem dívidas cadastradas. Se tiver, cadastre em <Link href="/dividas" className="font-bold text-brand-dark dark:text-brand-soft">Dívidas</Link> para comparar as estratégias.</p>
+              <p className="text-sm text-gray-500 mt-1">Sem dívidas cadastradas. Se tiver, cadastre em <Link href="/dividas" className="font-bold text-brand-dark dark:text-brand-soft">Despesas</Link> para comparar as estratégias.</p>
             ) : (
               <>
                 <div className="mt-3 max-w-xs">
                   <Label>Quanto cabe pagar por mês no total (R$)</Label>
                   <input className={inputCls} inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder={minTotal > 0 ? String(minTotal).replace(".", ",") : "0,00"} />
                 </div>
-                {!payoff ? <p className="text-sm text-gray-500 mt-3">Informe as parcelas mínimas em Dívidas ou digite aqui o valor mensal.</p> : !payoff.avalanche.ok ? (
+                {!payoff ? <p className="text-sm text-gray-500 mt-3">Informe as parcelas mínimas em Despesas ou digite aqui o valor mensal.</p> : !payoff.avalanche.ok ? (
                   <p className="text-sm text-red-500 font-bold mt-3">{payoff.avalanche.reason}</p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">

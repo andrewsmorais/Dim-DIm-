@@ -45,6 +45,7 @@ export default function DashboardPage() {
   const { supabase, userId, ready } = useSupabase();
   const { hide, toggle, money } = useHideValues();
   const [month, setMonth] = useState(currentMonth());
+  const [day, setDay] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [txs, setTxs] = useState<Tx[]>([]);
   const [cats, setCats] = useState<Record<string, { name: string; parent: string | null }>>({});
@@ -58,8 +59,10 @@ export default function DashboardPage() {
   const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
-    const { start, end } = monthRange(month);
-    const isCurrent = month === currentMonth();
+    const mr = monthRange(month);
+    const start = day ?? mr.start;
+    const end = day ? new Date(Date.UTC(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10)) + 1)).toISOString().slice(0, 10) : mr.end;
+    const isCurrent = month === currentMonth() && !day;
     let billsQ = supabase.from("bills").select("id,description,amount,due_date,type").eq("status", "pending").lt("due_date", end).order("due_date");
     if (!isCurrent) billsQ = billsQ.gte("due_date", start);
     const [p, t, c, b, g, bd, a, iv] = await Promise.all([
@@ -83,7 +86,7 @@ export default function DashboardPage() {
     setAccounts(((a.data ?? []) as Account[]).map((x) => ({ ...x, balance: Number(x.balance) })));
     const ivRows = (iv.data ?? []) as { invested: number; current_value: number }[];
     setInv({ value: ivRows.reduce((s, r) => s + Number(r.current_value), 0), invested: ivRows.reduce((s, r) => s + Number(r.invested), 0), count: ivRows.length });
-  }, [supabase, month, router]);
+  }, [supabase, month, day, router]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
   useEffect(() => {
@@ -136,7 +139,7 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      <div className="mb-5"><MonthNav month={month} onChange={setMonth} /></div>
+      <div className="mb-5"><MonthNav month={month} onChange={setMonth} day={day} onDayChange={setDay} /></div>
       {error && <p className="text-sm text-red-500 font-medium mb-4">Não foi possível carregar alguns dados.</p>}
 
       <FirstWeek />
