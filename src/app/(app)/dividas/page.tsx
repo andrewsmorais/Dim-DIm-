@@ -25,6 +25,11 @@ export default function DividasPage() {
   }, [supabase]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
+  useEffect(() => {
+    const h = () => load();
+    window.addEventListener("jakash:changed", h);
+    return () => window.removeEventListener("jakash:changed", h);
+  }, [load]);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();

@@ -4,9 +4,10 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { InstallButton } from "@/components/PWA";
+import { QuickAdd } from "@/components/QuickAdd";
 import {
   Home, Send, FileText, Gauge, CalendarClock, Landmark, Target, ShieldCheck,
-  Calculator, Settings, type LucideIcon,
+  Calculator, Settings, Landmark as Bank, Plus, Menu as MenuIcon, type LucideIcon,
 } from "lucide-react";
 
 type Item = { icon: LucideIcon; label: string; href: string };
@@ -18,6 +19,7 @@ const SECTIONS: Section[] = [
     items: [
       { icon: Home, label: "Resumo", href: "/dashboard" },
       { icon: Send, label: "Transações", href: "/transacoes" },
+      { icon: Bank, label: "Contas bancárias", href: "/contas-bancarias" },
       { icon: FileText, label: "Relatórios", href: "/relatorios" },
     ],
   },
@@ -40,22 +42,22 @@ const SECTIONS: Section[] = [
   },
 ];
 
-const ALL_ITEMS = SECTIONS.flatMap((s) => s.items);
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted) return <div className="min-h-screen bg-[#EEF0FB] dark:bg-black" />;
+  if (!mounted) return <div className="min-h-screen bg-[var(--bg-1)] dark:bg-black" />;
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#EEF0FB] via-[#E4E8FA] to-[#EADFFB] dark:from-black dark:via-black dark:to-black flex flex-col md:flex-row font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-[var(--bg-1)] via-[var(--bg-2)] to-[var(--bg-3)] dark:from-black dark:via-black dark:to-black flex flex-col md:flex-row font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
       {/* Sidebar - Desktop */}
       <aside className="w-64 bg-white/70 dark:bg-[#0B0B0B] backdrop-blur-xl hidden md:flex flex-col h-screen sticky top-0 rounded-r-[32px] shadow-[0_8px_30px_rgba(91,91,240,0.10)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.45)] z-20 border-r border-white/80 dark:border-white/5">
         <div className="p-8 flex items-center gap-3">
@@ -63,6 +65,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <span className="font-bold text-lg text-black dark:text-white tracking-tight">Jakash</span>
         </div>
 
+        <div className="px-6 pb-4">
+          <button onClick={() => setQuickOpen(true)} className="w-full flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid py-3 text-sm font-bold text-white shadow-lg shadow-brand-dark/30 dark:shadow-none"><Plus size={18} /> Novo lançamento</button>
+        </div>
         <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6 scrollbar-hide">
           {SECTIONS.map((section) => (
             <div key={section.title}>
@@ -76,7 +81,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       className={`flex items-center gap-3 px-4 py-3 rounded-full transition-colors ${
                         active
-                          ? "bg-gradient-to-r from-brand-dark to-brand-accent text-white font-bold shadow-lg shadow-brand-dark/30 dark:from-[#8B5CFF] dark:to-[#8B5CFF] dark:shadow-none"
+                          ? "bg-gradient-to-r from-brand-dark to-brand-accent text-white font-bold shadow-lg shadow-brand-dark/30 dark:from-brand-vivid dark:to-brand-vivid dark:shadow-none"
                           : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#262626] hover:text-gray-900 dark:hover:text-white"
                       }`}
                     >
@@ -92,35 +97,45 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="p-6"><InstallButton className="w-full" /></div>
       </aside>
 
-      {/* Navegação - Mobile */}
-      <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-[#0B0B0B] backdrop-blur-xl shadow-sm">
-        <div className="flex items-center gap-2 px-4 pt-3">
-          <img src="/logo.png" alt="Jakash" className="w-8 h-8 rounded-lg object-cover" />
-          <span className="font-bold text-black dark:text-white">Jakash</span>
+      {/* Topo - Mobile */}
+      <header className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-[#0B0B0B] backdrop-blur-xl shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <img src="/logo.png" alt="Jakash" className="w-8 h-8 rounded-lg object-cover" />
+            <span className="font-extrabold text-black dark:text-white">Jakash</span>
+          </Link>
+          <Link href="/configuracoes" aria-label="Configurações" className="w-9 h-9 rounded-full bg-brand-dark/10 dark:bg-[#262626] flex items-center justify-center text-brand-dark dark:text-brand-soft"><Settings size={18} /></Link>
         </div>
-        <nav className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-hide">
-          {ALL_ITEMS.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-bold ${
-                  active ? "bg-gradient-to-r from-brand-dark to-brand-accent dark:from-[#8B5CFF] dark:to-[#8B5CFF] text-white" : "bg-white/70 dark:bg-[#262626] text-gray-600 dark:text-gray-300"
-                }`}
-              >
-                <item.icon size={16} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+      </header>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen w-full relative">
-        <main className="flex-1 p-4 md:p-10 overflow-x-hidden pt-6 md:pt-8">{children}</main>
+        <main className="flex-1 p-4 md:p-10 overflow-x-hidden pt-6 md:pt-8 pb-28 md:pb-10">{children}</main>
       </div>
+      {/* Barra inferior - Mobile */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/90 dark:bg-[#0B0B0B] backdrop-blur-xl border-t border-white/80 dark:border-white/5 pb-[env(safe-area-inset-bottom)]">
+        <div className="grid grid-cols-5 items-center px-2 h-16">
+          {[
+            { icon: Home, href: "/dashboard", label: "Início" },
+            { icon: Send, href: "/transacoes", label: "Lançamentos" },
+          ].map((it) => (
+            <Link key={it.href} href={it.href} className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive(it.href) ? "text-brand-dark dark:text-brand-soft" : "text-gray-400"}`}>
+              <it.icon size={22} />{it.label}
+            </Link>
+          ))}
+          <button onClick={() => setQuickOpen(true)} aria-label="Novo lançamento" className="mx-auto -mt-6 w-14 h-14 rounded-full bg-gradient-to-br from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid text-white flex items-center justify-center shadow-xl shadow-brand-dark/40 dark:shadow-none"><Plus size={28} /></button>
+          {[
+            { icon: Gauge, href: "/limites", label: "Limites" },
+            { icon: MenuIcon, href: "/menu", label: "Menu" },
+          ].map((it) => (
+            <Link key={it.href} href={it.href} className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive(it.href) ? "text-brand-dark dark:text-brand-soft" : "text-gray-400"}`}>
+              <it.icon size={22} />{it.label}
+            </Link>
+          ))}
+        </div>
+      </nav>
+
+      <QuickAdd open={quickOpen} onClose={() => setQuickOpen(false)} />
     </div>
   );
 }

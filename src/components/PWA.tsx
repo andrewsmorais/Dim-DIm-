@@ -29,7 +29,7 @@ export function InstallButton({ className = "" }: { className?: string }) {
   return (
     <button
       onClick={async () => { await evt.prompt(); await evt.userChoice; setEvt(null); }}
-      className={`flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-dark to-brand-accent dark:from-[#8B5CFF] dark:to-[#8B5CFF] px-4 py-2.5 text-sm font-bold text-white ${className}`}
+      className={`flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid px-4 py-2.5 text-sm font-bold text-white ${className}`}
     >
       <Download size={16} /> Instalar app
     </button>

@@ -12,7 +12,7 @@ export const metadata = {
 
 export default function NotFound() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#EEF0FB] font-sans">
+    <div className="flex flex-col min-h-screen bg-[var(--bg-1)] font-sans">
       <Header />
       <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
         <div className="bg-white p-12 rounded-[3rem] shadow-sm max-w-lg w-full border border-gray-100">

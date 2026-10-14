@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, parseMoney, todayISO, formatDateBR, currentMonth, monthRange } from "@/lib/format";
+import { categoryOptions, type CatRow } from "@/lib/categories";
 import { PageHeader, Card, Label, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
-type Cat = { id: string; name: string; type: "income" | "expense" };
 type Tx = { id: string; description: string; amount: number; type: "income" | "expense"; date: string; category_id: string | null };
 
 export default function TransacoesPage() {
   const { supabase, userId, ready } = useSupabase();
-  const [cats, setCats] = useState<Cat[]>([]);
+  const [cats, setCats] = useState<CatRow[]>([]);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [month, setMonth] = useState(currentMonth());
   const [filter, setFilter] = useState<"all" | "income" | "expense">("all");
@@ -23,18 +23,23 @@ export default function TransacoesPage() {
   const load = useCallback(async () => {
     const { start, end } = monthRange(month);
     const [c, t] = await Promise.all([
-      supabase.from("categories").select("id,name,type").order("name"),
+      supabase.from("categories").select("id,name,type,parent_id").order("name"),
       supabase.from("transactions").select("id,description,amount,type,date,category_id")
         .gte("date", start).lt("date", end).order("date", { ascending: false }).limit(500),
     ]);
     if (c.error || t.error) setError("Não foi possível carregar os dados.");
     else setError(null);
-    setCats((c.data as Cat[]) ?? []);
+    setCats((c.data as CatRow[]) ?? []);
     setTxs(((t.data ?? []) as Tx[]).map((x) => ({ ...x, amount: Number(x.amount) })));
     setLoading(false);
   }, [supabase, month]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
+  useEffect(() => {
+    const h = () => load();
+    window.addEventListener("jakash:changed", h);
+    return () => window.removeEventListener("jakash:changed", h);
+  }, [load]);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -80,7 +85,7 @@ export default function TransacoesPage() {
           <div><Label>Categoria</Label>
             <select className={inputCls} value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
               <option value="">Sem categoria</option>
-              {cats.filter((c) => c.type === form.type).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {categoryOptions(cats, form.type).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select></div>
           <div><Label>Data</Label><input type="date" className={inputCls} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
           <div className="md:col-span-6"><button className={btnCls} type="submit"><Plus size={16} /> Adicionar</button></div>

@@ -17,8 +17,8 @@ const config: Config = {
           cardDark: "#1A1A1A",
         },
         primary: {
-          DEFAULT: "#8B5CF6",
-          dark: "#5B5BF0",
+          DEFAULT: "rgb(var(--brand-accent) / <alpha-value>)",
+          dark: "rgb(var(--brand-dark) / <alpha-value>)",
         },
         text: {
           DEFAULT: "#000000",
@@ -27,8 +27,10 @@ const config: Config = {
           secondaryDark: "#A0A0A0",
         },
         brand: {
-          dark: '#5B5BF0',
-          accent: '#8B5CF6',
+          dark: 'rgb(var(--brand-dark) / <alpha-value>)',
+          accent: 'rgb(var(--brand-accent) / <alpha-value>)',
+          vivid: 'rgb(var(--brand-vivid) / <alpha-value>)',
+          soft: 'rgb(var(--brand-soft) / <alpha-value>)',
           bg: '#EEF0FB',
           card: '#FFFFFF',
           textMuted: '#9CA3AF'
