@@ -25,6 +25,8 @@ export default function FaturaPage() {
   const { cards, invoices, loading: loadingCards } = useCards();
   const { money } = useHideValues();
   const card = cards.find((c) => c.id === id);
+  // Cartão de débito não tem fatura: volta para a lista.
+  useEffect(() => { if (card?.kind === "debito") window.location.replace("/cartoes"); }, [card?.kind]);
 
   const [month, setMonth] = useState("");
   const [txs, setTxs] = useState<Tx[]>([]);

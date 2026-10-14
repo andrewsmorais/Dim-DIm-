@@ -13,7 +13,7 @@ const RESET_OPTIONS = [
   { id: "goals", label: "Objetivos" },
   { id: "budgets", label: "Limites de gastos" },
   { id: "accounts", label: "Contas bancárias" },
-  { id: "credit_cards", label: "Cartões de crédito (com as compras e pagamentos)" },
+  { id: "credit_cards", label: "Cartões de crédito e débito (com as compras e pagamentos)" },
   { id: "investments", label: "Investimentos" },
 ] as const;
 

@@ -6,9 +6,11 @@ import { usePathname } from "next/navigation";
 import { InstallButton } from "@/components/PWA";
 import { QuickAdd, type QuickAddPreset } from "@/components/QuickAdd";
 import { AccentSync } from "@/components/AccentSync";
+import { ReferralSync } from "@/components/Referral";
+import { useUsageType } from "@/lib/useUsageType";
 import {
   Home, Send, FileText, Gauge, CalendarClock, Landmark, Target, ShieldCheck,
-  Calculator, Settings, Landmark as Bank, Plus, Menu as MenuIcon, CreditCard, TrendingUp, Sparkles, type LucideIcon,
+  Calculator, FileUp, Briefcase, Gift, CalendarRange, Settings, Landmark as Bank, Plus, Menu as MenuIcon, CreditCard, TrendingUp, Sparkles, type LucideIcon,
 } from "lucide-react";
 
 type Item = { icon: LucideIcon; label: string; href: string };
@@ -21,13 +23,14 @@ const SECTIONS: Section[] = [
       { icon: Home, label: "Resumo", href: "/dashboard" },
       { icon: Send, label: "Transações", href: "/transacoes" },
       { icon: Bank, label: "Contas bancárias", href: "/contas-bancarias" },
-      { icon: CreditCard, label: "Cartões de crédito", href: "/cartoes" },
+      { icon: CreditCard, label: "Cartão de crédito", href: "/cartoes" },
       { icon: FileText, label: "Relatórios", href: "/relatorios" },
     ],
   },
   {
     title: "PLANEJAMENTO",
     items: [
+      { icon: CalendarRange, label: "Planejamento", href: "/planejamento" },
       { icon: Gauge, label: "Limites", href: "/limites" },
       { icon: CalendarClock, label: "Contas a pagar", href: "/contas" },
       { icon: Landmark, label: "Dívidas", href: "/dividas" },
@@ -41,6 +44,8 @@ const SECTIONS: Section[] = [
     items: [
       { icon: Sparkles, label: "Chat IA", href: "/chat" },
       { icon: Calculator, label: "Simulador", href: "/simulador" },
+      { icon: FileUp, label: "Importar extrato", href: "/importar" },
+      { icon: Gift, label: "Indicar amigos", href: "/configuracoes/indicar" },
       { icon: Settings, label: "Configurações", href: "/configuracoes" },
     ],
   },
@@ -49,6 +54,8 @@ const SECTIONS: Section[] = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { isMei } = useUsageType();
+  const sections = isMei ? SECTIONS.map((sec, i) => (i === 0 ? { ...sec, items: sec.items.concat([{ icon: Briefcase, label: "Pacote MEI", href: "/mei" }]) } : sec)) : SECTIONS;
   const [mounted, setMounted] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [preset, setPreset] = useState<QuickAddPreset | undefined>(undefined);
@@ -74,9 +81,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--bg-1)] via-[var(--bg-2)] to-[var(--bg-3)] dark:from-black dark:via-black dark:to-black flex flex-col md:flex-row font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-[var(--bg-1)] via-[var(--bg-2)] to-[var(--bg-3)] dark:from-black dark:via-black dark:to-black flex flex-col md:flex-row font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300 print:block print:min-h-0 print:bg-none print:bg-white">
       {/* Sidebar - Desktop */}
-      <aside className="w-64 bg-white/70 dark:bg-[#0B0B0B] backdrop-blur-xl hidden md:flex flex-col h-screen sticky top-0 rounded-r-[32px] shadow-[0_8px_30px_rgba(91,91,240,0.10)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.45)] z-20 border-r border-white/80 dark:border-white/5">
+      <aside className="w-64 bg-white/70 dark:bg-[#0B0B0B] backdrop-blur-xl hidden md:flex print:!hidden flex-col h-screen sticky top-0 rounded-r-[32px] shadow-[0_8px_30px_rgba(91,91,240,0.10)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.45)] z-20 border-r border-white/80 dark:border-white/5">
         <div className="p-8 flex items-center gap-3">
           <img src="/logo.png" alt="Jakash" className="w-10 h-10 rounded-xl object-cover" />
           <span className="font-bold text-lg text-black dark:text-white tracking-tight">Jakash</span>
@@ -86,7 +93,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <button onClick={openQuick} className="w-full flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid py-3 text-sm font-bold text-white shadow-lg shadow-brand-dark/30 dark:shadow-none"><Plus size={18} /> Novo lançamento</button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6 scrollbar-hide">
-          {SECTIONS.map((section) => (
+          {sections.map((section) => (
             <div key={section.title}>
               <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-3 tracking-widest">{section.title}</p>
               <nav className="space-y-1">
@@ -115,7 +122,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Topo - Mobile */}
-      <header className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-[#0B0B0B] backdrop-blur-xl shadow-sm">
+      <header className="md:hidden print:hidden sticky top-0 z-20 bg-white/80 dark:bg-[#0B0B0B] backdrop-blur-xl shadow-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href="/dashboard" className="flex items-center gap-2">
             <img src="/logo.png" alt="Jakash" className="w-8 h-8 rounded-lg object-cover" />
@@ -127,10 +134,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen w-full relative">
-        <main className="flex-1 p-4 md:p-10 overflow-x-hidden pt-6 md:pt-8 pb-28 md:pb-10">{children}</main>
+        <main className="flex-1 p-4 md:p-10 overflow-x-hidden pt-6 md:pt-8 pb-28 md:pb-10 print:p-0 print:overflow-visible">{children}</main>
       </div>
       {/* Barra inferior - Mobile */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/90 dark:bg-[#0B0B0B] backdrop-blur-xl border-t border-white/80 dark:border-white/5 pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden print:hidden fixed bottom-0 inset-x-0 z-30 bg-white/90 dark:bg-[#0B0B0B] backdrop-blur-xl border-t border-white/80 dark:border-white/5 pb-[env(safe-area-inset-bottom)]">
         <div className="grid grid-cols-5 items-center px-2 h-16">
           {[
             { icon: Home, href: "/dashboard", label: "Início" },
@@ -154,6 +161,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       <QuickAdd open={quickOpen} onClose={() => setQuickOpen(false)} preset={preset} />
       <AccentSync />
+      <ReferralSync />
     </div>
   );
 }

@@ -67,3 +67,12 @@ Encerrar a qualquer momento: nada é apagado, cada um volta a ver só o que é s
 Migrações novas (já aplicadas no projeto Supabase e versionadas em `supabase/migrations/`):
 `20261015000000_partnerships`, `20261015010000_cards_investments`, `20261015020000_shared_policies_balances`,
 `20261015030000_notifications_ai_accent`, `20261015040000_reminders_helpers`.
+
+
+## Importar extrato, Pacote MEI, Planejamento e Crescimento
+
+- **Importar extrato** (`/importar`): OFX e CSV (PDF de fatura não é suportado). Categorias aprendem com o que o usuário já lançou; duplicatas são ignoradas por `import_key`.
+- **Pacote MEI** (`/mei`): aparece para perfis empresarial/ambos. Limite anual R$ 81.000 (editável), DAS dia 20, DASN-SIMEI até 31/05, relatório mensal em PDF (`/mei/relatorio`), QR Pix estático, link somente-leitura para o contador (`/contador/<token>`, expira). Se houver middleware próprio, libere `/contador/*`, `/api/contador/*`, `/api/cron/*` e `/sw.js`.
+- **Planejamento** (`/planejamento`): compromissos dos próximos 6 meses, "quanto posso gastar hoje", fluxo de caixa projetado, assinaturas detectadas e estratégia de dívidas.
+- **Indicação** (`/configuracoes/indicar`): código/link; mês grátis para os dois só é aplicado automaticamente com `REFERRAL_APPLY_REWARDS=1`.
+- **Insight mensal**: cron `/api/cron/insights` (dia 1, 12h UTC). Números calculados em código; a IA só escreve as dicas (uma chamada por usuário por mês).

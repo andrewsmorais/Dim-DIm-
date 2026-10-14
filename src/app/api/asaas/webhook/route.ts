@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { handleReferralPayment } from '@/lib/referrals';
 
 function safeEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a);
@@ -50,6 +51,11 @@ export async function POST(request: Request) {
         console.error('Asaas webhook: falha ao atualizar perfil', error);
         return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
       }
+    }
+
+    // Indicação de amigos: nunca pode fazer o webhook falhar (o Asaas reenviaria o evento).
+    if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') {
+      await handleReferralPayment(supabase, customerId).catch((e: unknown) => console.error('[referral] webhook', (e as Error).message));
     }
 
     return NextResponse.json({ received: true }, { status: 200 });

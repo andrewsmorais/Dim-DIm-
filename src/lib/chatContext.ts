@@ -31,7 +31,7 @@ export async function buildChatContext(db: SupabaseClient, today: string) {
     db.from('budgets').select('category_id,amount_limit'),
     db.from('goals').select('name,target_amount,current_amount').eq('status', 'in_progress').limit(10),
     db.from('debts').select('name,balance,monthly_rate').eq('archived', false).limit(10),
-    db.from('credit_cards').select('id,name,credit_limit,closing_day,due_day').eq('archived', false),
+    db.from('credit_cards').select('id,name,credit_limit,closing_day,due_day').eq('archived', false).eq('kind', 'credito'),
     db.rpc('card_invoice_summary'),
     db.from('investments').select('name,kind,invested,current_value').eq('archived', false).limit(15),
   ]);

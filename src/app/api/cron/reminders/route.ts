@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { addDays } from '@/lib/cards';
 import { brl } from '@/lib/format';
 import {
-  billItems, buildReminder, cardItems, offsetFor, targetDateFor, todayInSaoPaulo,
+  billItems, buildReminder, cardItems, meiItems, offsetFor, targetDateFor, todayInSaoPaulo,
   type BillLite, type CardDueRow, type DueItem,
 } from '@/lib/reminders';
 import { pushConfigured, sendPush } from '@/lib/push';
@@ -29,7 +29,7 @@ type Channel = 'push' | 'email' | 'whatsapp';
 type Prof = {
   id: string; full_name: string | null; whatsapp_number: string | null;
   notify_whatsapp: boolean; notify_email: boolean; notify_push: boolean; notify_when: string | null;
-  subscription_status: string; subscription_expires_at: string | null;
+  subscription_status: string; subscription_expires_at: string | null; usage_type: string | null;
 };
 type Counts = Record<Channel, { sent: number; failed: number }>;
 
@@ -84,7 +84,7 @@ export async function GET(request: Request) {
     // 1. Quem pode receber: notificações ligadas, assinatura em dia (ou teste ainda válido) e ao menos um canal utilizável.
     const profiles = (await readAll<Prof>((from, to) =>
       admin.from('profiles')
-        .select('id,full_name,whatsapp_number,notify_whatsapp,notify_email,notify_push,notify_when,subscription_status,subscription_expires_at')
+        .select('id,full_name,whatsapp_number,notify_whatsapp,notify_email,notify_push,notify_when,subscription_status,subscription_expires_at,usage_type')
         .eq('notify_enabled', true).in('subscription_status', ACTIVE_STATUS).order('id').range(from, to)
     )).filter((p) => {
       if (p.subscription_status === 'trial' && p.subscription_expires_at && new Date(p.subscription_expires_at).getTime() < now) return false;
@@ -127,6 +127,10 @@ export async function GET(request: Request) {
       const items: DueItem[] = [
         ...billItems(members.flatMap((m) => billsBy.get(m) ?? []), target),
         ...cardItems(members.flatMap((m) => cardsBy.get(m) ?? []), target),
+        // Obrigações do MEI (relatório mensal, DAS sem conta agendada, DASN-SIMEI): só para quem usa o app para a empresa.
+        ...(p.usage_type === 'empresarial' || p.usage_type === 'ambos'
+          ? meiItems(target, (billsBy.get(p.id) ?? []).some((b) => b.type === 'expense' && b.due_date === target && /^das/i.test(b.description)))
+          : []),
       ];
       const reminder = buildReminder(items, offset, target);
       if (!reminder) return;

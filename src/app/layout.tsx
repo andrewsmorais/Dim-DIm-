@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { PWARegister } from "@/components/PWA";
+import { RefCapture } from "@/components/Referral";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -52,6 +53,7 @@ export default function RootLayout({
       </head>
       <body className={`${jakarta.variable} font-sans antialiased overflow-x-hidden selection:bg-primary selection:text-white`}>
         <PWARegister />
+        <RefCapture />
         {children}
       </body>
     </html>
