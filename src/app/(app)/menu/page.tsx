@@ -13,7 +13,7 @@ const TILES: { icon: LucideIcon; label: string; href: string }[] = [
   { icon: Home, label: "Resumo do mês", href: "/dashboard" },
   { icon: MessageSquare, label: "Chat IA", href: "/chat" },
   { icon: Landmark, label: "Contas bancárias", href: "/contas-bancarias" },
-  { icon: CreditCard, label: "Cartão de crédito", href: "/cartoes" },
+  { icon: CreditCard, label: "Cartões", href: "/cartoes" },
   { icon: CalendarClock, label: "Contas a pagar", href: "/contas" },
   { icon: Gauge, label: "Limites de gastos", href: "/limites" },
   { icon: Target, label: "Objetivos", href: "/metas" },
