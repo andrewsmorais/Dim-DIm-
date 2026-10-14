@@ -1,12 +1,73 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle, Copy, MessageCircle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CheckCircle, Copy, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
+
+type LinkInfo = { code: string; expiresInMinutes: number; waLink: string | null; botNumber: string | null };
 
 export function WhatsAppConfig() {
-  const [isConnected, setIsConnected] = useState(false);
-  const waNumber = "+55 11 99999-9999"; // Número oficial do bot Grana Smart
+  const [connectedNumber, setConnectedNumber] = useState<string | null>(null);
+  const [link, setLink] = useState<LinkInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const checkConnection = useCallback(async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("whatsapp_number").eq("id", user.id).single();
+      setConnectedNumber(data?.whatsapp_number ?? null);
+    } catch {
+      // sem sessão ou sem rede: mantém o estado atual
+    }
+  }, []);
+
+  useEffect(() => {
+    checkConnection();
+  }, [checkConnection]);
+
+  // Enquanto há um código ativo, confere a cada 4s se o número já foi vinculado
+  useEffect(() => {
+    if (!link || connectedNumber) {
+      if (pollRef.current) clearInterval(pollRef.current);
+      return;
+    }
+    pollRef.current = setInterval(checkConnection, 4000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [link, connectedNumber, checkConnection]);
+
+  const generateCode = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/whatsapp/link-code", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao gerar código");
+      setLink(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro desconhecido");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyMessage = async () => {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(`conectar ${link.code}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard indisponível: o código continua visível na tela
+    }
+  };
 
   return (
     <div className="bg-[#121212] border border-white/10 p-6 rounded-2xl max-w-xl">
@@ -21,32 +82,49 @@ export function WhatsAppConfig() {
       </div>
 
       <div className="bg-black/50 p-6 rounded-xl border border-white/5 mb-6 text-center">
-        {isConnected ? (
+        {connectedNumber ? (
           <div className="flex flex-col items-center justify-center py-4">
             <CheckCircle className="text-primary mb-3" size={48} />
             <h4 className="font-bold text-xl mb-1">Conectado com sucesso!</h4>
             <p className="text-sm text-white/50">Seu número está verificado. Mande uma mensagem agora.</p>
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center">
-            <div className="bg-white p-4 rounded-xl mb-4 w-32 h-32 flex items-center justify-center">
-              {/* Fake QR Code */}
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://wa.me/${waNumber.replace(/\D/g,'')}?text=Oi%20Grana!%20Quero%20conectar%20minha%20conta.`} alt="QR Code WhatsApp" className="w-full h-full object-contain" />
+        ) : link ? (
+          <div className="flex flex-col items-center justify-center gap-3">
+            <p className="text-sm text-white/60">Mande esta mensagem para o assistente no WhatsApp:</p>
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-lg">
+              <span className="font-mono text-lg tracking-wider">conectar {link.code}</span>
+              <button onClick={copyMessage} className="text-primary hover:text-primary-dark transition-colors p-1" aria-label="Copiar mensagem">
+                <Copy size={16} />
+              </button>
+              {copied && <span className="text-xs text-primary">Copiado!</span>}
             </div>
-            <h4 className="font-bold mb-2">Escaneie o QR Code</h4>
-            <p className="text-sm text-white/50 mb-4">
-              Aponte a câmera do celular ou clique no link abaixo para ativar seu número.
+            {link.waLink ? (
+              <a href={link.waLink} target="_blank" rel="noopener noreferrer">
+                <Button size="sm" className="bg-[#25D366] text-black hover:bg-[#1ebe5b]">Abrir o WhatsApp</Button>
+              </a>
+            ) : (
+              <p className="text-xs text-yellow-500">Número do assistente ainda não configurado.</p>
+            )}
+            <p className="text-xs text-white/40">
+              O código vale por {link.expiresInMinutes} minutos. Esta tela atualiza sozinha quando conectar.
             </p>
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-lg">
-              <span className="font-mono text-sm text-white/80">{waNumber}</span>
-              <button className="text-primary hover:text-primary-dark transition-colors p-1"><Copy size={14} /></button>
-            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-3">
+            <h4 className="font-bold">Conecte seu WhatsApp</h4>
+            <p className="text-sm text-white/50 mb-1">
+              Gere um código e mande para o assistente. Assim confirmamos que o número é seu.
+            </p>
+            <Button onClick={generateCode} disabled={loading} className="bg-primary text-black hover:bg-primary-dark">
+              {loading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Gerando...</>) : "Gerar código"}
+            </Button>
           </div>
         )}
+        {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
       </div>
 
       <div className="space-y-4">
-        <h4 className="font-medium text-sm text-white/70">Como testar:</h4>
+        <h4 className="font-medium text-sm text-white/70">Depois de conectar, experimente:</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="bg-white/5 p-3 rounded-lg border border-white/5">
             <p className="text-xs text-white/50 mb-1">Exemplo 1 (Gasto)</p>
@@ -59,21 +137,15 @@ export function WhatsAppConfig() {
         </div>
       </div>
 
-      <div className="mt-8 border-t border-white/5 pt-6 flex justify-between items-center">
+      <div className="mt-8 border-t border-white/5 pt-6">
         <span className="text-sm flex items-center gap-2">
-          Status: 
-          {isConnected ? (
+          Status:
+          {connectedNumber ? (
             <span className="text-primary font-bold">Ativo</span>
           ) : (
             <span className="text-yellow-500 font-bold">Aguardando ativação...</span>
           )}
         </span>
-        
-        {!isConnected && (
-          <Button onClick={() => setIsConnected(true)} variant="outline" size="sm" className="border-primary/50 text-primary hover:bg-primary hover:text-black">
-            Simular Conexão
-          </Button>
-        )}
       </div>
     </div>
   );
