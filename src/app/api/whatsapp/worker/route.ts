@@ -70,21 +70,41 @@ export async function POST(request: Request) {
          return NextResponse.json({ success: true });
       }
 
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-      const aiFetchRes = await fetch(`${baseUrl}/api/ai/process-message`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.WORKER_SECRET}`
-        },
-        body: JSON.stringify({ message: userMessage, imageUrl: undefined })
-      });
+      // Vinculação do número: "conectar ABC123" (código gerado no painel). Não usa IA.
+      const linkMatch = message?.type === "text"
+        ? String(message.text.body).trim().match(/^(?:conectar|vincular)\s+([A-Za-z0-9]{6})$/i)
+        : null;
 
-      if (!aiFetchRes.ok) {
-         return await failTask(`AI Service returned ${aiFetchRes.status}`);
+      if (linkMatch) {
+        const { data: linkResult, error: linkError } = await supabase.rpc('link_whatsapp_number', {
+          p_code: linkMatch[1],
+          p_phone: phone_number
+        });
+        if (linkError) return await failTask(`Link failed: ${linkError.message}`);
+
+        const linkReplies: Record<string, string> = {
+          ok: "Pronto! ✅ Seu WhatsApp está conectado. Agora é só me mandar seus gastos, tipo: \"gastei 35 no almoço\".",
+          in_use: "Esse número já está conectado a outra conta. Fale com o suporte se precisar de ajuda.",
+          invalid: "Esse código é inválido ou expirou. Gere um novo no painel e me mande de novo."
+        };
+        ai_response = { success: false, link: true, reply: linkReplies[String(linkResult)] ?? linkReplies.invalid };
+      } else {
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+        const aiFetchRes = await fetch(`${baseUrl}/api/ai/process-message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.WORKER_SECRET}`
+          },
+          body: JSON.stringify({ message: userMessage, imageUrl: undefined })
+        });
+
+        if (!aiFetchRes.ok) {
+           return await failTask(`AI Service returned ${aiFetchRes.status}`);
+        }
+
+        ai_response = await aiFetchRes.json();
       }
-      
-      ai_response = await aiFetchRes.json();
 
       // Persist AI Response using fencing token and strict lease validation
       const { error: updateAiError, data: aiUpdated } = await supabase
@@ -101,6 +121,21 @@ export async function POST(request: Request) {
     }
 
     // --- CHECKPOINT 2: Database Sync ---
+    // Mensagem de vinculação não grava chat nem transação: só marca como sincronizada.
+    if (!db_synced && ai_response?.link) {
+      const { data: linkSynced, error: linkSyncError } = await supabase
+        .from('whatsapp_inbox')
+        .update({ db_synced: true })
+        .eq('id', taskId)
+        .eq('worker_id', workerId)
+        .gte('locked_until', new Date().toISOString())
+        .select('id');
+      if (linkSyncError || !linkSynced || linkSynced.length === 0) {
+        return NextResponse.json({ error: "Lease expired at CP2" }, { status: 409 });
+      }
+      db_synced = true;
+    }
+
     if (!db_synced) {
       // Get user profile
       const { data: profile } = await supabase
