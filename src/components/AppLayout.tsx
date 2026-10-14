@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { InstallButton } from "@/components/PWA";
 import { QuickAdd, type QuickAddPreset } from "@/components/QuickAdd";
 import { AccentSync } from "@/components/AccentSync";
 import { ReferralSync } from "@/components/Referral";
@@ -117,7 +116,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </div>
-        <div className="p-6"><InstallButton className="w-full" /></div>
       </aside>
 
       {/* Topo - Mobile */}

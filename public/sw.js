@@ -1,5 +1,5 @@
 // Service worker do Jakash. Só guarda arquivos estáticos; nunca dados financeiros, API ou Supabase.
-const VERSION = "jakash-v1";
+const VERSION = "jakash-v2";
 const STATIC = ["/offline.html", "/icon-192.png", "/icon-512.png", "/logo.png"];
 
 self.addEventListener("install", (event) => {
