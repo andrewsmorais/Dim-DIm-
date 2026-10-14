@@ -10,3 +10,10 @@ export type PlanId = keyof typeof PLANS;
 export function isPlanId(value: unknown): value is PlanId {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(PLANS, value);
 }
+
+// Mensagens do Chat IA por dia, por usuário (controle de custo). AI_CHAT_DAILY_LIMIT, se definida, vale para todos.
+export function aiDailyLimit(plan?: string | null): number {
+  const override = Number(process.env.AI_CHAT_DAILY_LIMIT);
+  if (Number.isFinite(override) && override > 0) return Math.floor(override);
+  return plan === 'mei' || plan === 'cnpj' ? 60 : 30;
+}

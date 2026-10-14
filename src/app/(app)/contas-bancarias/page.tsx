@@ -4,10 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Archive, ArchiveRestore, Landmark, Pencil, Plus, Wallet, PiggyBank, TrendingUp } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useHideValues } from "@/lib/useHideValues";
+import { usePartnership } from "@/lib/usePartnership";
+import { WhoBadge } from "@/components/WhoBadge";
 import { brl, parseMoney } from "@/lib/format";
 import { BackTitle, Card, Label, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
-type Row = { id: string; name: string; kind: string; initial_balance: number; archived: boolean };
+type Row = { id: string; user_id: string; name: string; kind: string; initial_balance: number; archived: boolean };
 type Bal = { id: string; balance: number };
 
 const KINDS: Record<string, { label: string; icon: typeof Landmark }> = {
@@ -20,6 +22,7 @@ const KINDS: Record<string, { label: string; icon: typeof Landmark }> = {
 export default function ContasBancariasPage() {
   const { supabase, userId, ready } = useSupabase();
   const { money } = useHideValues();
+  const { nameOf } = usePartnership();
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [rows, setRows] = useState<Row[]>([]);
   const [bal, setBal] = useState<Record<string, number>>({});
@@ -29,7 +32,7 @@ export default function ContasBancariasPage() {
 
   const load = useCallback(async () => {
     const [a, b] = await Promise.all([
-      supabase.from("accounts").select("id,name,kind,initial_balance,archived").order("created_at"),
+      supabase.from("accounts").select("id,user_id,name,kind,initial_balance,archived").order("created_at"),
       supabase.rpc("account_balances"),
     ]);
     if (a.error || b.error) { setError("Não foi possível carregar as contas."); return; }
@@ -108,7 +111,7 @@ export default function ContasBancariasPage() {
                 <div className="w-12 h-12 rounded-2xl bg-brand-dark/10 dark:bg-[#262626] text-brand-dark dark:text-brand-soft flex items-center justify-center shrink-0"><K.icon size={22} /></div>
                 <div className="min-w-0 flex-1">
                   <p className="font-extrabold truncate">{r.name}</p>
-                  <p className="text-xs text-gray-500">{K.label}</p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{K.label}<WhoBadge name={nameOf(r.user_id)} /></p>
                 </div>
                 {!r.archived && <div className="text-right"><p className="text-[10px] text-gray-400">Saldo atual</p><p className="font-extrabold">{money(brl(bal[r.id] ?? 0))}</p></div>}
               </div>

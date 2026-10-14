@@ -4,10 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { Eye, EyeOff, Landmark, PiggyBank, CircleDollarSign, CheckCircle2, Clock, TrendingUp, Scale, MessageCircle, ArrowUpRight, PlusCircle } from "lucide-react";
+import { Eye, EyeOff, Landmark, PiggyBank, CircleDollarSign, CheckCircle2, Clock, TrendingUp, Scale, MessageCircle, ArrowUpRight, PlusCircle, CreditCard } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useHideValues } from "@/lib/useHideValues";
-import { brl, currentMonth, monthRange, formatDateBR, daysUntil } from "@/lib/format";
+import { useCards } from "@/lib/useCards";
+import { dueDateFor, invoiceMonthFor, invoiceStatus, openInvoicesDue } from "@/lib/cards";
+import { InvoiceChip } from "@/components/CardBits";
+import { brl, currentMonth, monthRange, formatDateBR, daysUntil, todayISO } from "@/lib/format";
 import { Card, Progress, Empty, MonthNav } from "@/components/ui/page";
 
 type Tx = { id: string; description: string; amount: number; type: "income" | "expense"; date: string; category_id: string | null };
@@ -24,12 +27,13 @@ function greeting() {
   return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
 }
 
-function Kpi({ icon: Icon, label, value, tone }: { icon: typeof Landmark; label: string; value: string; tone: string }) {
+function Kpi({ icon: Icon, label, value, tone, hint }: { icon: typeof Landmark; label: string; value: string; tone: string; hint?: string }) {
   return (
     <div className={`relative rounded-[22px] bg-white/75 dark:bg-[#161616] border border-white/80 dark:border-white/5 p-4 pl-5 overflow-hidden shadow-[0_8px_30px_rgba(91,91,240,0.06)] dark:shadow-none`}>
       <span className={`absolute left-0 top-3 bottom-3 w-1.5 rounded-r-full ${tone}`} />
       <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs font-bold mb-2"><Icon size={16} />{label}</div>
       <p className="text-lg md:text-xl font-extrabold">{value}</p>
+      {hint && <p className="text-[10px] text-gray-400 mt-0.5">{hint}</p>}
     </div>
   );
 }
@@ -46,6 +50,8 @@ export default function DashboardPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [inv, setInv] = useState<{ value: number; invested: number; count: number }>({ value: 0, invested: 0, count: 0 });
+  const { cards, invoices } = useCards();
   const [tab, setTab] = useState<Tab>("expense");
   const [error, setError] = useState(false);
 
@@ -54,7 +60,7 @@ export default function DashboardPage() {
     const isCurrent = month === currentMonth();
     let billsQ = supabase.from("bills").select("id,description,amount,due_date,type").eq("status", "pending").lt("due_date", end).order("due_date");
     if (!isCurrent) billsQ = billsQ.gte("due_date", start);
-    const [p, t, c, b, g, bd, a] = await Promise.all([
+    const [p, t, c, b, g, bd, a, iv] = await Promise.all([
       supabase.from("profiles").select("full_name,onboarding_completed").maybeSingle(),
       supabase.from("transactions").select("id,description,amount,type,date,category_id").gte("date", start).lt("date", end).order("date", { ascending: false }).limit(1000),
       supabase.from("categories").select("id,name,parent_id"),
@@ -62,6 +68,7 @@ export default function DashboardPage() {
       supabase.from("goals").select("id,name,icon,target_amount,current_amount").eq("status", "in_progress").order("created_at").limit(20),
       supabase.from("budgets").select("id,category_id,amount_limit"),
       supabase.rpc("account_balances"),
+      supabase.from("investments").select("invested,current_value").eq("archived", false),
     ]);
     setError(Boolean(t.error || c.error || b.error));
     setName((p.data?.full_name ?? "").split(" ")[0]);
@@ -72,6 +79,8 @@ export default function DashboardPage() {
     setGoals(((g.data ?? []) as Goal[]).map((x) => ({ ...x, target_amount: Number(x.target_amount), current_amount: Number(x.current_amount ?? 0) })));
     setBudgets(((bd.data ?? []) as Budget[]).map((x) => ({ ...x, amount_limit: Number(x.amount_limit) })));
     setAccounts(((a.data ?? []) as Account[]).map((x) => ({ ...x, balance: Number(x.balance) })));
+    const ivRows = (iv.data ?? []) as { invested: number; current_value: number }[];
+    setInv({ value: ivRows.reduce((s, r) => s + Number(r.current_value), 0), invested: ivRows.reduce((s, r) => s + Number(r.invested), 0), count: ivRows.length });
   }, [supabase, month, router]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
@@ -88,8 +97,10 @@ export default function DashboardPage() {
   const revenue = received + toReceive;
   const expenses = paid + toPay;
   const balanceNow = accounts.reduce((s, a) => s + a.balance, 0);
-  const projected = balanceNow + toReceive - toPay;
-  const { end } = monthRange(month);
+  const { start, end } = monthRange(month);
+  const activeCards = cards.filter((c) => !c.archived);
+  const cardsDue = openInvoicesDue(activeCards, invoices, end, month === currentMonth() ? undefined : start);
+  const projected = balanceNow + toReceive - toPay - cardsDue;
   const endLabel = formatDateBR(new Date(new Date(end + "T00:00:00").getTime() - 86_400_000).toISOString().slice(0, 10));
 
   const groupBy = (rows: { name: string; amount: number }[]) =>
@@ -142,7 +153,7 @@ export default function DashboardPage() {
         <Kpi icon={CheckCircle2} label="Pago" value={money(brl(paid))} tone="bg-orange-500" />
         <Kpi icon={Clock} label="A receber" value={money(brl(toReceive))} tone="bg-blue-500" />
         <Kpi icon={Clock} label="A pagar" value={money(brl(toPay))} tone="bg-amber-500" />
-        <Kpi icon={TrendingUp} label={`Saldo previsto até ${endLabel}`} value={money(brl(projected))} tone="bg-slate-500" />
+        <Kpi icon={TrendingUp} label={`Saldo previsto até ${endLabel}`} value={money(brl(projected))} tone="bg-slate-500" hint={cardsDue > 0 ? `já desconta ${money(brl(cardsDue))} de faturas` : undefined} />
         <Kpi icon={Scale} label="Balanço" value={money(brl(revenue - expenses))} tone="bg-cyan-500" />
       </div>
 
@@ -160,6 +171,35 @@ export default function DashboardPage() {
                   <span className="text-right"><span className="block text-[10px] text-gray-400">Saldo atual</span><span className="font-extrabold">{money(brl(a.balance))}</span></span>
                 </li>
               ))}
+            </ul>
+          )}
+        </Card>
+
+
+        {/* Cartões de crédito */}
+        <Card>
+          <div className="flex items-center justify-between mb-4"><p className="font-extrabold flex items-center gap-2"><CreditCard size={18} /> Cartões de crédito</p><Link href="/cartoes" className="text-xs font-bold text-brand-dark dark:text-brand-soft">Gerenciar</Link></div>
+          {activeCards.length === 0 ? (
+            <Link href="/cartoes" className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 py-6 text-sm font-bold text-gray-500"><PlusCircle size={18} /> Adicionar cartão</Link>
+          ) : (
+            <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
+              {activeCards.map((c) => {
+                const today = todayISO();
+                // Próxima fatura a pagar (a mais antiga com valor em aberto, vencida ou não); sem pendência, a fatura atual.
+                const next = invoices.filter((i) => i.card_id === c.id && i.total - i.paid > 0.004).sort((a, b) => a.invoice_month.localeCompare(b.invoice_month))[0];
+                const im = next?.invoice_month ?? invoiceMonthFor(c, today);
+                const row = next ?? invoices.find((i) => i.card_id === c.id && i.invoice_month === im);
+                const total = row?.total ?? 0;
+                const toPay = Math.max(total - (row?.paid ?? 0), 0);
+                return (
+                  <li key={c.id}>
+                    <Link href={`/cartoes/${c.id}?m=${im.slice(0, 7)}`} className="flex items-center justify-between py-3 gap-3">
+                      <span className="min-w-0"><span className="block font-bold truncate">{c.name}</span><span className="block text-xs text-gray-500">Vence {formatDateBR(dueDateFor(c, im))}</span></span>
+                      <span className="text-right shrink-0"><span className="block font-extrabold">{money(brl(toPay))}</span><InvoiceChip status={invoiceStatus(c, im, total, row?.paid ?? 0, today)} /></span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
@@ -214,6 +254,23 @@ export default function DashboardPage() {
           <div className="flex items-end justify-between mb-2"><span className="text-3xl font-extrabold">{Math.round(goalsPct)}%</span><span className="text-xs font-bold rounded-full bg-brand-dark/10 dark:bg-brand-vivid/20 px-3 py-1">{goals.length} {goals.length === 1 ? "objetivo" : "objetivos"}</span></div>
           <Progress value={goalsPct} />
           {goals.length === 0 && <p className="text-sm text-gray-500 mt-4">Você ainda não tem objetivos. <Link href="/metas" className="font-bold text-brand-dark dark:text-brand-soft">Criar o primeiro</Link></p>}
+        </Card>
+
+
+        {/* Investimentos */}
+        <Card>
+          <div className="flex items-center justify-between mb-3"><p className="font-extrabold">Meus investimentos</p><Link href="/investimentos" aria-label="Abrir investimentos"><ArrowUpRight size={18} className="text-gray-400" /></Link></div>
+          {inv.count === 0 ? (
+            <Link href="/investimentos" className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 py-4 text-sm font-bold text-gray-500"><PlusCircle size={18} /> Registrar investimento</Link>
+          ) : (
+            <>
+              <p className="text-3xl font-extrabold">{money(brl(inv.value))}</p>
+              <p className={`text-sm font-bold mt-1 ${inv.value - inv.invested >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                {inv.value - inv.invested >= 0 ? "+" : ""}{money(brl(inv.value - inv.invested))}
+                {inv.invested > 0 && <span className="text-gray-400 font-bold"> ({(((inv.value - inv.invested) / inv.invested) * 100).toFixed(1).replace(".", ",")}%)</span>}
+              </p>
+            </>
+          )}
         </Card>
 
         {/* Últimas transações */}

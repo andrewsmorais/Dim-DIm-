@@ -4,6 +4,9 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "regions": ["gru1"],
+  "crons": [
+    { "path": "/api/cron/reminders", "schedule": "0 11 * * *" }
+  ],
   "headers": [
     {
       "source": "/sw.js",

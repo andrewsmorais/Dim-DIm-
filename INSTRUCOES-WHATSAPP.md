@@ -25,3 +25,6 @@ Obs.: o número de teste da Meta só conversa com até 5 destinatários cadastra
 ## Custos
 Respostas de texto livre dentro de 24h após a mensagem do usuário são o caso comum. Confira a tabela
 atual de preços no painel da Meta (mudou em 1º/10/2026).
+
+## Lembretes de vencimento
+Os avisos automáticos (push, e-mail e WhatsApp) e o modelo de mensagem que a Meta precisa aprovar estão em `LEMBRETES-E-IA.md`.
