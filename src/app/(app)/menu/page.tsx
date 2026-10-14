@@ -24,7 +24,7 @@ const TILES: { icon: LucideIcon; label: string; href: string }[] = [
   { icon: FileText, label: "Relatórios", href: "/relatorios" },
   { icon: Calculator, label: "Simulador", href: "/simulador" },
   { icon: CalendarRange, label: "Planejamento", href: "/planejamento" },
-  { icon: FileUp, label: "Importar extrato", href: "/importar" },
+  { icon: FileUp, label: "Importar arquivo", href: "/importar" },
   { icon: Users, label: "Gestão compartilhada", href: "/configuracoes/compartilhada" },
   { icon: Sparkles, label: "Planos", href: "/configuracoes/planos" },
   { icon: Settings, label: "Configurações", href: "/configuracoes" },

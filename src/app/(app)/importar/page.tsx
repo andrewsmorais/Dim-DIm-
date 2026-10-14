@@ -9,9 +9,10 @@ import { brl, formatDateBR } from "@/lib/format";
 import { categoryOptions, type CatRow } from "@/lib/categories";
 import { invoiceMonthFor } from "@/lib/cards";
 import {
-  buildPreview, buildRules, parseStatement, suggestInvert,
+  buildPreview, buildRules, suggestInvert,
   type ExistingTx, type ParseResult, type PreviewRow, type Rules,
 } from "@/lib/importer";
+import { ACCEPT, readAnyFile, takeFile, usesAI } from "@/lib/fileImport";
 import { BackTitle, Card, Label, Toggle, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type Acc = { id: string; name: string; is_business: boolean };
@@ -79,27 +80,44 @@ export default function ImportarPage() {
     setRows(buildPreview({ rows: parsed.rows, invert, targetId: targetId || "x", rules, cats, existing }));
   }, [parsed, invert, targetId, rules, cats, existing]);
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  const [reading, setReading] = useState(false);
+  const [viaAI, setViaAI] = useState(false);
+
+  async function processFile(file: File) {
     setError(null);
     setDone(null);
+    setReading(true);
     try {
-      if (file.size > 8 * 1024 * 1024) throw new Error("Arquivo muito grande (máximo 8 MB).");
-      const res = parseStatement(await file.arrayBuffer());
+      const res = await readAnyFile(file);
       const dates = res.rows.map((r) => r.date).sort();
       const ex = await supabase.from("transactions").select("date,amount,type,import_key").eq("user_id", userId!)
         .gte("date", dates[0]).lte("date", dates[dates.length - 1]).limit(5000);
       setExisting(((ex.data ?? []) as ExistingTx[]).map((x) => ({ ...x, amount: Number(x.amount) })));
       setFileName(file.name);
+      setViaAI(usesAI(file));
       setInvert(suggestInvert(res, targetKind));
+      if (res.kind === "card" && cards.length) { setTargetKind("card"); setTargetId(cards[0].id); }
       setParsed(res);
     } catch (err) {
       setParsed(null);
       setError(err instanceof Error ? err.message : "Não consegui ler este arquivo.");
     }
+    setReading(false);
   }
+
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) void processFile(file);
+  }
+
+  // Arquivo escolhido na janela "Novo lançamento": abre direto na prévia.
+  useEffect(() => {
+    if (loading || !userId) return;
+    const f = takeFile();
+    if (f) void processFile(f);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, userId]);
 
   const optsIncome = useMemo(() => categoryOptions(cats, "income"), [cats]);
   const optsExpense = useMemo(() => categoryOptions(cats, "expense"), [cats]);
@@ -152,7 +170,7 @@ export default function ImportarPage() {
 
   return (
     <div className="max-w-3xl mx-auto pb-24">
-      <BackTitle title="Importar extrato ou fatura" subtitle="Envie o arquivo OFX ou CSV do seu banco. Ele é lido aqui, no seu aparelho." href="/transacoes" />
+      <BackTitle title="Importar arquivo" subtitle="Envie extrato, fatura, nota ou comprovante em PDF, foto, planilha, OFX ou CSV. Você confere tudo antes de salvar." href="/transacoes" />
 
       {done && (
         <Card className="mb-6">
@@ -191,11 +209,11 @@ export default function ImportarPage() {
             </div>
             <div>
               <label className={btnCls + " cursor-pointer"}>
-                <FileUp size={16} /> {parsed ? "Trocar arquivo" : "Escolher arquivo"}
-                <input type="file" className="hidden" accept=".ofx,.qfx,.csv,.txt,text/csv,application/x-ofx" onChange={onFile} />
+                <FileUp size={16} /> {reading ? "Lendo o arquivo..." : parsed ? "Trocar arquivo" : "Escolher arquivo"}
+                <input type="file" className="hidden" accept={ACCEPT} onChange={onFile} disabled={reading} />
               </label>
               {fileName && <span className="ml-3 text-sm text-gray-500">{fileName}</span>}
-              <p className="text-xs text-gray-400 mt-2">Aceita OFX e CSV. PDF não é suportado: no app do banco, baixe o extrato ou a fatura em OFX ou CSV.</p>
+              <p className="text-xs text-gray-400 mt-2">Aceita PDF, foto (JPG, PNG), planilha .xlsx, OFX e CSV, até 4 MB. OFX, CSV e planilha são lidos no seu aparelho; PDF e foto são lidos por IA.</p>
             </div>
           </div>
         )}
@@ -206,6 +224,7 @@ export default function ImportarPage() {
         <>
           <Card className="mb-6">
             <p className="font-extrabold">{parsed.rows.length} lançamentos · {range}</p>
+            {viaAI && <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 rounded-xl px-3 py-2 mt-2">Arquivo lido por IA. Confira datas, valores e entradas/saídas antes de importar.</p>}
             {parsed.skipped > 0 && <p className="text-xs text-gray-500 mt-0.5">{parsed.skipped} linhas ignoradas (saldos, totais ou valor zero).</p>}
             <div className="space-y-3 mt-4">
               <Toggle checked={invert} onChange={setInvert} label="Inverter entradas e saídas"

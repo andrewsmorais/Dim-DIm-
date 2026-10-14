@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { FileUp, X } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
 import { categoryOptions, type CatRow } from "@/lib/categories";
 import { buildCardPurchase, dueDateFor, invoiceMonthFor, splitInstallments } from "@/lib/cards";
+import { ACCEPT, stashFile } from "@/lib/fileImport";
 import { Label, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
 
 type Acc = { id: string; name: string; is_business: boolean };
@@ -16,6 +18,7 @@ export type QuickAddPreset = { cardId?: string };
 
 // Janela de novo lançamento (botão + do app). Avisa a tela atual por evento "jakash:changed".
 export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: () => void; preset?: QuickAddPreset }) {
+  const router = useRouter();
   const { supabase, userId } = useSupabase();
   const { isMei } = useUsageType();
   const [cats, setCats] = useState<CatRow[]>([]);
@@ -107,6 +110,15 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           <h2 className="text-xl font-extrabold">Novo lançamento</h2>
           <button type="button" onClick={onClose} aria-label="Fechar" className="text-gray-400"><X size={20} /></button>
         </div>
+
+        <label className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-brand-dark/30 dark:border-white/15 px-4 py-3 cursor-pointer hover:bg-brand-dark/5 dark:hover:bg-[#1E1E1E]">
+          <FileUp size={20} className="text-brand-dark dark:text-brand-soft shrink-0" />
+          <span className="min-w-0">
+            <span className="block text-sm font-extrabold">Enviar arquivo</span>
+            <span className="block text-xs text-gray-500">PDF, foto, planilha, OFX ou CSV: os lançamentos entram no app</span>
+          </span>
+          <input type="file" className="hidden" accept={ACCEPT} onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; stashFile(file); onClose(); router.push("/importar"); }} />
+        </label>
 
         <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#262626]">
           {(["expense", "income"] as const).map((t) => (
