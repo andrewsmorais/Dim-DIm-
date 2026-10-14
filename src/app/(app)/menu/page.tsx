@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  Settings, Landmark, FileText, Tag, Target, Gauge, CalendarClock, ShieldCheck, Calculator, TrendingDown, Home, Sparkles,
+  Settings, Landmark, FileText, Tag, Target, Gauge, CalendarClock, ShieldCheck, Calculator, FileUp, CalendarRange, Briefcase, Gift, TrendingDown, Home, Sparkles,
   CreditCard, TrendingUp, MessageSquare, Users, type LucideIcon,
 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
+import { useUsageType } from "@/lib/useUsageType";
 
 const TILES: { icon: LucideIcon; label: string; href: string }[] = [
   { icon: Home, label: "Resumo do mês", href: "/dashboard" },
   { icon: MessageSquare, label: "Chat IA", href: "/chat" },
   { icon: Landmark, label: "Contas bancárias", href: "/contas-bancarias" },
-  { icon: CreditCard, label: "Cartões de crédito", href: "/cartoes" },
+  { icon: CreditCard, label: "Cartão de crédito", href: "/cartoes" },
   { icon: CalendarClock, label: "Contas a pagar", href: "/contas" },
   { icon: Gauge, label: "Limites de gastos", href: "/limites" },
   { icon: Target, label: "Objetivos", href: "/metas" },
@@ -22,6 +23,9 @@ const TILES: { icon: LucideIcon; label: string; href: string }[] = [
   { icon: Tag, label: "Categorias", href: "/categorias" },
   { icon: FileText, label: "Relatórios", href: "/relatorios" },
   { icon: Calculator, label: "Simulador", href: "/simulador" },
+  { icon: CalendarRange, label: "Planejamento", href: "/planejamento" },
+  { icon: FileUp, label: "Importar extrato", href: "/importar" },
+  { icon: Gift, label: "Indicar amigos", href: "/configuracoes/indicar" },
   { icon: Users, label: "Gestão compartilhada", href: "/configuracoes/compartilhada" },
   { icon: Sparkles, label: "Planos", href: "/configuracoes/planos" },
   { icon: Settings, label: "Configurações", href: "/configuracoes" },
@@ -35,6 +39,8 @@ function greeting() {
 export default function MenuPage() {
   const { supabase, userId, ready } = useSupabase();
   const [name, setName] = useState("");
+  const { isMei } = useUsageType();
+  const tiles = isMei ? TILES.slice(0, 4).concat([{ icon: Briefcase, label: "Pacote MEI", href: "/mei" }], TILES.slice(4)) : TILES;
 
   useEffect(() => {
     if (!ready || !userId) return;
@@ -54,7 +60,7 @@ export default function MenuPage() {
       </div>
       <h1 className="text-2xl font-extrabold mb-4">Tudo</h1>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {TILES.map((t, i) => (
+        {tiles.map((t, i) => (
           <Link key={t.href} href={t.href}
             className={`rounded-[24px] p-4 h-32 flex flex-col justify-between border transition-transform active:scale-95 ${
               i === 0

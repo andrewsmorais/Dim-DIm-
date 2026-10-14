@@ -3,19 +3,21 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
+import { useUsageType } from "@/lib/useUsageType";
 import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
 import { categoryOptions, type CatRow } from "@/lib/categories";
 import { buildCardPurchase, dueDateFor, invoiceMonthFor, splitInstallments } from "@/lib/cards";
 import { Label, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
 
-type Acc = { id: string; name: string };
-type CardOpt = { id: string; name: string; closing_day: number; due_day: number };
+type Acc = { id: string; name: string; is_business: boolean };
+type CardOpt = { id: string; name: string; closing_day: number; due_day: number; is_business: boolean; kind: "credito" | "debito"; pay_account_id: string | null };
 
 export type QuickAddPreset = { cardId?: string };
 
 // Janela de novo lançamento (botão + do app). Avisa a tela atual por evento "jakash:changed".
 export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: () => void; preset?: QuickAddPreset }) {
   const { supabase, userId } = useSupabase();
+  const { isMei } = useUsageType();
   const [cats, setCats] = useState<CatRow[]>([]);
   const [accs, setAccs] = useState<Acc[]>([]);
   const [cards, setCards] = useState<CardOpt[]>([]);
@@ -23,7 +25,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
   const [saving, setSaving] = useState(false);
   const [f, setF] = useState({
     type: "expense" as "income" | "expense", amount: "", description: "", category_id: "", account_id: "", date: todayISO(), paid: true,
-    method: "account" as "account" | "card", card_id: "", installments: 1,
+    method: "account" as "account" | "card" | "debit", card_id: "", installments: 1, biz: false,
   });
 
   useEffect(() => {
@@ -31,18 +33,19 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     setError(null);
     Promise.all([
       supabase.from("categories").select("id,name,type,parent_id").order("name"),
-      supabase.from("accounts").select("id,name").eq("archived", false).order("created_at"),
-      supabase.from("credit_cards").select("id,name,closing_day,due_day").eq("archived", false).order("created_at"),
+      supabase.from("accounts").select("id,name,is_business").eq("archived", false).order("created_at"),
+      supabase.from("credit_cards").select("id,name,closing_day,due_day,is_business,kind,pay_account_id").eq("archived", false).order("created_at"),
     ]).then(([c, a, k]) => {
       setCats((c.data ?? []) as CatRow[]);
       setAccs((a.data ?? []) as Acc[]);
       const list = (k.data ?? []) as CardOpt[];
+      const credits = list.filter((x) => x.kind === "credito");
       setCards(list);
       setF((p) => ({
         ...p, date: todayISO(), installments: 1,
         ...(preset?.cardId && list.some((x) => x.id === preset.cardId)
-          ? { type: "expense" as const, method: "card" as const, card_id: preset.cardId }
-          : { method: "account" as const, card_id: list.length === 1 ? list[0].id : "" }),
+          ? { type: "expense" as const, method: "card" as const, card_id: preset.cardId, biz: Boolean(list.find((x) => x.id === preset.cardId)?.is_business) }
+          : { method: "account" as const, card_id: credits.length === 1 ? credits[0].id : "", biz: false }),
       }));
     });
   }, [open, userId, supabase, preset?.cardId]);
@@ -50,8 +53,13 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
   if (!open) return null;
 
   const isIncome = f.type === "income";
-  const useCard = !isIncome && f.method === "card" && cards.length > 0;
-  const card = cards.find((c) => c.id === f.card_id);
+  const creditCards = cards.filter((c) => c.kind === "credito");
+  const debitCards = cards.filter((c) => c.kind === "debito");
+  const useCard = !isIncome && f.method === "card" && creditCards.length > 0;
+  const useDebit = !isIncome && f.method === "debit" && debitCards.length > 0;
+  const card = creditCards.find((c) => c.id === f.card_id);
+  const debit = debitCards.find((c) => c.id === f.card_id);
+  const methods = [["account", "Conta"] as const, ...(creditCards.length ? [["card", "Crédito"] as const] : []), ...(debitCards.length ? [["debit", "Débito"] as const] : [])];
   const total = parseMoney(f.amount);
   const per = Number.isNaN(total) || !(total > 0) ? 0 : splitInstallments(total, f.installments)[0];
 
@@ -60,17 +68,24 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     const amount = parseMoney(f.amount);
     if (!f.description.trim() || !(amount > 0)) { setError("Informe descrição e um valor maior que zero."); return; }
     if (useCard && !card) { setError("Escolha o cartão."); return; }
+    if (useDebit && (!debit || !debit.pay_account_id)) { setError(debit ? "Este cartão de débito está sem conta vinculada. Edite o cartão e escolha a conta." : "Escolha o cartão de débito."); return; }
     setSaving(true);
     let res;
     if (useCard && card) {
       const rows = buildCardPurchase(card, {
         userId: userId!, description: f.description.trim(), total: amount, installments: f.installments, date: f.date, category_id: f.category_id || null,
       });
-      res = await supabase.from("transactions").insert(rows);
+      res = await supabase.from("transactions").insert(rows.map((r) => ({ ...r, is_business: f.biz })));
+    } else if (useDebit && debit) {
+      // Débito sai da conta na hora: lançamento normal na conta do cartão, marcado com o cartão usado.
+      res = await supabase.from("transactions").insert({
+        user_id: userId, description: f.description.trim(), amount, type: "expense", date: f.date,
+        category_id: f.category_id || null, account_id: debit.pay_account_id, debit_card_id: debit.id, origin: "manual", is_business: f.biz,
+      });
     } else if (f.paid) {
       res = await supabase.from("transactions").insert({
         user_id: userId, description: f.description.trim(), amount, type: f.type, date: f.date,
-        category_id: f.category_id || null, account_id: f.account_id || null, origin: "manual",
+        category_id: f.category_id || null, account_id: f.account_id || null, origin: "manual", is_business: f.biz,
       });
     } else {
       res = await supabase.from("bills").insert({
@@ -102,10 +117,10 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           ))}
         </div>
 
-        {!isIncome && cards.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#262626]">
-            {([["account", "Conta"], ["card", "Cartão de crédito"]] as const).map(([k, l]) => (
-              <button key={k} type="button" onClick={() => setF({ ...f, method: k })}
+        {!isIncome && methods.length > 1 && (
+          <div className={`grid gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#262626] ${methods.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+            {methods.map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setF({ ...f, method: k, card_id: k === "card" ? (creditCards.length === 1 ? creditCards[0].id : "") : k === "debit" ? (debitCards.length === 1 ? debitCards[0].id : "") : f.card_id })}
                 className={`py-2 rounded-xl text-xs font-bold ${f.method === k ? "bg-white dark:bg-brand-vivid text-brand-dark dark:text-white shadow-sm" : "text-gray-500"}`}>{l}</button>
             ))}
           </div>
@@ -126,9 +141,9 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           <>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Cartão</Label>
-                <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value })}>
+                <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value, biz: Boolean(cards.find((c) => c.id === e.target.value)?.is_business) || f.biz })}>
                   <option value="">Escolher</option>
-                  {cards.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {creditCards.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select></div>
               <div><Label>Parcelas</Label>
                 <select className={inputCls} value={f.installments} onChange={(e) => setF({ ...f, installments: Number(e.target.value) })}>
@@ -138,11 +153,20 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
             {f.installments > 1 && per > 0 && <p className="text-xs text-gray-500 -mt-2">{f.installments}x de {brl(per)} (a primeira parcela pode ter alguns centavos a mais).</p>}
             {card && <p className="text-xs text-gray-500 -mt-2">Entra na fatura que vence em {formatDateBR(dueDateFor(card, invoiceMonthFor(card, f.date)))}. O dinheiro só sai da conta quando você pagar a fatura.</p>}
           </>
+        ) : useDebit ? (
+          <>
+            <div><Label>Cartão de débito</Label>
+              <select className={inputCls} value={f.card_id} onChange={(e) => setF({ ...f, card_id: e.target.value, biz: Boolean(debitCards.find((c) => c.id === e.target.value)?.is_business) || f.biz })}>
+                <option value="">Escolher</option>
+                {debitCards.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select></div>
+            {debit && <p className="text-xs text-gray-500 -mt-2">Sai na hora da conta {accs.find((a) => a.id === debit.pay_account_id)?.name ?? "vinculada ao cartão"}.</p>}
+          </>
         ) : (
           <>
             {accs.length > 0 && f.paid && (
               <div><Label>Conta</Label>
-                <select className={inputCls} value={f.account_id} onChange={(e) => setF({ ...f, account_id: e.target.value })}>
+                <select className={inputCls} value={f.account_id} onChange={(e) => setF({ ...f, account_id: e.target.value, biz: Boolean(accs.find((a) => a.id === e.target.value)?.is_business) || f.biz })}>
                   <option value="">Conta principal</option>
                   {accs.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select></div>
@@ -153,6 +177,12 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
             </label>
             {!f.paid && <p className="text-xs text-gray-500 -mt-2">Fica em Contas a pagar/receber até você dar baixa.</p>}
           </>
+        )}
+        {(isMei || f.biz) && (useCard || useDebit || f.paid) && (
+          <label className="flex items-center justify-between rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#1E1E1E] px-4 py-3 text-sm font-bold">
+            <span>Da empresa (MEI)<span className="block text-xs font-normal text-gray-500">Entra na receita bruta e no limite do MEI</span></span>
+            <input type="checkbox" checked={f.biz} onChange={(e) => setF({ ...f, biz: e.target.checked })} className="h-5 w-5 accent-brand-dark" />
+          </label>
         )}
         <ErrorNote message={error} />
         <button className={btnCls + " w-full"} disabled={saving} type="submit">{saving ? "Salvando..." : "Salvar"}</button>

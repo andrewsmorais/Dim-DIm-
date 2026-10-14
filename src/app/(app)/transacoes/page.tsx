@@ -1,23 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CreditCard, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { CreditCard, FileUp, Plus, Trash2 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, parseMoney, todayISO, formatDateBR, currentMonth, monthRange } from "@/lib/format";
 import { categoryOptions, type CatRow } from "@/lib/categories";
 import { usePartnership } from "@/lib/usePartnership";
+import { useUsageType } from "@/lib/useUsageType";
 import { WhoBadge } from "@/components/WhoBadge";
 import { PageHeader, Card, Label, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type Tx = {
   id: string; user_id: string; description: string; amount: number; type: "income" | "expense"; date: string; category_id: string | null;
-  card_id: string | null; installment_group: string | null;
+  card_id: string | null; installment_group: string | null; is_business: boolean; debit_card_id: string | null;
 };
 
 export default function TransacoesPage() {
   const { supabase, userId, ready } = useSupabase();
   const { shared, partner, nameOf } = usePartnership();
+  const { isMei } = useUsageType();
   const [who, setWho] = useState<"all" | "me" | "partner">("all");
+  const [scope, setScope] = useState<"all" | "pf" | "pj">("all");
   const [cats, setCats] = useState<CatRow[]>([]);
   const [cardNames, setCardNames] = useState<Record<string, string>>({});
   const [delTx, setDelTx] = useState<Tx | null>(null);
@@ -33,7 +37,7 @@ export default function TransacoesPage() {
     const { start, end } = monthRange(month);
     const [c, t, k] = await Promise.all([
       supabase.from("categories").select("id,name,type,parent_id").order("name"),
-      supabase.from("transactions").select("id,user_id,description,amount,type,date,category_id,card_id,installment_group")
+      supabase.from("transactions").select("id,user_id,description,amount,type,date,category_id,card_id,installment_group,is_business,debit_card_id")
         .gte("date", start).lt("date", end).order("date", { ascending: false }).limit(500),
       supabase.from("credit_cards").select("id,name"),
     ]);
@@ -74,14 +78,18 @@ export default function TransacoesPage() {
 
   const catName = (id: string | null) => cats.find((c) => c.id === id)?.name ?? "Sem categoria";
   // Na gestão compartilhada dá para ver só os seus lançamentos ou só os do parceiro; os totais seguem o filtro.
-  const scoped = txs.filter((t) => !shared || who === "all" || (who === "me" ? t.user_id === userId : t.user_id === partner?.id));
+  const scoped = txs
+    .filter((t) => !shared || who === "all" || (who === "me" ? t.user_id === userId : t.user_id === partner?.id))
+    .filter((t) => scope === "all" || (scope === "pj") === t.is_business);
+  const showScope = isMei || txs.some((t) => t.is_business);
   const shown = scoped.filter((t) => filter === "all" || t.type === filter);
   const income = scoped.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const expense = scoped.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
 
   return (
     <div className="max-w-5xl mx-auto pb-20">
-      <PageHeader title="Transações" subtitle="Tudo que você registrou, aqui ou pelo WhatsApp" />
+      <PageHeader title="Transações" subtitle="Tudo que você registrou, aqui ou pelo WhatsApp"
+        action={<Link href="/importar" className={btnGhostCls + " !py-2.5 !px-4 w-fit"}><FileUp size={14} /> Importar extrato</Link>} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <Card><p className="text-xs font-bold text-gray-500">Receitas</p><p className="text-2xl font-bold text-emerald-500">{brl(income)}</p></Card>
@@ -115,6 +123,13 @@ export default function TransacoesPage() {
             {f === "all" ? "Todas" : f === "expense" ? "Despesas" : "Receitas"}
           </button>
         ))}
+        {showScope && (
+          <div className="flex items-center gap-1 rounded-full bg-brand-dark/10 dark:bg-[#161616] p-1">
+            {([["all", "PF e PJ"], ["pf", "Pessoal"], ["pj", "Empresa"]] as const).map(([k, l]) => (
+              <button key={k} onClick={() => setScope(k)} className={`px-3 py-1.5 rounded-full text-xs font-bold ${scope === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+            ))}
+          </div>
+        )}
         {shared && partner && (
           <div className="flex items-center gap-1 rounded-full bg-brand-dark/10 dark:bg-[#161616] p-1">
             {([["all", "Os dois"], ["me", "Você"], ["partner", partner.name.split(" ")[0]]] as const).map(([k, l]) => (
@@ -131,7 +146,7 @@ export default function TransacoesPage() {
               <li key={t.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-bold truncate">{t.description}</p>
-                  <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{formatDateBR(t.date)} · {catName(t.category_id)}{t.card_id && <span className="inline-flex items-center gap-1 rounded-full bg-brand-dark/10 dark:bg-[#262626] px-2 py-0.5 text-[10px] font-bold text-brand-dark dark:text-brand-soft"><CreditCard size={10} />{cardNames[t.card_id] ?? "Cartão"}</span>}<WhoBadge name={nameOf(t.user_id)} /></p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{formatDateBR(t.date)} · {catName(t.category_id)}{(t.card_id || t.debit_card_id) && <span className="inline-flex items-center gap-1 rounded-full bg-brand-dark/10 dark:bg-[#262626] px-2 py-0.5 text-[10px] font-bold text-brand-dark dark:text-brand-soft"><CreditCard size={10} />{cardNames[(t.card_id ?? t.debit_card_id) as string] ?? "Cartão"}{t.debit_card_id ? " (débito)" : ""}</span>}{t.is_business && <span className="inline-flex rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">Empresa</span>}<WhoBadge name={nameOf(t.user_id)} /></p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className={`font-bold whitespace-nowrap ${t.type === "income" ? "text-emerald-500" : "text-red-500"}`}>

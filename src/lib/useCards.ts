@@ -14,6 +14,7 @@ export type Card = {
   due_day: number;
   pay_account_id: string | null;
   archived: boolean;
+  kind: "credito" | "debito";
 };
 
 // Cartões da casa + resumo das faturas (um registro por cartão/mês). Recarrega com "jakash:changed".
@@ -26,7 +27,7 @@ export function useCards() {
 
   const load = useCallback(async () => {
     const [c, s] = await Promise.all([
-      supabase.from("credit_cards").select("id,user_id,name,brand,credit_limit,closing_day,due_day,pay_account_id,archived").order("created_at"),
+      supabase.from("credit_cards").select("id,user_id,name,brand,credit_limit,closing_day,due_day,pay_account_id,archived,kind").order("created_at"),
       supabase.rpc("card_invoice_summary"),
     ]);
     setError(Boolean(c.error || s.error));

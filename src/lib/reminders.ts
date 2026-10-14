@@ -1,12 +1,13 @@
 // Lembretes de vencimento (regras puras, sem acesso ao banco nem a canais de envio).
 import { addDays } from "@/lib/cards";
 import { brl, formatDateBR } from "@/lib/format";
+import { meiObligations } from "@/lib/mei";
 
 // Valores de profiles.notify_when -> quantos dias antes do vencimento avisar.
 const OFFSETS: Record<string, number> = { on_due: 0, "1_day": 1, "3_days": 3, "7_days": 7 };
 export const offsetFor = (when: string | null | undefined): number => OFFSETS[String(when)] ?? 0;
 
-export type DueItem = { kind: "pagar" | "receber" | "fatura"; label: string; amount: number; due: string };
+export type DueItem = { kind: "pagar" | "receber" | "fatura" | "obrigacao"; label: string; amount: number; due: string };
 
 export type BillLite = { user_id: string; description: string; amount: number | string; due_date: string; type: "income" | "expense" };
 /** Linha de public.card_invoices_due_on(): fatura com valor em aberto que vence em `due_date`. */
@@ -34,6 +35,15 @@ export function cardItems(rows: CardDueRow[], target: string): DueItem[] {
     .map((r) => ({ kind: "fatura" as const, label: `Fatura ${r.card_name}`, amount: Number(r.remaining), due: target }));
 }
 
+const MEI_LABEL = { das: "Pagar o DAS (MEI)", relatorio: "Relatório mensal de receitas brutas (MEI)", dasn: "Declaração anual DASN-SIMEI (MEI)" } as const;
+
+/** Obrigações do MEI que vencem em `target`. O DAS só entra se o usuário não agendou a conta "DAS" (que já avisa sozinha). */
+export function meiItems(target: string, hasDasBill: boolean): DueItem[] {
+  return meiObligations(target)
+    .filter((o) => o.due === target && !(o.key === "das" && hasDasBill))
+    .map((o) => ({ kind: "obrigacao" as const, label: MEI_LABEL[o.key], amount: 0, due: target }));
+}
+
 const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
 const cut = (s: string, max: number) => (s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s);
 
@@ -56,23 +66,26 @@ export type Reminder = {
 /** Monta o texto do lembrete. Retorna null se não há nada a avisar. */
 export function buildReminder(items: DueItem[], offset: number, target: string): Reminder | null {
   if (items.length === 0) return null;
-  const pay = items.filter((i) => i.kind !== "receber");
+  const pay = items.filter((i) => i.kind === "pagar" || i.kind === "fatura");
   const recv = items.filter((i) => i.kind === "receber");
+  const tasks = items.filter((i) => i.kind === "obrigacao");
   const when = whenLabel(offset, target);
 
   let title: string;
-  if (recv.length === 0) title = pay.length === 1 ? `1 conta vence ${when}` : `${pay.length} contas vencem ${when}`;
+  if (tasks.length > 0 && pay.length + recv.length > 0) title = `Vencimentos ${when}`;
+  else if (tasks.length > 0) title = tasks.length === 1 ? `1 obrigação do MEI ${when}` : `${tasks.length} obrigações do MEI ${when}`;
+  else if (recv.length === 0) title = pay.length === 1 ? `1 conta vence ${when}` : `${pay.length} contas vencem ${when}`;
   else if (pay.length === 0) title = recv.length === 1 ? `1 recebimento previsto ${when}` : `${recv.length} recebimentos previstos ${when}`;
   else title = `Contas e recebimentos ${when}`;
 
-  // Pagamentos primeiro, do maior para o menor valor.
-  const sorted = [...pay.sort((a, b) => b.amount - a.amount), ...recv.sort((a, b) => b.amount - a.amount)];
-  const text = (i: DueItem) => `${cut(oneLine(i.label), 40)}${i.kind === "receber" ? " (a receber)" : ""} ${brl(i.amount)}`;
+  // Pagamentos primeiro, do maior para o menor valor; depois recebimentos e obrigações (sem valor).
+  const sorted = [...pay.sort((a, b) => b.amount - a.amount), ...recv.sort((a, b) => b.amount - a.amount), ...tasks];
+  const text = (i: DueItem) => (i.kind === "obrigacao" ? cut(oneLine(i.label), 60) : `${cut(oneLine(i.label), 40)}${i.kind === "receber" ? " (a receber)" : ""} ${brl(i.amount)}`);
   const top = sorted.slice(0, 3).map(text).join("; ");
   const more = sorted.length - 3;
   const summary = oneLine(`${top}${more > 0 ? ` e mais ${more}` : ""}`);
 
-  const lines = sorted.slice(0, 10).map((i) => `${i.kind === "receber" ? "A receber · " : ""}${cut(oneLine(i.label), 60)}: ${brl(i.amount)}`);
+  const lines = sorted.slice(0, 10).map((i) => (i.kind === "obrigacao" ? cut(oneLine(i.label), 60) : `${i.kind === "receber" ? "A receber · " : ""}${cut(oneLine(i.label), 60)}: ${brl(i.amount)}`));
   if (sorted.length > 10) lines.push(`e mais ${sorted.length - 10}`);
 
   const totalToPay = Math.round(pay.reduce((s, i) => s + i.amount, 0) * 100) / 100;

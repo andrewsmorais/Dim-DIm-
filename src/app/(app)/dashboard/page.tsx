@@ -12,6 +12,8 @@ import { dueDateFor, invoiceMonthFor, invoiceStatus, openInvoicesDue } from "@/l
 import { InvoiceChip } from "@/components/CardBits";
 import { brl, currentMonth, monthRange, formatDateBR, daysUntil, todayISO } from "@/lib/format";
 import { Card, Progress, Empty, MonthNav } from "@/components/ui/page";
+import { FirstWeek } from "@/components/growth/FirstWeek";
+import { MonthlyInsight } from "@/components/growth/MonthlyInsight";
 
 type Tx = { id: string; description: string; amount: number; type: "income" | "expense"; date: string; category_id: string | null };
 type Bill = { id: string; description: string; amount: number; due_date: string; type: "income" | "expense" };
@@ -98,7 +100,7 @@ export default function DashboardPage() {
   const expenses = paid + toPay;
   const balanceNow = accounts.reduce((s, a) => s + a.balance, 0);
   const { start, end } = monthRange(month);
-  const activeCards = cards.filter((c) => !c.archived);
+  const activeCards = cards.filter((c) => !c.archived && c.kind === "credito");
   const cardsDue = openInvoicesDue(activeCards, invoices, end, month === currentMonth() ? undefined : start);
   const projected = balanceNow + toReceive - toPay - cardsDue;
   const endLabel = formatDateBR(new Date(new Date(end + "T00:00:00").getTime() - 86_400_000).toISOString().slice(0, 10));
@@ -136,6 +138,9 @@ export default function DashboardPage() {
 
       <div className="mb-5"><MonthNav month={month} onChange={setMonth} /></div>
       {error && <p className="text-sm text-red-500 font-medium mb-4">Não foi possível carregar alguns dados.</p>}
+
+      <FirstWeek />
+      <MonthlyInsight />
 
       {/* Saldo atual */}
       <div className="rounded-[28px] p-6 mb-4 text-white shadow-xl shadow-brand-dark/30 bg-gradient-to-br from-[#6C6CF5] via-[#7C6CF7] to-brand-soft dark:from-brand-vivid dark:via-brand-vivid dark:to-brand-vivid dark:shadow-none flex items-center gap-4">
@@ -176,9 +181,9 @@ export default function DashboardPage() {
         </Card>
 
 
-        {/* Cartões de crédito */}
+        {/* Cartão de crédito */}
         <Card>
-          <div className="flex items-center justify-between mb-4"><p className="font-extrabold flex items-center gap-2"><CreditCard size={18} /> Cartões de crédito</p><Link href="/cartoes" className="text-xs font-bold text-brand-dark dark:text-brand-soft">Gerenciar</Link></div>
+          <div className="flex items-center justify-between mb-4"><p className="font-extrabold flex items-center gap-2"><CreditCard size={18} /> Cartão de crédito</p><Link href="/cartoes" className="text-xs font-bold text-brand-dark dark:text-brand-soft">Gerenciar</Link></div>
           {activeCards.length === 0 ? (
             <Link href="/cartoes" className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 py-6 text-sm font-bold text-gray-500"><PlusCircle size={18} /> Adicionar cartão</Link>
           ) : (

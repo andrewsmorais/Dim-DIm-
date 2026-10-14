@@ -5,7 +5,8 @@
   "installCommand": "npm install",
   "regions": ["gru1"],
   "crons": [
-    { "path": "/api/cron/reminders", "schedule": "0 11 * * *" }
+    { "path": "/api/cron/reminders", "schedule": "0 11 * * *" },
+    { "path": "/api/cron/insights", "schedule": "0 12 1 * *" }
   ],
   "headers": [
     {
