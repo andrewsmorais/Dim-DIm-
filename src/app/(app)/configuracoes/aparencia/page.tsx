@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Check, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useSupabase } from "@/lib/useSupabase";
+import { applyAccent, isAccent, storedAccent } from "@/lib/accent";
 import { BackTitle, Card } from "@/components/ui/page";
 
 const ACCENTS = [
@@ -18,16 +20,27 @@ const ACCENTS = [
 
 export default function AparenciaPage() {
   const { theme, setTheme } = useTheme();
+  const { supabase, userId } = useSupabase();
   const [accent, setAccent] = useState("violet");
+  const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
-    try { setAccent(localStorage.getItem("jakash-accent") || "violet"); } catch { /* sem storage */ }
+    const read = () => setAccent(document.documentElement.dataset.accent || storedAccent() || "violet");
+    read();
+    window.addEventListener("jakash:accent", read);
+    return () => window.removeEventListener("jakash:accent", read);
   }, []);
 
+  // A cor fica na conta (vale em todos os aparelhos) e também no aparelho, para abrir já com ela.
   function pick(id: string) {
+    if (!isAccent(id)) return;
     setAccent(id);
-    document.documentElement.dataset.accent = id;
-    try { localStorage.setItem("jakash-accent", id); } catch { /* sem storage */ }
+    applyAccent(id);
+    setNote(null);
+    if (!userId) return;
+    supabase.from("profiles").update({ accent: id }).eq("id", userId).then(({ error }) => {
+      if (error) setNote("Não consegui salvar na sua conta. A cor vale só neste aparelho por enquanto.");
+    });
   }
 
   const current = ACCENTS.find((a) => a.id === accent) ?? ACCENTS[0];
@@ -49,7 +62,7 @@ export default function AparenciaPage() {
 
       <Card>
         <p className="font-extrabold">Cor do tema</p>
-        <p className="text-sm text-gray-500 mb-4">Escolha a cor que combina com você. Vale só neste aparelho.</p>
+        <p className="text-sm text-gray-500 mb-4">Escolha a cor que combina com você. Ela fica salva na sua conta e vale em todos os aparelhos.</p>
         <div className="flex items-center justify-between rounded-2xl border border-gray-100 dark:border-white/5 px-4 py-3 mb-4">
           <div><p className="text-xs text-gray-500">Tema atual</p><p className="font-extrabold">{current.label}</p></div>
           <div className="flex gap-2"><span className="w-9 h-9 rounded-full" style={{ background: current.a }} /><span className="w-9 h-9 rounded-full border border-gray-200 dark:border-white/10" style={{ background: current.b }} /></div>
@@ -62,6 +75,7 @@ export default function AparenciaPage() {
             </button>
           ))}
         </div>
+        {note && <p className="text-xs text-amber-600 dark:text-amber-400 mt-4">{note}</p>}
       </Card>
     </div>
   );

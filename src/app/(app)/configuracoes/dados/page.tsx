@@ -13,6 +13,8 @@ const RESET_OPTIONS = [
   { id: "goals", label: "Objetivos" },
   { id: "budgets", label: "Limites de gastos" },
   { id: "accounts", label: "Contas bancárias" },
+  { id: "credit_cards", label: "Cartões de crédito (com as compras e pagamentos)" },
+  { id: "investments", label: "Investimentos" },
 ] as const;
 
 type Modal = null | "reset" | "delete";
@@ -55,7 +57,9 @@ export default function DadosPage() {
   async function doReset() {
     if (confirm.trim().toUpperCase() !== "APAGAR" || picked.length === 0) { setError("Escolha o que apagar e digite APAGAR."); return; }
     setBusy(true); setError(null);
-    for (const table of picked) {
+    // Lançamentos e cartões levam junto os pagamentos de fatura (que dependem das compras).
+    const tables = picked.includes("transactions") && !picked.includes("credit_cards") ? [...picked, "card_invoice_payments"] : picked;
+    for (const table of tables) {
       const { error: err } = await supabase.from(table).delete().eq("user_id", userId);
       if (err) { setError("Não foi possível apagar tudo. Tente de novo."); setBusy(false); return; }
     }

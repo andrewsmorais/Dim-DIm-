@@ -3,21 +3,26 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  Settings, Landmark, FileText, Tag, Target, Gauge, CalendarClock, ShieldCheck, Calculator, TrendingDown, Home, Sparkles, type LucideIcon,
+  Settings, Landmark, FileText, Tag, Target, Gauge, CalendarClock, ShieldCheck, Calculator, TrendingDown, Home, Sparkles,
+  CreditCard, TrendingUp, MessageSquare, Users, type LucideIcon,
 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 
 const TILES: { icon: LucideIcon; label: string; href: string }[] = [
   { icon: Home, label: "Resumo do mês", href: "/dashboard" },
+  { icon: MessageSquare, label: "Chat IA", href: "/chat" },
   { icon: Landmark, label: "Contas bancárias", href: "/contas-bancarias" },
+  { icon: CreditCard, label: "Cartões de crédito", href: "/cartoes" },
   { icon: CalendarClock, label: "Contas a pagar", href: "/contas" },
   { icon: Gauge, label: "Limites de gastos", href: "/limites" },
   { icon: Target, label: "Objetivos", href: "/metas" },
   { icon: TrendingDown, label: "Dívidas", href: "/dividas" },
   { icon: ShieldCheck, label: "Reserva", href: "/reserva" },
+  { icon: TrendingUp, label: "Investimentos", href: "/investimentos" },
   { icon: Tag, label: "Categorias", href: "/categorias" },
   { icon: FileText, label: "Relatórios", href: "/relatorios" },
   { icon: Calculator, label: "Simulador", href: "/simulador" },
+  { icon: Users, label: "Gestão compartilhada", href: "/configuracoes/compartilhada" },
   { icon: Sparkles, label: "Planos", href: "/configuracoes/planos" },
   { icon: Settings, label: "Configurações", href: "/configuracoes" },
 ];

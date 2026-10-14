@@ -14,7 +14,7 @@ const ITEMS: { icon: LucideIcon; title: string; desc: string; href?: string; soo
   { icon: MessageCircle, title: "WhatsApp", desc: "Conecte o número que registra seus gastos.", href: "/configuracoes/whatsapp" },
   { icon: Sparkles, title: "Planos e assinatura", desc: "Seu plano, faturas e cancelamento.", href: "/configuracoes/planos" },
   { icon: Database, title: "Dados", desc: "Exportar, recomeçar do zero ou excluir a conta.", href: "/configuracoes/dados" },
-  { icon: Users, title: "Gestão compartilhada", desc: "Dividir as finanças com outra pessoa.", soon: true },
+  { icon: Users, title: "Gestão compartilhada", desc: "Dividir as finanças com outra pessoa.", href: "/configuracoes/compartilhada" },
 ];
 
 export default function ConfiguracoesPage() {

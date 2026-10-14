@@ -4,10 +4,11 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { InstallButton } from "@/components/PWA";
-import { QuickAdd } from "@/components/QuickAdd";
+import { QuickAdd, type QuickAddPreset } from "@/components/QuickAdd";
+import { AccentSync } from "@/components/AccentSync";
 import {
   Home, Send, FileText, Gauge, CalendarClock, Landmark, Target, ShieldCheck,
-  Calculator, Settings, Landmark as Bank, Plus, Menu as MenuIcon, type LucideIcon,
+  Calculator, Settings, Landmark as Bank, Plus, Menu as MenuIcon, CreditCard, TrendingUp, Sparkles, type LucideIcon,
 } from "lucide-react";
 
 type Item = { icon: LucideIcon; label: string; href: string };
@@ -20,6 +21,7 @@ const SECTIONS: Section[] = [
       { icon: Home, label: "Resumo", href: "/dashboard" },
       { icon: Send, label: "Transações", href: "/transacoes" },
       { icon: Bank, label: "Contas bancárias", href: "/contas-bancarias" },
+      { icon: CreditCard, label: "Cartões de crédito", href: "/cartoes" },
       { icon: FileText, label: "Relatórios", href: "/relatorios" },
     ],
   },
@@ -31,11 +33,13 @@ const SECTIONS: Section[] = [
       { icon: Landmark, label: "Dívidas", href: "/dividas" },
       { icon: Target, label: "Objetivos", href: "/metas" },
       { icon: ShieldCheck, label: "Reserva", href: "/reserva" },
+      { icon: TrendingUp, label: "Investimentos", href: "/investimentos" },
     ],
   },
   {
     title: "FERRAMENTAS",
     items: [
+      { icon: Sparkles, label: "Chat IA", href: "/chat" },
       { icon: Calculator, label: "Simulador", href: "/simulador" },
       { icon: Settings, label: "Configurações", href: "/configuracoes" },
     ],
@@ -47,10 +51,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
+  const [preset, setPreset] = useState<QuickAddPreset | undefined>(undefined);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Outras telas abrem o lançamento rápido (ex.: "Nova compra" na fatura do cartão).
+  useEffect(() => {
+    const h = (e: Event) => {
+      setPreset((e as CustomEvent<QuickAddPreset>).detail ?? undefined);
+      setQuickOpen(true);
+    };
+    window.addEventListener("jakash:quickadd", h);
+    return () => window.removeEventListener("jakash:quickadd", h);
+  }, []);
+
+  const openQuick = () => { setPreset(undefined); setQuickOpen(true); };
 
   if (!mounted) return <div className="min-h-screen bg-[var(--bg-1)] dark:bg-black" />;
 
@@ -66,7 +83,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="px-6 pb-4">
-          <button onClick={() => setQuickOpen(true)} className="w-full flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid py-3 text-sm font-bold text-white shadow-lg shadow-brand-dark/30 dark:shadow-none"><Plus size={18} /> Novo lançamento</button>
+          <button onClick={openQuick} className="w-full flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid py-3 text-sm font-bold text-white shadow-lg shadow-brand-dark/30 dark:shadow-none"><Plus size={18} /> Novo lançamento</button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6 scrollbar-hide">
           {SECTIONS.map((section) => (
@@ -123,7 +140,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <it.icon size={22} />{it.label}
             </Link>
           ))}
-          <button onClick={() => setQuickOpen(true)} aria-label="Novo lançamento" className="mx-auto -mt-6 w-14 h-14 rounded-full bg-gradient-to-br from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid text-white flex items-center justify-center shadow-xl shadow-brand-dark/40 dark:shadow-none"><Plus size={28} /></button>
+          <button onClick={openQuick} aria-label="Novo lançamento" className="mx-auto -mt-6 w-14 h-14 rounded-full bg-gradient-to-br from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid text-white flex items-center justify-center shadow-xl shadow-brand-dark/40 dark:shadow-none"><Plus size={28} /></button>
           {[
             { icon: Gauge, href: "/limites", label: "Limites" },
             { icon: MenuIcon, href: "/menu", label: "Menu" },
@@ -135,7 +152,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
 
-      <QuickAdd open={quickOpen} onClose={() => setQuickOpen(false)} />
+      <QuickAdd open={quickOpen} onClose={() => setQuickOpen(false)} preset={preset} />
+      <AccentSync />
     </div>
   );
 }
