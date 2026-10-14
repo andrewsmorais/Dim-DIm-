@@ -1,60 +1,75 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { AuthShell, authBtn, authInput, Divider, GoogleButton, Notice } from "@/components/auth/AuthShell";
+import { authError } from "@/lib/authUtil";
 
 export default function CadastroPage() {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password.length < 8) { setError("A senha precisa ter pelo menos 8 caracteres."); return; }
+    setBusy(true); setError("");
+    const { data, error: err } = await createClient().auth.signUp({
+      email: email.trim(), password,
+      options: { data: { full_name: name.trim() }, emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard` },
+    });
+    if (err) { setError(authError(err.message)); setBusy(false); return; }
+    if (data.session) { router.replace("/dashboard"); router.refresh(); return; }
+    setSent(true); setBusy(false);
+  }
+
+  async function google() {
+    setBusy(true); setError("");
+    const { error: err } = await createClient().auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=/dashboard` },
+    });
+    if (err) { setError(authError(err.message)); setBusy(false); }
+  }
+
+  if (sent) {
+    return (
+      <AuthShell title="Confira seu e-mail">
+        <p className="text-center text-gray-600">Enviamos um link de confirmação para <strong>{email}</strong>. Clique nele para ativar a conta. Se não achar, olhe o spam.</p>
+        <div className="mt-8 text-center text-sm font-medium text-gray-500"><Link href="/login" className="text-[#00A152] hover:underline">Voltar para o login</Link></div>
+      </AuthShell>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F3F4F6] p-6 font-sans">
-      <Link href="/" className="flex items-center gap-3 mb-10">
-        <div className="w-10 h-10 rounded-[10px] bg-[#00E676] flex items-center justify-center text-white font-bold text-xl shadow-sm">
-          G
+    <AuthShell title="Crie sua conta">
+      <GoogleButton onClick={google} busy={busy} />
+      <Divider />
+      <form onSubmit={submit} className="space-y-5">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-600 mb-1.5">Nome completo</label>
+          <input id="name" type="text" required autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={authInput} placeholder="Seu nome" />
         </div>
-        <span className="font-bold text-[22px] text-gray-900 tracking-tight">Jakash</span>
-      </Link>
-      
-      <div className="w-full max-w-[420px] bg-white border border-gray-100 p-8 sm:p-10 rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-        <h1 className="text-2xl font-bold mb-8 text-center text-gray-900">Crie sua conta</h1>
-        
-        <form className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1.5">Nome completo</label>
-            <input 
-              type="text" 
-              className="w-full bg-[#FAFAFA] border border-gray-200 rounded-lg px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00E676] focus:ring-1 focus:ring-[#00E676] transition-colors"
-              placeholder="Seu nome"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1.5">E-mail</label>
-            <input 
-              type="email" 
-              className="w-full bg-[#FAFAFA] border border-gray-200 rounded-lg px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00E676] focus:ring-1 focus:ring-[#00E676] transition-colors"
-              placeholder="seu@email.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1.5">Senha</label>
-            <input 
-              type="password" 
-              className="w-full bg-[#FAFAFA] border border-gray-200 rounded-lg px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#00E676] focus:ring-1 focus:ring-[#00E676] transition-colors"
-              placeholder="••••••••"
-            />
-          </div>
-          
-          <div className="pt-4">
-            <Link href="/dashboard" className="block w-full">
-              <button 
-                type="button" 
-                className="w-full h-12 bg-gradient-to-r from-brand-dark to-brand-accent hover:opacity-90 text-white font-bold text-lg rounded-full transition-opacity shadow-lg shadow-brand-dark/30"
-              >
-                Cadastrar
-              </button>
-            </Link>
-          </div>
-        </form>
-        
-        <div className="mt-8 text-center text-sm font-medium text-gray-500">
-          Já tem uma conta? <Link href="/login" className="text-[#00E676] hover:underline">Entrar</Link>
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-1.5">E-mail</label>
+          <input id="email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} placeholder="seu@email.com" />
         </div>
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-600 mb-1.5">Senha (mínimo 8 caracteres)</label>
+          <input id="password" type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} placeholder="••••••••" />
+        </div>
+        {error && <Notice kind="error">{error}</Notice>}
+        <button type="submit" disabled={busy} className={authBtn}>{busy ? "Criando..." : "Cadastrar"}</button>
+      </form>
+      <div className="mt-8 text-center text-sm font-medium text-gray-500">
+        Já tem uma conta? <Link href="/login" className="text-[#00A152] hover:underline">Entrar</Link>
       </div>
-    </div>
+    </AuthShell>
   );
 }
