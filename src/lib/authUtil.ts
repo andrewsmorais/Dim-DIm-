@@ -1,0 +1,16 @@
+// Só aceita caminhos internos como destino depois do login (evita redirecionamento para sites externos).
+export function safeNext(next: string | null | undefined, fallback = "/dashboard"): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
+  return next;
+}
+
+export function authError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("invalid login")) return "E-mail ou senha incorretos.";
+  if (m.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar. Procure o link na sua caixa de entrada (e no spam).";
+  if (m.includes("already registered") || m.includes("already been registered")) return "Esse e-mail já tem conta. Use Entrar ou recupere a senha.";
+  if (m.includes("password") && (m.includes("least") || m.includes("short") || m.includes("weak"))) return "A senha precisa ter pelo menos 8 caracteres.";
+  if (m.includes("rate limit") || m.includes("too many") || m.includes("security purposes")) return "Muitas tentativas. Aguarde um minuto e tente de novo.";
+  if (m.includes("same password") || m.includes("different from the old")) return "Escolha uma senha diferente da anterior.";
+  return "Não foi possível concluir. Tente novamente.";
+}
