@@ -11,6 +11,11 @@
     background-color: #EEF0FB;
     color: theme('colors.text.DEFAULT');
   }
+
+  html.dark body {
+    background-color: #000000;
+    color: #FFFFFF;
+  }
 }
 
 @layer utilities {

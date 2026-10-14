@@ -31,7 +31,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen font-sans bg-[#F0F2F5]">
+    <div className="flex flex-col min-h-screen font-sans bg-[#EEF0FB]">
       <Header />
 
       <main>
@@ -89,7 +89,7 @@ export default function LandingPage() {
         </section>
 
         {/* 3. SEÇÃO "QUEM FAZ" (Light/Gray) */}
-        <section className="py-24 px-6 bg-[#F0F2F5] text-gray-900">
+        <section className="py-24 px-6 bg-[#EEF0FB] text-gray-900">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 fade-in-section">
             <div className="lg:w-1/2">
               <SectionBadge text="✓ QUEM FAZ" />
@@ -133,7 +133,7 @@ export default function LandingPage() {
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-[#F0F2F5] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
+              <div className="bg-[#EEF0FB] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
                 <div className="w-16 h-16 bg-white text-brand-dark rounded-2xl flex items-center justify-center mb-8 shadow-sm">
                   <CalendarDays size={32} />
                 </div>
@@ -141,7 +141,7 @@ export default function LandingPage() {
                 <p className="text-gray-500 font-medium leading-relaxed">Fatura, boleto, assinatura. A IA alerta no WhatsApp para você não pagar juros.</p>
               </div>
               
-              <div className="bg-[#F0F2F5] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
+              <div className="bg-[#EEF0FB] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
                 <div className="w-16 h-16 bg-white text-brand-dark rounded-2xl flex items-center justify-center mb-8 shadow-sm">
                   <StickyNote size={32} />
                 </div>
@@ -149,7 +149,7 @@ export default function LandingPage() {
                 <p className="text-gray-500 font-medium leading-relaxed">Isso só funciona no primeiro dia. Depois, o mês fica em aberto. Deixe o app categorizar para você.</p>
               </div>
               
-              <div className="bg-[#F0F2F5] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
+              <div className="bg-[#EEF0FB] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
                 <div className="w-16 h-16 bg-white text-brand-dark rounded-2xl flex items-center justify-center mb-8 shadow-sm">
                   <Calculator size={32} />
                 </div>
@@ -161,7 +161,7 @@ export default function LandingPage() {
         </section>
 
         {/* 5. SEÇÃO "AUTOMAÇÃO" (Light/Gray) */}
-        <section className="py-32 px-6 bg-[#F0F2F5] text-gray-900 overflow-hidden">
+        <section className="py-32 px-6 bg-[#EEF0FB] text-gray-900 overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 fade-in-section">
             <div className="lg:w-1/2">
               <SectionBadge text="✓ AUTOMAÇÃO" />
@@ -262,7 +262,7 @@ export default function LandingPage() {
         </section>
 
         {/* 7. SEÇÃO "CONVERSA" (Dark Green Gradient) */}
-        <section className="py-32 px-6 bg-gradient-to-br from-brand-dark to-[#05200F] text-white relative overflow-hidden">
+        <section className="py-32 px-6 bg-gradient-to-br from-brand-dark to-[#2A1F8F] text-white relative overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 relative z-10 fade-in-section">
             <div className="lg:w-1/2">
               <SectionBadge text="✓ CONVERSA" dark />
@@ -291,7 +291,7 @@ export default function LandingPage() {
               <div className="w-full aspect-[4/3] rounded-[2rem] overflow-hidden relative">
                 {/* Simulated Image Background */}
                 <div className="absolute inset-0 bg-brand-dark/50 bg-[url('https://images.unsplash.com/photo-1556740758-90de374c12ad?auto=format&fit=crop&q=80&w=1000')] bg-cover bg-center mix-blend-overlay"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#05200F] to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#2A1F8F] to-transparent"></div>
                 
                 {/* Floating Chat Bubble */}
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white p-6 rounded-3xl shadow-2xl animate-float text-gray-900">
@@ -309,7 +309,7 @@ export default function LandingPage() {
         </section>
 
         {/* 9. SEÇÃO "INÍCIO" (Light) */}
-        <section id="como-funciona" className="py-32 px-6 bg-[#F0F2F5] text-gray-900 text-center">
+        <section id="como-funciona" className="py-32 px-6 bg-[#EEF0FB] text-gray-900 text-center">
           <div className="max-w-6xl mx-auto fade-in-section">
             <SectionBadge text="✓ INÍCIO" />
             <h2 className="text-4xl md:text-5xl font-bold mb-20">
@@ -364,7 +364,7 @@ export default function LandingPage() {
             </h2>
             
             <div className="flex justify-center mb-12">
-              <div className="bg-[#F0F2F5] p-1 rounded-full inline-flex border border-gray-200">
+              <div className="bg-[#EEF0FB] p-1 rounded-full inline-flex border border-gray-200">
                 <button className="px-6 py-2 rounded-full font-bold bg-white text-brand-dark shadow-sm">Anual</button>
                 <button className="px-6 py-2 rounded-full font-medium text-gray-500">Mensal</button>
               </div>
@@ -384,7 +384,7 @@ export default function LandingPage() {
                 <p className="text-sm font-bold text-gray-400"><span className="line-through">R$ 29,90</span> · preço de turma fundadora</p>
               </div>
               
-              <ul className="space-y-4 mb-10 text-left font-medium text-gray-600 bg-[#F0F2F5] p-6 rounded-[24px]">
+              <ul className="space-y-4 mb-10 text-left font-medium text-gray-600 bg-[#EEF0FB] p-6 rounded-[24px]">
                 {[
                   'Conexões ilimitadas',
                   'Insights sobre suas finanças',
@@ -410,7 +410,7 @@ export default function LandingPage() {
         </section>
 
         {/* 11. SEÇÃO "RESPOSTAS" (Light/Gray) */}
-        <section id="faq" className="py-24 px-6 bg-[#F0F2F5] text-gray-900">
+        <section id="faq" className="py-24 px-6 bg-[#EEF0FB] text-gray-900">
           <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-16 fade-in-section">
             <div className="md:w-1/3">
               <SectionBadge text="✓ RESPOSTAS" />
@@ -453,7 +453,7 @@ export default function LandingPage() {
             <p className="text-xl text-white/70 mb-12 font-medium">
               Depois, apenas R$ 19,90/mês. Cancele quando quiser, sem multa.
             </p>
-            <CTAButton text="Comece agora, é grátis →" size="lg" className="h-16 px-12 text-xl bg-brand-accent text-white hover:bg-green-600" />
+            <CTAButton text="Comece agora, é grátis →" size="lg" className="h-16 px-12 text-xl bg-brand-accent text-white hover:opacity-90" />
             <p className="mt-12 text-sm text-white/50 font-bold">Jakash, feito no Brasil 🇧🇷</p>
           </div>
         </section>

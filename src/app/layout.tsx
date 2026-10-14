@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { PWARegister } from "@/components/PWA";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -24,7 +25,19 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Jakash", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
   authors: [{ name: "Jakash", url: "https://www.jakash.app" }],
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#5B5BF0" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -35,6 +48,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${jakarta.variable} font-sans antialiased overflow-x-hidden selection:bg-primary selection:text-white`}>
+        <PWARegister />
         {children}
       </body>
     </html>
