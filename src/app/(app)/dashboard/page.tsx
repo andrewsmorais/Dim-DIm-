@@ -183,7 +183,7 @@ export default function DashboardPage() {
 
         {/* Cartão de crédito */}
         <Card>
-          <div className="flex items-center justify-between mb-4"><p className="font-extrabold flex items-center gap-2"><CreditCard size={18} /> Cartão de crédito</p><Link href="/cartoes" className="text-xs font-bold text-brand-dark dark:text-brand-soft">Gerenciar</Link></div>
+          <div className="flex items-center justify-between mb-4"><p className="font-extrabold flex items-center gap-2"><CreditCard size={18} /> Cartões</p><Link href="/cartoes" className="text-xs font-bold text-brand-dark dark:text-brand-soft">Gerenciar</Link></div>
           {activeCards.length === 0 ? (
             <Link href="/cartoes" className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 py-6 text-sm font-bold text-gray-500"><PlusCircle size={18} /> Adicionar cartão</Link>
           ) : (

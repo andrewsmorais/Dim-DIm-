@@ -107,7 +107,7 @@ export default function CartoesPage() {
 
   return (
     <div className="max-w-3xl mx-auto pb-20">
-      <BackTitle title="Cartão de crédito" subtitle="Crédito com faturas e limites. Débito saindo direto da conta." />
+      <BackTitle title="Cartões" subtitle="Crédito com faturas e limites. Débito saindo direto da conta." />
 
       <button onClick={openNew} className={btnCls + " w-full mb-5"}><Plus size={18} /> Adicionar cartão</button>
 

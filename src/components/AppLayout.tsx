@@ -23,7 +23,7 @@ const SECTIONS: Section[] = [
       { icon: Home, label: "Resumo", href: "/dashboard" },
       { icon: Send, label: "Transações", href: "/transacoes" },
       { icon: Bank, label: "Contas bancárias", href: "/contas-bancarias" },
-      { icon: CreditCard, label: "Cartão de crédito", href: "/cartoes" },
+      { icon: CreditCard, label: "Cartões", href: "/cartoes" },
       { icon: FileText, label: "Relatórios", href: "/relatorios" },
     ],
   },
