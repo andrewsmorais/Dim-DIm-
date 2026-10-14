@@ -8,7 +8,7 @@
   }
   
   body {
-    background-color: theme('colors.background.DEFAULT');
+    background-color: #EEF0FB;
     color: theme('colors.text.DEFAULT');
   }
 }

@@ -1,7 +1,7 @@
 /* TEAM */
-Author: Escola de SEO / Grana Capital
+Author: Escola de SEO / Jakash
 Role: Estratégia AEO, SEO & Desenvolvimento Full-Stack
-Site: https://granasmart.com.br
+Site: https://www.jakash.app
 
 /* SITE */
 Last update: 2025

@@ -7,7 +7,7 @@ export default function LoginPage() {
         <div className="w-10 h-10 rounded-[10px] bg-[#00E676] flex items-center justify-center text-white font-bold text-xl shadow-sm">
           G
         </div>
-        <span className="font-bold text-[22px] text-gray-900 tracking-tight">Grana Smart</span>
+        <span className="font-bold text-[22px] text-gray-900 tracking-tight">Jakash</span>
       </Link>
       
       <div className="w-full max-w-[420px] bg-white border border-gray-100 p-8 sm:p-10 rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
@@ -39,7 +39,7 @@ export default function LoginPage() {
             <Link href="/dashboard" className="block w-full">
               <button 
                 type="button" 
-                className="w-full h-12 bg-[#00E676] hover:bg-[#00C853] text-white font-bold text-lg rounded-lg transition-colors shadow-sm"
+                className="w-full h-12 bg-gradient-to-r from-brand-dark to-brand-accent hover:opacity-90 text-white font-bold text-lg rounded-full transition-opacity shadow-lg shadow-brand-dark/30"
               >
                 Entrar
               </button>

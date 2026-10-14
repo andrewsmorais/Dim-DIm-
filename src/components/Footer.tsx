@@ -9,7 +9,7 @@ export function Footer() {
             L
           </div>
           <span className="font-bold text-3xl tracking-tight text-white">
-            Grana <span className="text-brand-accent">Smart</span>
+            Jakash
           </span>
         </Link>
         
@@ -26,7 +26,7 @@ export function Footer() {
         </div>
         
         <div className="text-xs text-white/40 text-center flex flex-col items-center gap-2">
-          <p>Grana Smart · CNPJ XX.XXX.XXX/0001-XX</p>
+          <p>Jakash · CNPJ XX.XXX.XXX/0001-XX</p>
           <p>Feito no Brasil 🇧🇷</p>
         </div>
       </div>

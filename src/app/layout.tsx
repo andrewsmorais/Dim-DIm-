@@ -1,29 +1,30 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
 
 export const metadata: Metadata = {
-  title: "Grana Smart | Controle Financeiro Automático pelo WhatsApp",
-  description: "Cuidar das contas dava trabalho. Agora é automático. O Grana Smart importa, categoriza e avisa no WhatsApp sobre faturas, assinaturas e saldos.",
+  title: "Jakash | Controle Financeiro Automático pelo WhatsApp",
+  description: "Cuidar das contas dava trabalho. Agora é automático. O Jakash importa, categoriza e avisa no WhatsApp sobre faturas, assinaturas e saldos.",
   openGraph: {
-    title: "Grana Smart | Controle Financeiro Automático",
-    description: "O Grana Smart importa, categoriza e avisa no WhatsApp sobre faturas, assinaturas e saldos.",
-    url: "https://granasmart.com.br",
-    siteName: "Grana Smart",
-    images: [{ url: "https://granasmart.com.br/og-image.jpg", width: 1200, height: 630 }],
+    title: "Jakash | Controle Financeiro Automático",
+    description: "O Jakash importa, categoriza e avisa no WhatsApp sobre faturas, assinaturas e saldos.",
+    url: "https://www.jakash.app",
+    siteName: "Jakash",
+    images: [{ url: "https://www.jakash.app/og-image.jpg", width: 1200, height: 630 }],
     locale: "pt_BR",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Grana Smart | Controle Financeiro Automático",
+    title: "Jakash | Controle Financeiro Automático",
     description: "Cuidar das contas dava trabalho. Agora é automático.",
-    images: ["https://granasmart.com.br/twitter-card.jpg"],
+    images: ["https://www.jakash.app/twitter-card.jpg"],
   },
   manifest: "/manifest.webmanifest",
-  authors: [{ name: "Grana Capital", url: "https://granasmart.com.br" }],
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  authors: [{ name: "Jakash", url: "https://www.jakash.app" }],
 };
 
 export default function RootLayout({
@@ -33,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased overflow-x-hidden selection:bg-primary selection:text-black`}>
+      <body className={`${jakarta.variable} font-sans antialiased overflow-x-hidden selection:bg-primary selection:text-white`}>
         {children}
       </body>
     </html>

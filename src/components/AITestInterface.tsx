@@ -42,7 +42,7 @@ export function AITestInterface() {
           <Bot size={24} />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-white">Testar Grana IA</h2>
+          <h2 className="text-2xl font-bold text-white">Testar IA do Jakash</h2>
           <p className="text-sm text-text-secondary">Simulador direto da API OpenAI (GPT-4o-mini)</p>
         </div>
       </div>
