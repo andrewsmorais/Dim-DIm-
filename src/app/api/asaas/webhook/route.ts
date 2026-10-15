@@ -38,7 +38,7 @@ async function recordBillingEvent(
   const planValue = plan === 'cpf' || plan === 'mei' ? PLANS[plan].value : 0;
   const amount = Number(body.payment?.value ?? planValue) || 0;
 
-  const { error } = await supabase.from('billing_events').insert({
+  const row = {
     user_id: profile?.id ?? null,
     asaas_customer_id: customerId,
     payment_id: body.payment?.id ?? null,
@@ -46,9 +46,15 @@ async function recordBillingEvent(
     plan,
     // Só cobranças carregam valor; cancelamento de assinatura não é dinheiro.
     amount: kind === 'canceled' || kind === 'overdue' ? 0 : amount,
-    // Valor líquido (já sem a taxa do Asaas): a diferença para `amount` é a taxa real.
-    net_amount: kind === 'paid' && body.payment?.netValue != null ? Number(body.payment.netValue) : null,
-  });
+  };
+  // Valor líquido (já sem a taxa do Asaas): a diferença para `amount` é a taxa real.
+  const net = kind === 'paid' && body.payment?.netValue != null ? Number(body.payment.netValue) : null;
+
+  let { error } = await supabase.from('billing_events').insert({ ...row, net_amount: net });
+  // Coluna net_amount ainda não existe (migration pendente): grava sem ela para nunca perder o evento.
+  if (error && (error.code === '42703' || error.code === 'PGRST204')) {
+    ({ error } = await supabase.from('billing_events').insert(row));
+  }
   // 23505 = o Asaas reenviou o mesmo pagamento (PAYMENT_RECEIVED + PAYMENT_CONFIRMED): ignorar.
   if (error && error.code !== '23505') throw new Error(error.message);
 }
