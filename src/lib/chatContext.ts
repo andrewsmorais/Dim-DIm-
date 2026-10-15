@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cardUsed, dueDateFor, invoiceMonthFor, type InvoiceRow } from '@/lib/cards';
+import { limitForYear, limitStatus, planLimit, profitSummary, toSummary } from '@/lib/mei';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -23,7 +24,7 @@ type Tx = { description: string; amount: number | string; type: 'income' | 'expe
 // Resumo compacto das finanças do usuário (com a sessão dele, então respeita o RLS e a gestão compartilhada).
 export async function buildChatContext(db: SupabaseClient, today: string) {
   const { start, end, prevStart, in30 } = bounds(today);
-  const [c, t, a, b, bd, g, d, k, s, iv] = await Promise.all([
+  const [c, t, a, b, bd, g, d, k, s, iv, pf] = await Promise.all([
     db.from('categories').select('id,name,type,parent_id'),
     db.from('transactions').select('description,amount,type,date,category_id').gte('date', prevStart).lt('date', end).order('date', { ascending: false }).limit(1500),
     db.rpc('account_balances'),
@@ -34,6 +35,7 @@ export async function buildChatContext(db: SupabaseClient, today: string) {
     db.from('credit_cards').select('id,name,credit_limit,closing_day,due_day').eq('archived', false).eq('kind', 'credito'),
     db.rpc('card_invoice_summary'),
     db.from('investments').select('name,kind,invested,current_value').eq('archived', false).limit(15),
+    db.from('profiles').select('usage_type,mei_activity,mei_opened_on,mei_annual_limit').maybeSingle(),
   ]);
 
   const cats = (c.data ?? []) as Cat[];
@@ -88,6 +90,10 @@ export async function buildChatContext(db: SupabaseClient, today: string) {
 
   const roots = (type: 'income' | 'expense') => cats.filter((x) => x.type === type && !x.parent_id).map((x) => x.name);
 
+  const prof = pf.data as { usage_type: string; mei_activity: string; mei_opened_on: string | null; mei_annual_limit: number | string } | null;
+  const isMei = prof?.usage_type === 'empresarial' || prof?.usage_type === 'ambos';
+  const mei = isMei && prof ? await meiContext(db, today, prof) : null;
+
   return {
     hoje: today,
     CATEGORIAS: { despesa: roots('expense'), receita: roots('income') },
@@ -105,5 +111,32 @@ export async function buildChatContext(db: SupabaseClient, today: string) {
       .map((x) => ({ nome: x.name, saldo_devedor: r2(Number(x.balance)), juros_ao_mes_pct: Number(x.monthly_rate) })),
     cartoes_de_credito: cards,
     investimentos: investments,
+    ...(mei ? { mei } : {}),
+  };
+}
+
+// Números do Pacote MEI (só para quem usa o app para a empresa). Usa as mesmas regras da tela /mei.
+async function meiContext(db: SupabaseClient, today: string, prof: { mei_activity: string; mei_opened_on: string | null; mei_annual_limit: number | string }) {
+  const year = Number(today.slice(0, 4));
+  const { data } = await db.rpc('mei_year_summary', { p_year: year });
+  const sum = toSummary(((data ?? []) as Parameters<typeof toSummary>[0][])[0]);
+  const limit = limitForYear(year, Number(prof.mei_annual_limit ?? 81000), prof.mei_opened_on ?? null);
+  const p = profitSummary(sum);
+  const st = limitStatus(p.revenue, limit);
+  const plan = planLimit(p.revenue, limit, today, prof.mei_opened_on ?? null);
+  return {
+    atividade_principal: prof.mei_activity,
+    limite_de_faturamento_do_ano: r2(limit),
+    receita_da_empresa_no_ano: p.revenue,
+    percentual_do_limite_usado: r2(st.pct),
+    restante_do_limite: r2(st.remaining),
+    receita_por_tipo: { comercio: sum.rev_comercio, industria: sum.rev_industria, servicos: sum.rev_servicos },
+    despesas_da_empresa_no_ano: p.expenses,
+    lucro_no_ano: p.profit,
+    retiradas_ja_feitas: p.draws,
+    retirada_isenta_disponivel: p.exemptAvailable,
+    pode_faturar_por_mes_ate_dezembro: plan.perMonth,
+    ritmo_atual_por_mes: plan.paceNow,
+    faixa_de_tolerancia_20_por_cento_ate: plan.toleranceLimit,
   };
 }

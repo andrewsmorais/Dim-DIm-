@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { aiDailyLimit } from '@/lib/plans';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/chatPrompt';
 import { buildChatContext } from '@/lib/chatContext';
+import { parseChatOutput, type ChatAction } from '@/lib/chatActions';
 
 export const maxDuration = 30;
 
@@ -20,16 +21,6 @@ const bodySchema = z.object({
   message: z.string().trim().min(1).max(500),
   history: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(800) })).max(8).default([]),
 });
-
-// Nada que a IA devolver vira lançamento sem passar por aqui (e sem a confirmação da pessoa no app).
-const txSchema = z.object({
-  amount: z.coerce.number().positive().max(10_000_000).transform((n) => Math.round(n * 100) / 100),
-  description: z.string().trim().min(1).max(120),
-  category: z.string().trim().max(60).nullish(),
-  type: z.enum(['income', 'expense']),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => !Number.isNaN(Date.parse(d)), 'data inválida'),
-});
-const replySchema = z.object({ reply: z.string().trim().min(1).max(2000), transactions: z.array(z.unknown()).max(10).optional() });
 
 export async function GET() {
   const supabase = createClient();
@@ -82,7 +73,7 @@ export async function POST(request: Request) {
       const completion = await openai.chat.completions.create({
         model: process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',
         temperature: 0.3,
-        max_tokens: 600,
+        max_tokens: 900,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: `${CHAT_SYSTEM_PROMPT}\n\n# DADOS (JSON)\n${JSON.stringify(context)}` },
@@ -97,20 +88,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não consegui responder agora. Tente de novo em instantes.' }, { status: 502 });
     }
 
-    let reply = 'Não consegui entender direito. Pode reformular?';
-    let transactions: z.infer<typeof txSchema>[] = [];
-    try {
-      const out = replySchema.safeParse(JSON.parse(content || '{}'));
-      if (out.success) {
-        reply = out.data.reply;
-        transactions = (out.data.transactions ?? [])
-          .map((t) => txSchema.safeParse(t))
-          .flatMap((r) => (r.success ? [r.data] : []))
-          .slice(0, 5);
-      }
-    } catch {
-      /* resposta fora do formato: usa a mensagem padrão */
-    }
+    // Nada que a IA devolver é gravado aqui: só o que passa na validação chega à tela, e a pessoa confirma antes de salvar.
+    const { reply, actions } = parseChatOutput(content);
 
     // Histórico compartilhado com o WhatsApp (melhor esforço).
     await supabase.from('chat_history').insert([
@@ -118,7 +97,9 @@ export async function POST(request: Request) {
       { user_id: user.id, message_role: 'assistant', content: reply },
     ]);
 
-    return NextResponse.json({ reply, transactions, remaining: Math.max(limit - used, 0) });
+    // "transactions" continua na resposta para telas antigas que ainda estejam abertas durante o deploy.
+    const transactions = actions.flatMap((a: ChatAction) => (a.type === 'transaction' ? [{ amount: a.amount, description: a.description, category: a.category, type: a.flow, date: a.date }] : []));
+    return NextResponse.json({ reply, actions, transactions, remaining: Math.max(limit - used, 0) });
   } catch (error) {
     console.error('[chat] erro', error);
     return NextResponse.json({ error: 'Erro interno ao processar o chat.' }, { status: 500 });
