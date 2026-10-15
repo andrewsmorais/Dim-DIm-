@@ -6,8 +6,11 @@ export function emailConfigured(): boolean {
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-export async function sendEmail(to: string, subject: string, text: string, html?: string): Promise<boolean> {
-  if (!emailConfigured()) return false;
+export type SendResult = { ok: boolean; reason?: 'not_configured' | 'rejected' | 'network'; status?: number };
+
+/** Igual ao sendEmail, mas devolve o motivo da falha (usado pelo botão "Enviar teste"). */
+export async function sendEmailResult(to: string, subject: string, text: string, html?: string): Promise<SendResult> {
+  if (!emailConfigured()) return { ok: false, reason: 'not_configured' };
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -15,11 +18,15 @@ export async function sendEmail(to: string, subject: string, text: string, html?
       body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [to], subject, text, html }),
     });
     if (!res.ok) console.error('[email] Resend respondeu', res.status);
-    return res.ok;
+    return res.ok ? { ok: true, status: res.status } : { ok: false, reason: 'rejected', status: res.status };
   } catch (err) {
     console.error('[email] falha no envio', (err as Error).message);
-    return false;
+    return { ok: false, reason: 'network' };
   }
+}
+
+export async function sendEmail(to: string, subject: string, text: string, html?: string): Promise<boolean> {
+  return (await sendEmailResult(to, subject, text, html)).ok;
 }
 
 /** E-mail simples e legível em qualquer cliente. `lines` já vêm formatadas; o conteúdo é escapado. */
