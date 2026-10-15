@@ -19,6 +19,8 @@ export function PixCharge({ profile, onSaved }: { profile: PixProfile; onSaved: 
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
   const [qr, setQr] = useState("");
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [clientId, setClientId] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +40,13 @@ export function PixCharge({ profile, onSaved }: { profile: PixProfile; onSaved: 
       .catch(() => { if (!off) setQr(""); });
     return () => { off = true; };
   }, [payload]);
+
+  useEffect(() => {
+    if (!userId) return;
+    let off = false;
+    supabase.from("mei_clients").select("id,name").eq("archived", false).order("name").then(({ data }) => { if (!off) setClients((data ?? []) as { id: string; name: string }[]); });
+    return () => { off = true; };
+  }, [supabase, userId]);
 
   const note = (t: string) => { setMsg(t); setTimeout(() => setMsg(null), 2500); };
 
@@ -59,8 +68,9 @@ export function PixCharge({ profile, onSaved }: { profile: PixProfile; onSaved: 
     if (!(value > 0)) { setError("Informe o valor para registrar a cobrança."); return; }
     const { error: err } = await supabase.from("bills").insert({
       user_id: userId, description: desc.trim() || "Cobrança Pix", amount: value, due_date: todayISO(), type: "income",
+      is_business: true, client_id: clientId || null,
     });
-    if (err) setError("Não foi possível registrar."); else { note("Registrada em Contas a receber. Dê baixa quando o Pix cair."); window.dispatchEvent(new Event("jakash:changed")); }
+    if (err) setError("Não foi possível registrar."); else { note("Registrada em Clientes e a receber. Dê baixa quando o Pix cair."); window.dispatchEvent(new Event("jakash:changed")); }
   }
 
   const share = `https://wa.me/?text=${encodeURIComponent(`${desc.trim() ? desc.trim() + "\n" : ""}${value > 0 ? `Valor: ${brl(value)}\n` : ""}Pix copia e cola:\n${payload}`)}`;
@@ -81,6 +91,13 @@ export function PixCharge({ profile, onSaved }: { profile: PixProfile; onSaved: 
         <div><Label>Cidade (até 15)</Label><input className={inputCls} maxLength={15} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ex.: São Paulo" /></div>
         <div><Label>Valor (opcional)</Label><input className={inputCls} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Em branco = o cliente digita" /></div>
         <div><Label>Descrição (opcional)</Label><input className={inputCls} maxLength={40} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex.: Pedido 15" /></div>
+        {clients.length > 0 && (
+          <div className="sm:col-span-2"><Label>Cliente (opcional, para registrar a receber)</Label>
+            <select className={inputCls} value={clientId} onChange={(e) => setClientId(e.target.value)}>
+              <option value="">Sem cliente</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select></div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2 mt-4">

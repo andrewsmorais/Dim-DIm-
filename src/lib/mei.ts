@@ -85,6 +85,117 @@ export function meiObligations(today: string): Obligation[] {
   return list.sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
+// ---------- Tipo de receita (DASN-SIMEI) ----------
+
+/** Mesmos valores da atividade: a DASN pede a receita separada em comércio/indústria e serviços. */
+export type RevenueKind = MeiActivity;
+export const KIND_LABEL: Record<RevenueKind, string> = {
+  comercio: "Comércio (revenda de mercadorias)",
+  industria: "Indústria (produtos industrializados)",
+  servicos: "Prestação de serviços",
+};
+
+export type YearSummary = { rev_comercio: number; rev_industria: number; rev_servicos: number; expenses: number; draws: number; das_paid: number };
+export const EMPTY_SUMMARY: YearSummary = { rev_comercio: 0, rev_industria: 0, rev_servicos: 0, expenses: 0, draws: 0, das_paid: 0 };
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Normaliza a linha da função mei_year_summary (o Postgres devolve numeric como texto). */
+export function toSummary(row: Partial<Record<keyof YearSummary, number | string | null>> | null | undefined): YearSummary {
+  const n = (v: number | string | null | undefined) => r2(Number(v ?? 0) || 0);
+  if (!row) return { ...EMPTY_SUMMARY };
+  return { rev_comercio: n(row.rev_comercio), rev_industria: n(row.rev_industria), rev_servicos: n(row.rev_servicos), expenses: n(row.expenses), draws: n(row.draws), das_paid: n(row.das_paid) };
+}
+
+export function dasnTotals(s: YearSummary) {
+  const goods = r2(s.rev_comercio + s.rev_industria);
+  return { goods, services: s.rev_servicos, total: r2(goods + s.rev_servicos) };
+}
+
+// ---------- Lucro e retiradas (pró-labore) ----------
+
+/** Percentual de lucro presumido isento de IR para o MEI (8% comércio/indústria, 32% serviços). Confirme com o contador. */
+export function presumedRate(kind: RevenueKind): number {
+  return kind === "servicos" ? 0.32 : 0.08;
+}
+
+export type ProfitSummary = {
+  revenue: number;
+  expenses: number;
+  profit: number;          // receita - despesas da empresa (retiradas não entram)
+  margin: number;          // % do lucro sobre a receita
+  draws: number;           // quanto já foi retirado
+  realAvailable: number;   // lucro real ainda não retirado
+  presumed: number;        // lucro presumido do ano (receita x percentual)
+  exemptTotal: number;     // presumido - DAS pago: teto da retirada isenta sem escrituração contábil
+  exemptAvailable: number; // quanto ainda dá para retirar nessa faixa
+  needsAccounting: number; // parte do lucro real que só se retira como isenta com contabilidade
+};
+
+export function profitSummary(s: YearSummary): ProfitSummary {
+  const revenue = r2(s.rev_comercio + s.rev_industria + s.rev_servicos);
+  const profit = r2(revenue - s.expenses);
+  const presumed = r2((s.rev_comercio + s.rev_industria) * presumedRate("comercio") + s.rev_servicos * presumedRate("servicos"));
+  const exemptTotal = Math.max(r2(presumed - s.das_paid), 0);
+  const realAvailable = Math.max(r2(profit - s.draws), 0);
+  const exemptAvailable = Math.max(r2(exemptTotal - s.draws), 0);
+  return {
+    revenue, expenses: s.expenses, profit, margin: revenue > 0 ? r2((profit / revenue) * 100) : 0, draws: s.draws,
+    realAvailable, presumed, exemptTotal, exemptAvailable,
+    needsAccounting: Math.max(r2(realAvailable - exemptAvailable), 0),
+  };
+}
+
+// ---------- Planejador do limite ----------
+
+/** Faixa de tolerância: excesso de até 20% do limite no ano não desenquadra de imediato (paga-se a diferença do DAS). */
+export const MEI_TOLERANCE = 0.2;
+
+export type LimitPlan = {
+  monthsLeft: number;        // meses que ainda faltam no ano, contando o atual
+  perMonth: number;          // quanto dá para faturar por mês até dezembro sem passar do limite
+  paceNow: number;           // média mensal até agora
+  projected: number;         // fechamento do ano mantendo o ritmo
+  toleranceLimit: number;    // limite + 20%
+  toleranceLeft: number;     // quanto falta para o limite + 20%
+  hitMonth: number | null;   // mês (1-12) em que o limite é atingido no ritmo atual; null se não atinge no ano
+  status: "ok" | "ritmo_alto" | "no_limite" | "tolerancia" | "desenquadra";
+};
+
+export function planLimit(revenue: number, limit: number, today: string, openedOn: string | null): LimitPlan {
+  const [y, m] = today.split("-").map(Number);
+  const total = activeMonths(y, openedOn);
+  const startMonth = openedOn && openedOn.slice(0, 4) === String(y) ? Number(openedOn.slice(5, 7)) : 1;
+  const elapsed = Math.max(m - startMonth + 1, 1);
+  const monthsLeft = Math.max(13 - m, 0);
+  const remaining = Math.max(limit - revenue, 0);
+  const paceNow = total > 0 ? r2(revenue / elapsed) : 0;
+  const projected = total > 0 ? r2(paceNow * Math.min(total, 12)) : revenue;
+  const toleranceLimit = r2(limit * (1 + MEI_TOLERANCE));
+
+  let hitMonth: number | null = null;
+  if (revenue >= limit) hitMonth = m;
+  else if (paceNow > 0) {
+    const monthsToHit = Math.ceil(remaining / paceNow); // contando o mês atual como já faturado até aqui
+    const hit = m + monthsToHit;
+    hitMonth = hit <= 12 ? hit : null;
+  }
+
+  let status: LimitPlan["status"] = "ok";
+  if (revenue > toleranceLimit) status = "desenquadra";
+  else if (revenue > limit) status = "tolerancia";
+  else if (remaining <= limit * 0.05) status = "no_limite";
+  else if (projected > limit) status = "ritmo_alto";
+
+  return {
+    monthsLeft,
+    perMonth: monthsLeft > 0 ? r2(remaining / monthsLeft) : 0,
+    paceNow, projected, toleranceLimit,
+    toleranceLeft: Math.max(r2(toleranceLimit - revenue), 0),
+    hitMonth, status,
+  };
+}
+
 /** Mês de competência (AAAA-MM) do relatório que vence no dia 20 de `dueMonth` (AAAA-MM): o mês anterior. */
 export function reportMonthFor(dueMonth: string): string {
   const [y, m] = dueMonth.split("-").map(Number);

@@ -10,6 +10,7 @@ import { categoryOptions, type CatRow } from "@/lib/categories";
 import { buildCardPurchase, dueDateFor, invoiceMonthFor, splitInstallments } from "@/lib/cards";
 import { ACCEPT, stashFile } from "@/lib/fileImport";
 import { RECEIPT_ACCEPT, uploadReceipt } from "@/lib/receipts";
+import { KIND_LABEL, type RevenueKind } from "@/lib/mei";
 import { Label, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
 
 type Acc = { id: string; name: string; is_business: boolean };
@@ -31,6 +32,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
   const [f, setF] = useState({
     type: "expense" as "income" | "expense", amount: "", description: "", category_id: "", account_id: "", date: todayISO(), paid: true,
     method: "account" as "account" | "card" | "debit", card_id: "", installments: 1, biz: false,
+    kind: "servicos" as RevenueKind, draw: false,
   });
 
   useEffect(() => {
@@ -40,14 +42,16 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
       supabase.from("categories").select("id,name,type,parent_id").order("name"),
       supabase.from("accounts").select("id,name,is_business").eq("archived", false).order("created_at"),
       supabase.from("credit_cards").select("id,name,closing_day,due_day,is_business,kind,pay_account_id").eq("archived", false).order("created_at"),
-    ]).then(([c, a, k]) => {
+      supabase.from("profiles").select("mei_activity").eq("id", userId).maybeSingle(),
+    ]).then(([c, a, k, pr]) => {
       setCats((c.data ?? []) as CatRow[]);
       setAccs((a.data ?? []) as Acc[]);
       const list = (k.data ?? []) as CardOpt[];
       const credits = list.filter((x) => x.kind === "credito");
       setCards(list);
+      const activity = ((pr.data as { mei_activity?: RevenueKind } | null)?.mei_activity ?? "servicos") as RevenueKind;
       setF((p) => ({
-        ...p, date: todayISO(), installments: 1,
+        ...p, date: todayISO(), installments: 1, kind: activity, draw: false,
         ...(preset?.cardId && list.some((x) => x.id === preset.cardId)
           ? { type: "expense" as const, method: "card" as const, card_id: preset.cardId, biz: Boolean(list.find((x) => x.id === preset.cardId)?.is_business) }
           : { method: "account" as const, card_id: credits.length === 1 ? credits[0].id : "", biz: false }),
@@ -96,6 +100,8 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
       res = await supabase.from("transactions").insert({
         user_id: userId, description: f.description.trim(), amount, type: f.type, date: f.date,
         category_id: f.category_id || null, account_id: f.account_id || null, origin: "manual", is_business: f.biz, ...att,
+        revenue_kind: f.biz && f.type === "income" ? f.kind : null,
+        is_owner_draw: f.biz && f.type === "expense" && f.draw,
       });
     } else {
       res = await supabase.from("bills").insert({
@@ -202,6 +208,20 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           <label className="flex items-center justify-between rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#1E1E1E] px-4 py-3 text-sm font-bold">
             <span>Da empresa (MEI)<span className="block text-xs font-normal text-gray-500">Entra na receita bruta e no limite do MEI</span></span>
             <input type="checkbox" checked={f.biz} onChange={(e) => setF({ ...f, biz: e.target.checked })} className="h-5 w-5 accent-brand-dark" />
+          </label>
+        )}
+        {f.biz && isIncome && f.paid && (
+          <div>
+            <Label>Tipo da receita (para a DASN)</Label>
+            <select className={inputCls} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as RevenueKind })}>
+              {(Object.keys(KIND_LABEL) as RevenueKind[]).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+            </select>
+          </div>
+        )}
+        {f.biz && !isIncome && !useCard && !useDebit && f.paid && (
+          <label className="flex items-center justify-between rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#1E1E1E] px-4 py-3 text-sm font-bold">
+            <span>É retirada para a pessoa física<span className="block text-xs font-normal text-gray-500">Pró-labore: não conta como despesa da empresa</span></span>
+            <input type="checkbox" checked={f.draw} onChange={(e) => setF({ ...f, draw: e.target.checked })} className="h-5 w-5 accent-brand-dark" />
           </label>
         )}
         <ErrorNote message={error} />

@@ -5,10 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { Printer } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, formatDateBR, monthLabel, monthRange, todayISO } from "@/lib/format";
-import { ACTIVITY_LABEL, reportMonthFor, type MeiActivity } from "@/lib/mei";
+import { ACTIVITY_LABEL, reportMonthFor, type MeiActivity, type RevenueKind } from "@/lib/mei";
 import { BackTitle, Empty, btnCls } from "@/components/ui/page";
 
-type Row = { id: string; date: string; description: string; amount: number };
+type Row = { id: string; date: string; description: string; amount: number; revenue_kind: RevenueKind | null };
 type Prof = { full_name: string | null; business_name: string | null; business_cnpj: string | null; mei_activity: MeiActivity };
 
 // Relatório mensal de receitas brutas, pronto para imprimir ou salvar em PDF.
@@ -28,7 +28,7 @@ function Report() {
     const { start, end } = monthRange(month);
     Promise.all([
       supabase.from("profiles").select("full_name,business_name,business_cnpj,mei_activity").eq("id", userId).maybeSingle(),
-      supabase.from("transactions").select("id,date,description,amount").eq("user_id", userId).eq("is_business", true).eq("type", "income")
+      supabase.from("transactions").select("id,date,description,amount,revenue_kind").eq("user_id", userId).eq("is_business", true).eq("type", "income")
         .gte("date", start).lt("date", end).order("date").limit(2000),
     ]).then(([p, t]) => {
       setFailed(Boolean(p.error || t.error));
@@ -42,8 +42,10 @@ function Report() {
   const activity = prof?.mei_activity ?? "servicos";
   const [y, m] = month.split("-").map(Number);
   const lastDay = new Date(y, m, 0).getDate();
-  const line = (label: string, active: boolean) => (
-    <tr><td className="border border-gray-400 px-3 py-2">{label}</td><td className="border border-gray-400 px-3 py-2 text-right whitespace-nowrap w-40">{brl(active ? total : 0)}</td></tr>
+  // Receita sem tipo usa a atividade principal; com tipo definido no lançamento, cada linha soma o seu.
+  const sumKind = (kind: RevenueKind) => rows.filter((r) => (r.revenue_kind ?? activity) === kind).reduce((s, r) => s + r.amount, 0);
+  const line = (label: string, kind: RevenueKind) => (
+    <tr><td className="border border-gray-400 px-3 py-2">{label}</td><td className="border border-gray-400 px-3 py-2 text-right whitespace-nowrap w-40">{brl(sumKind(kind))}</td></tr>
   );
 
   return (
@@ -71,9 +73,9 @@ function Report() {
           <h2 className="font-extrabold mt-6 mb-2">Receita bruta do mês</h2>
           <table className="w-full border-collapse">
             <tbody>
-              {line("I – Revenda de mercadorias (comércio)", activity === "comercio")}
-              {line("II – Venda de produtos industrializados (indústria)", activity === "industria")}
-              {line("III – Prestação de serviços", activity === "servicos")}
+              {line("I – Revenda de mercadorias (comércio)", "comercio")}
+              {line("II – Venda de produtos industrializados (indústria)", "industria")}
+              {line("III – Prestação de serviços", "servicos")}
               <tr className="font-extrabold"><td className="border border-gray-400 px-3 py-2">IV – Total das receitas brutas (I + II + III)</td><td className="border border-gray-400 px-3 py-2 text-right whitespace-nowrap">{brl(total)}</td></tr>
             </tbody>
           </table>

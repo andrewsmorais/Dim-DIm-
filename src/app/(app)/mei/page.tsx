@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, CalendarClock, FileText } from "lucide-react";
+import { AlertTriangle, CalendarClock, FileText, Users, ClipboardCheck } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
 import {
-  ACTIVITY_LABEL, MEI_DEFAULT_LIMIT, dasDueDate, limitForYear, limitStatus, meiObligations, monthlySeries, projectYearRevenue, reportMonthFor,
-  type MeiActivity,
+  ACTIVITY_LABEL, EMPTY_SUMMARY, MEI_DEFAULT_LIMIT, dasDueDate, limitForYear, limitStatus, meiObligations, monthlySeries, planLimit, profitSummary,
+  projectYearRevenue, reportMonthFor, toSummary, type MeiActivity, type YearSummary,
 } from "@/lib/mei";
 import { PixCharge, type PixProfile } from "@/components/mei/PixCharge";
 import { AccountantLinks } from "@/components/mei/AccountantLinks";
@@ -21,6 +21,7 @@ type Prof = {
 type DasBill = { id: string; amount: number; due_date: string };
 
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+const MONTH_FULL = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 export default function MeiPage() {
   const { supabase, userId, ready } = useSupabase();
@@ -30,6 +31,7 @@ export default function MeiPage() {
   const [year, setYear] = useState(thisYear);
   const [prof, setProf] = useState<Prof | null>(null);
   const [series, setSeries] = useState<{ revenue: number[]; expenses: number[] }>({ revenue: Array(12).fill(0), expenses: Array(12).fill(0) });
+  const [summary, setSummary] = useState<YearSummary>(EMPTY_SUMMARY);
   const [das, setDas] = useState<DasBill | null>(null);
   const [dasValue, setDasValue] = useState("");
   const [report, setReport] = useState(reportMonthFor(today.slice(0, 7)));
@@ -39,10 +41,11 @@ export default function MeiPage() {
   const [form, setForm] = useState({ business_name: "", business_cnpj: "", mei_activity: "servicos" as MeiActivity, mei_opened_on: "", mei_annual_limit: String(MEI_DEFAULT_LIMIT) });
 
   const load = useCallback(async () => {
-    const [p, m, b] = await Promise.all([
+    const [p, m, b, ys] = await Promise.all([
       supabase.from("profiles").select("full_name,business_name,business_cnpj,mei_activity,mei_opened_on,mei_annual_limit,pix_key,pix_key_type,pix_name,pix_city").eq("id", userId!).maybeSingle(),
       supabase.rpc("mei_monthly", { p_year: year }),
       supabase.from("bills").select("id,amount,due_date").eq("user_id", userId!).eq("status", "pending").eq("recurrence", "monthly").ilike("description", "DAS MEI%").order("due_date").limit(1),
+      supabase.rpc("mei_year_summary", { p_year: year }),
     ]);
     if (p.error || m.error) setError("Não foi possível carregar os dados do MEI.");
     const pr = p.data as Prof | null;
@@ -55,6 +58,7 @@ export default function MeiPage() {
       });
     }
     setSeries(monthlySeries((m.data ?? []) as { month: number; revenue: number; expenses: number }[]));
+    setSummary(toSummary(((ys.data ?? []) as Partial<Record<keyof YearSummary, number | string>>[])[0]));
     const bill = ((b.data ?? []) as { id: string; amount: number | string; due_date: string }[])[0];
     setDas(bill ? { id: bill.id, amount: Number(bill.amount), due_date: bill.due_date } : null);
     setLoading(false);
@@ -113,6 +117,8 @@ export default function MeiPage() {
   const tone = st.level === "excedido" ? "bad" : st.level === "perigo" ? "bad" : st.level === "atencao" ? "warn" : "ok";
   const maxBar = Math.max(...series.revenue, 1);
   const obligations = meiObligations(today);
+  const plan = planLimit(revenue, limit, today, prof?.mei_opened_on ?? null);
+  const profit = profitSummary(summary);
   const when = (d: number) => (d === 0 ? "hoje" : d === 1 ? "amanhã" : `em ${d} dias`);
 
   const pixProfile: PixProfile = {
@@ -122,7 +128,7 @@ export default function MeiPage() {
 
   return (
     <div className="max-w-3xl mx-auto pb-20 space-y-6">
-      <BackTitle title="Pacote MEI" subtitle="Limite anual, DAS, relatório mensal, cobrança por Pix e acesso do contador." />
+      <BackTitle title="Pacote MEI" subtitle="Limite anual, DAS, DASN, clientes, lucro, cobrança por Pix e acesso do contador." />
 
       {usage !== null && !isMei && (
         <Card className="!bg-amber-50 dark:!bg-amber-500/10">
@@ -132,6 +138,21 @@ export default function MeiPage() {
       )}
       <ErrorNote message={error} />
       {note && <p className="text-sm font-bold text-emerald-600">{note}</p>}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link href="/mei/dasn" className="block">
+          <Card className="h-full hover:shadow-lg transition-shadow">
+            <p className="font-extrabold flex items-center gap-2"><ClipboardCheck size={18} /> DASN pronta para o contador</p>
+            <p className="text-sm text-gray-500 mt-1">Receita do ano separada em comércio/indústria e serviços, com CSV e PDF.</p>
+          </Card>
+        </Link>
+        <Link href="/mei/clientes" className="block">
+          <Card className="h-full hover:shadow-lg transition-shadow">
+            <p className="font-extrabold flex items-center gap-2"><Users size={18} /> Clientes e a receber</p>
+            <p className="text-sm text-gray-500 mt-1">Quem ainda não pagou, cobrança no WhatsApp com Pix e histórico por cliente.</p>
+          </Card>
+        </Link>
+      </div>
 
       <Card>
         <div className="flex items-center justify-between gap-3 mb-1">
@@ -168,6 +189,51 @@ export default function MeiPage() {
           </>
         )}
       </Card>
+
+      {year === thisYear && !loading && (
+        <Card>
+          <h2 className="font-extrabold text-lg">Planejador do limite</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+            {plan.status === "ok" && `Você está dentro do ritmo. Dá para faturar até ${brl(plan.perMonth)} por mês nos ${plan.monthsLeft} meses que faltam sem passar do limite.`}
+            {plan.status === "ritmo_alto" && `No ritmo atual você atinge o limite${plan.hitMonth ? ` por volta de ${MONTH_FULL[plan.hitMonth - 1]}` : " antes de dezembro"}. Para fechar o ano dentro do teto, fature no máximo ${brl(plan.perMonth)} por mês até dezembro.`}
+            {plan.status === "no_limite" && `Você está a menos de 5% do teto: restam só ${brl(st.remaining)} no ano. Segure novas receitas ou fale com o contador.`}
+            {plan.status === "tolerancia" && `Você passou do limite, mas dentro da faixa de 20% (até ${brl(plan.toleranceLimit)}). O tratamento é diferente de passar dessa faixa: fale com seu contador sobre a diferença do DAS e o desenquadramento.`}
+            {plan.status === "desenquadra" && `Você passou de 20% acima do limite (${brl(plan.toleranceLimit)}). Isso muda o enquadramento: fale com seu contador o quanto antes.`}
+          </p>
+          <div className="grid grid-cols-3 gap-3 mt-4 text-center">
+            <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-3"><p className="text-[11px] text-gray-500">Pode faturar por mês</p><p className="font-extrabold">{brl(plan.perMonth)}</p></div>
+            <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-3"><p className="text-[11px] text-gray-500">Seu ritmo hoje</p><p className="font-extrabold">{brl(plan.paceNow)}</p></div>
+            <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-3"><p className="text-[11px] text-gray-500">Faixa de 20% (teto)</p><p className="font-extrabold">{brl(plan.toleranceLimit)}</p></div>
+          </div>
+          <p className="text-xs text-gray-400 mt-3">Estimativa com a média dos meses de atividade até agora. Receitas ainda não lançadas ou sazonais mudam o resultado.</p>
+        </Card>
+      )}
+
+      {!loading && (
+        <Card>
+          <h2 className="font-extrabold text-lg">Lucro e retiradas de {year}</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+            <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-3"><p className="text-[11px] text-gray-500">Receita</p><p className="font-extrabold">{brl(profit.revenue)}</p></div>
+            <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-3"><p className="text-[11px] text-gray-500">Despesas da empresa</p><p className="font-extrabold">{brl(profit.expenses)}</p></div>
+            <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-3"><p className="text-[11px] text-gray-500">Lucro{profit.revenue > 0 ? ` (${profit.margin.toFixed(0)}%)` : ""}</p><p className={`font-extrabold ${profit.profit < 0 ? "text-red-500" : ""}`}>{brl(profit.profit)}</p></div>
+            <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-3"><p className="text-[11px] text-gray-500">Já retirado</p><p className="font-extrabold">{brl(profit.draws)}</p></div>
+          </div>
+          {profit.revenue === 0 ? (
+            <p className="text-sm text-gray-500 mt-3">Sem receita da empresa neste ano. Lance receitas e despesas marcadas como “da empresa” e o lucro aparece aqui.</p>
+          ) : (
+            <div className="mt-4 space-y-2 text-sm">
+              <p><span className="font-bold">Lucro real ainda não retirado:</span> {brl(profit.realAvailable)}.</p>
+              <p><span className="font-bold">Retirada isenta sem contabilidade:</span> até {brl(profit.exemptAvailable)}
+                <span className="text-gray-500"> (lucro presumido de {brl(profit.presumed)} menos o DAS pago de {brl(summary.das_paid)} e as retiradas já feitas).</span></p>
+              {profit.needsAccounting > 0 && (
+                <p className="text-amber-700 dark:text-amber-300 font-bold flex items-start gap-2"><AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                  {brl(profit.needsAccounting)} do seu lucro real só podem ser retirados como isentos com escrituração contábil. Fale com o contador antes de retirar acima da faixa isenta.</p>
+              )}
+            </div>
+          )}
+          <p className="text-xs text-gray-400 mt-3">Ao lançar a saída para você, marque “É retirada para a pessoa física”: ela não conta como despesa da empresa. O DAS pago é somado dos lançamentos de despesa da empresa que começam com “DAS”. Percentuais de presunção: 8% (comércio e indústria) e 32% (serviços). Confirme com seu contador.</p>
+        </Card>
+      )}
 
       <Card>
         <h2 className="font-extrabold text-lg flex items-center gap-2"><CalendarClock size={18} /> Obrigações</h2>
