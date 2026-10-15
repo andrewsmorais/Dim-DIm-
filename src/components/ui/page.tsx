@@ -130,7 +130,7 @@ export function MonthNav({ month, onChange, day, onDayChange }: { month: string;
 export function BackTitle({ title, subtitle, href = "/menu" }: { title: string; subtitle?: string; href?: string }) {
   return (
     <div className="flex items-start gap-3 mb-6">
-      <a href={href} aria-label="Voltar" className="md:hidden mt-1 w-10 h-10 shrink-0 rounded-2xl bg-white/80 dark:bg-[#161616] border border-white/80 dark:border-white/5 flex items-center justify-center"><ChevronLeft size={20} /></a>
+      <a href={href} aria-label="Voltar" className="mt-1 w-10 h-10 shrink-0 rounded-2xl bg-white/80 dark:bg-[#161616] border border-white/80 dark:border-white/5 flex items-center justify-center"><ChevronLeft size={20} /></a>
       <div>
         <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">{title}</h1>
         {subtitle && <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm md:text-base">{subtitle}</p>}

@@ -1,5 +1,22 @@
+// Moeda de exibição (preferência em Configurações › Preferências). Só muda o símbolo/formato mostrado:
+// os valores continuam gravados e somados como estão, sem conversão entre moedas.
+export const CURRENCIES = {
+  BRL: { label: "Real brasileiro (BRL)", locale: "pt-BR" },
+  USD: { label: "Dólar americano (USD)", locale: "en-US" },
+  EUR: { label: "Euro (EUR)", locale: "en-US" },
+  GBP: { label: "Libra esterlina (GBP)", locale: "en-US" },
+  ARS: { label: "Peso argentino (ARS)", locale: "en-US" },
+  CAD: { label: "Dólar canadense (CAD)", locale: "en-US" },
+  AUD: { label: "Dólar australiano (AUD)", locale: "en-US" },
+} as const;
+export type CurrencyCode = keyof typeof CURRENCIES;
+
+let displayCurrency: CurrencyCode = "BRL";
+export function setDisplayCurrency(c: CurrencyCode): void { displayCurrency = c; }
+export function getDisplayCurrency(): CurrencyCode { return displayCurrency; }
+
 export const brl = (n: number): string =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  n.toLocaleString(CURRENCIES[displayCurrency].locale, { style: "currency", currency: displayCurrency });
 
 // "1.234,56" | "1234,56" | "1234.56" | "R$ 50" -> number (NaN se inválido)
 export function parseMoney(input: string): number {
