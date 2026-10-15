@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  Settings, Landmark, FileText, Tag, Target, Gauge, CalendarClock, ShieldCheck, Calculator, FileUp, CalendarRange, Briefcase, TrendingDown, Home, Sparkles,
+  Settings, Landmark, FileText, Tag, Target, Gauge, CalendarClock, ShieldCheck, Calculator, CalendarRange, Briefcase, TrendingDown, Home, Sparkles,
   CreditCard, TrendingUp, MessageSquare, Users, type LucideIcon,
 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
@@ -24,7 +24,6 @@ const TILES: { icon: LucideIcon; label: string; href: string }[] = [
   { icon: FileText, label: "Relatórios", href: "/relatorios" },
   { icon: Calculator, label: "Simulador", href: "/simulador" },
   { icon: CalendarRange, label: "Planejamento", href: "/planejamento" },
-  { icon: FileUp, label: "Importar arquivo", href: "/importar" },
   { icon: Users, label: "Gestão compartilhada", href: "/configuracoes/compartilhada" },
   { icon: Sparkles, label: "Planos", href: "/configuracoes/planos" },
   { icon: Settings, label: "Configurações", href: "/configuracoes" },
