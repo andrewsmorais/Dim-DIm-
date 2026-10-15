@@ -2,11 +2,53 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { handleReferralPayment } from '@/lib/referrals';
+import { PLANS } from '@/lib/plans';
 
 function safeEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a);
   const bb = Buffer.from(b);
   return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
+}
+
+const EVENT_KIND: Record<string, 'paid' | 'overdue' | 'refunded' | 'canceled'> = {
+  PAYMENT_RECEIVED: 'paid',
+  PAYMENT_CONFIRMED: 'paid',
+  PAYMENT_OVERDUE: 'overdue',
+  PAYMENT_REFUNDED: 'refunded',
+  SUBSCRIPTION_DELETED: 'canceled',
+  SUBSCRIPTION_INACTIVATED: 'canceled',
+};
+
+async function recordBillingEvent(
+  supabase: ReturnType<typeof createAdminClient>,
+  event: string,
+  customerId: string,
+  body: { payment?: { id?: string; value?: number }; subscription?: { id?: string } },
+) {
+  const kind = EVENT_KIND[event];
+  if (!kind) return;
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, subscription_plan')
+    .eq('asaas_customer_id', customerId)
+    .maybeSingle();
+
+  const plan = (profile?.subscription_plan as string | null) ?? null;
+  const planValue = plan === 'cpf' || plan === 'mei' ? PLANS[plan].value : 0;
+  const amount = Number(body.payment?.value ?? planValue) || 0;
+
+  const { error } = await supabase.from('billing_events').insert({
+    user_id: profile?.id ?? null,
+    asaas_customer_id: customerId,
+    payment_id: body.payment?.id ?? null,
+    kind,
+    plan,
+    // Só cobranças carregam valor; cancelamento de assinatura não é dinheiro.
+    amount: kind === 'canceled' || kind === 'overdue' ? 0 : amount,
+  });
+  // 23505 = o Asaas reenviou o mesmo pagamento (PAYMENT_RECEIVED + PAYMENT_CONFIRMED): ignorar.
+  if (error && error.code !== '23505') throw new Error(error.message);
 }
 
 export async function POST(request: Request) {
@@ -52,6 +94,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
       }
     }
+
+    // Histórico de cobrança para o painel admin (receita/churn por mês). Nunca pode derrubar o webhook.
+    await recordBillingEvent(supabase, event, customerId, body).catch((e: unknown) => console.error('[billing_events]', (e as Error).message));
 
     // Indicação de amigos: nunca pode fazer o webhook falhar (o Asaas reenviaria o evento).
     if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') {

@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   Settings, Landmark, FileText, Tag, Target, Gauge, CalendarClock, ShieldCheck, Calculator, CalendarRange, Briefcase, TrendingDown, Home, Sparkles,
-  CreditCard, TrendingUp, MessageSquare, Users, type LucideIcon,
+  CreditCard, TrendingUp, MessageSquare, Users, BarChart3, type LucideIcon,
 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
+import { useIsAdmin } from "@/lib/useIsAdmin";
 import { useUsageType } from "@/lib/useUsageType";
 
 const TILES: { icon: LucideIcon; label: string; href: string }[] = [
@@ -38,7 +39,9 @@ export default function MenuPage() {
   const { supabase, userId, ready } = useSupabase();
   const [name, setName] = useState("");
   const { isMei } = useUsageType();
-  const tiles = isMei ? TILES.slice(0, 4).concat([{ icon: Briefcase, label: "Pacote MEI", href: "/mei" }], TILES.slice(4)) : TILES;
+  const isAdmin = useIsAdmin();
+  const base = isMei ? TILES.slice(0, 4).concat([{ icon: Briefcase, label: "Pacote MEI", href: "/mei" }], TILES.slice(4)) : TILES;
+  const tiles = isAdmin ? base.concat([{ icon: BarChart3, label: "Painel do dono", href: "/admin" }]) : base;
 
   useEffect(() => {
     if (!ready || !userId) return;
