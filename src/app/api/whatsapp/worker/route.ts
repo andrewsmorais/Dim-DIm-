@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { whatsappGate } from '@/lib/whatsappGate';
 
 export async function POST(request: Request) {
   try {
@@ -75,6 +76,9 @@ export async function POST(request: Request) {
         ? String(message.text.body).trim().match(/^(?:conectar|vincular)\s+([A-Za-z0-9]{6})$/i)
         : null;
 
+      // Antes de gastar IA: número desconhecido, assinatura inativa ou limite diário estourado.
+      const gate = linkMatch ? null : await whatsappGate(supabase, phone_number);
+
       if (linkMatch) {
         const { data: linkResult, error: linkError } = await supabase.rpc('link_whatsapp_number', {
           p_code: linkMatch[1],
@@ -88,6 +92,8 @@ export async function POST(request: Request) {
           invalid: "Esse código é inválido ou expirou. Gere um novo no painel e me mande de novo."
         };
         ai_response = { success: false, link: true, reply: linkReplies[String(linkResult)] ?? linkReplies.invalid };
+      } else if (gate) {
+        ai_response = gate;
       } else {
         const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
         const aiFetchRes = await fetch(`${baseUrl}/api/ai/process-message`, {
@@ -122,7 +128,7 @@ export async function POST(request: Request) {
 
     // --- CHECKPOINT 2: Database Sync ---
     // Mensagem de vinculação não grava chat nem transação: só marca como sincronizada.
-    if (!db_synced && ai_response?.link) {
+    if (!db_synced && (ai_response?.link || ai_response?.skipDb)) {
       const { data: linkSynced, error: linkSyncError } = await supabase
         .from('whatsapp_inbox')
         .update({ db_synced: true })
@@ -206,6 +212,14 @@ export async function POST(request: Request) {
     }
 
     // --- CHECKPOINT 3: Send WhatsApp Reply ---
+    // Acima do limite diário: não responde (o aviso já foi dado na primeira mensagem excedente).
+    if (!wa_replied && ai_response?.silent) {
+      await supabase.from('whatsapp_inbox')
+        .update({ wa_replied: true, status: 'completed', worker_id: null, locked_until: null })
+        .eq('id', taskId).eq('worker_id', workerId);
+      return NextResponse.json({ success: true, taskId, silent: true }, { status: 200 });
+    }
+
     if (!wa_replied) {
       const WA_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
       const WA_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;

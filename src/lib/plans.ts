@@ -46,6 +46,15 @@ export function memberLimit(plan?: string | null): number {
   return isPlanId(plan) ? PLANS[plan].members : PLANS.familia.members;
 }
 
+// Mensagens por dia que cada pessoa pode mandar ao assistente no WhatsApp (controle de custo da IA).
+// Independente do limite do Chat IA do app.
+const WHATSAPP_DAILY: Record<PlanId, number> = { cpf: 50, familia: 80, mei: 120 };
+export function whatsappDailyLimit(plan?: string | null): number {
+  const override = Number(process.env.WHATSAPP_DAILY_LIMIT);
+  if (Number.isFinite(override) && override > 0) return Math.floor(override);
+  return isPlanId(plan) ? WHATSAPP_DAILY[plan] : WHATSAPP_DAILY.cpf;
+}
+
 // Mensagens do Chat IA por dia, por usuário (controle de custo). AI_CHAT_DAILY_LIMIT, se definida, vale para todos.
 export function aiDailyLimit(plan?: string | null): number {
   const override = Number(process.env.AI_CHAT_DAILY_LIMIT);
