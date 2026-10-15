@@ -3,6 +3,7 @@ import Link from "next/link";
 export const INSTAGRAM_HANDLE = "jakashfinancas";
 export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_HANDLE}/`;
 
+// Cada item abre a sua própria página (o usuário lê e volta pelo botão "Voltar ao início" ou pelo navegador).
 const LINKS: { href: string; label: string }[] = [
   { href: "/termos-de-uso", label: "Termos de uso" },
   { href: "/politica-de-privacidade", label: "Política de privacidade" },
@@ -25,35 +26,43 @@ function InstagramIcon({ size = 20 }: { size?: number }) {
 
 export function Footer() {
   return (
-    <footer className="bg-brand-dark pt-14 pb-8 px-6 border-t border-brand-dark">
-      <div className="max-w-7xl mx-auto">
-        {/* Marca de um lado, Instagram do outro */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-8 border-b border-white/10">
-          <Link href="/" className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Jakash" className="w-11 h-11 rounded-xl object-cover" />
-            <span className="font-bold text-3xl tracking-tight text-white">Jakash</span>
-          </Link>
+    <footer className="bg-white border-t border-gray-200 text-gray-900">
+      <div className="max-w-6xl mx-auto px-6 pt-14 pb-8">
+        <div className="flex flex-col md:flex-row md:justify-between gap-12">
+          {/* Lado esquerdo: jacaré + nome, e o Instagram embaixo */}
+          <div className="flex flex-col items-start gap-5">
+            <Link href="/" className="flex items-center gap-3" aria-label="Jakash, página inicial">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Jakash" className="w-16 h-16 rounded-2xl object-cover shadow-md" />
+              <span className="font-extrabold text-3xl tracking-tight text-gray-900">Jakash</span>
+            </Link>
 
-          <a
-            href={INSTAGRAM_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Instagram do Jakash (@${INSTAGRAM_HANDLE})`}
-            className="inline-flex items-center gap-2.5 w-max rounded-full border border-white/20 px-5 py-2.5 text-sm font-bold text-white/80 hover:text-white hover:border-white/50 transition-colors"
-          >
-            <InstagramIcon /> @{INSTAGRAM_HANDLE}
-          </a>
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Instagram do Jakash (@${INSTAGRAM_HANDLE})`}
+              className="inline-flex items-center gap-2.5 text-sm font-bold text-gray-600 hover:text-brand-dark transition-colors"
+            >
+              <span className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-700"><InstagramIcon /></span>
+              @{INSTAGRAM_HANDLE}
+            </a>
+          </div>
+
+          {/* Lado direito: todas as páginas */}
+          <nav aria-label="Links institucionais">
+            <p className="text-xs font-extrabold tracking-widest text-gray-400 mb-4">INSTITUCIONAL</p>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-14 gap-y-3 text-sm font-semibold">
+              {LINKS.map((l) => (
+                <li key={l.href}>
+                  <Link href={l.href} className="text-gray-600 hover:text-brand-dark transition-colors">{l.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
 
-        {/* Menu institucional */}
-        <nav aria-label="Links institucionais" className="flex flex-wrap justify-center sm:justify-start gap-x-8 gap-y-3 py-8 text-sm font-medium">
-          {LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="text-white/70 hover:text-white transition-colors">{l.label}</Link>
-          ))}
-        </nav>
-
-        <div className="text-xs text-white/40 flex flex-col sm:flex-row items-center justify-between gap-2 pt-6 border-t border-white/10">
+        <div className="mt-12 pt-6 border-t border-gray-200 text-xs text-gray-400 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>© {new Date().getFullYear()} Jakash. Todos os direitos reservados.</p>
           <p>Feito no Brasil 🇧🇷</p>
         </div>
