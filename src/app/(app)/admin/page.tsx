@@ -7,6 +7,7 @@ import { BackTitle, Card, Empty, ErrorNote } from "@/components/ui/page";
 import { KpiCard } from "@/components/admin/KpiCard";
 import { CustomersChart, RevenueChart } from "@/components/admin/AdminCharts";
 import { CostsForm } from "@/components/admin/CostsForm";
+import { SyncBar } from "@/components/admin/SyncBar";
 import { brl } from "@/lib/format";
 import type { CostRow, Dashboard } from "@/lib/adminMetrics";
 
@@ -45,6 +46,7 @@ export default function AdminPage() {
 
       {data && cur && (
         <>
+          <SyncBar sync={data.sync} onDone={load} />
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard icon={Users} label="Clientes pagantes" value={String(data.paying)} hint={`${data.trial} em teste · ${data.pastDue} em atraso`} />
             <KpiCard icon={Banknote} label="Vendido no mês" value={brl(cur.revenue)} delta={pct(cur.revenue, prev?.revenue)} hint={`${cur.payments} pagamento(s)`} />
@@ -99,7 +101,7 @@ export default function AdminPage() {
               <h2 className="font-extrabold text-lg mb-3 flex items-center gap-2"><Percent size={18} /> Como o lucro é calculado</h2>
               <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5">
                 <li><b>Vendido</b> = pagamentos confirmados no mês (Asaas).</li>
-                <li><b>Lucro bruto</b> = vendido − reembolsos − taxas de pagamento, Vercel, Supabase, IA e WhatsApp.</li>
+                <li><b>Lucro bruto</b> = vendido − reembolsos − taxas do Asaas (reais, vindas da API), Vercel, Supabase, IA e WhatsApp.</li>
                 <li><b>Custo operacional</b> = todos os custos lançados, menos impostos.</li>
                 <li><b>Lucro líquido</b> = lucro bruto − domínio, outros e impostos.</li>
               </ul>

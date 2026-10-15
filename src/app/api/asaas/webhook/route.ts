@@ -23,7 +23,7 @@ async function recordBillingEvent(
   supabase: ReturnType<typeof createAdminClient>,
   event: string,
   customerId: string,
-  body: { payment?: { id?: string; value?: number }; subscription?: { id?: string } },
+  body: { payment?: { id?: string; value?: number; netValue?: number | null }; subscription?: { id?: string } },
 ) {
   const kind = EVENT_KIND[event];
   if (!kind) return;
@@ -46,6 +46,8 @@ async function recordBillingEvent(
     plan,
     // Só cobranças carregam valor; cancelamento de assinatura não é dinheiro.
     amount: kind === 'canceled' || kind === 'overdue' ? 0 : amount,
+    // Valor líquido (já sem a taxa do Asaas): a diferença para `amount` é a taxa real.
+    net_amount: kind === 'paid' && body.payment?.netValue != null ? Number(body.payment.netValue) : null,
   });
   // 23505 = o Asaas reenviou o mesmo pagamento (PAYMENT_RECEIVED + PAYMENT_CONFIRMED): ignorar.
   if (error && error.code !== '23505') throw new Error(error.message);

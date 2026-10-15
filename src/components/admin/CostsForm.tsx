@@ -11,7 +11,7 @@ const FIELDS: { key: keyof Omit<CostRow, "month" | "notes">; label: string; hint
   { key: "ai", label: "IA (OpenAI)" },
   { key: "whatsapp", label: "WhatsApp (Meta)" },
   { key: "domain", label: "Domínio" },
-  { key: "payment_fees", label: "Taxas de pagamento (Asaas)" },
+  { key: "payment_fees", label: "Taxas Asaas (só se não vier do Asaas)" },
   { key: "taxes", label: "Impostos" },
   { key: "other", label: "Outros" },
 ];
