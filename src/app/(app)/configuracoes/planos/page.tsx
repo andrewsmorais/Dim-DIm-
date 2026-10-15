@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Clock, ExternalLink, FileText, Receipt } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
-import { PLANS } from "@/lib/plans";
+import { PLANS, PLAN_IDS, isPlanId, planPrice, type PlanId } from "@/lib/plans";
 import { brl, formatDateBR } from "@/lib/format";
 import { CheckoutButton } from "@/components/CheckoutButton";
 import { BackTitle, Card, Label, Empty, ErrorNote, inputCls, btnGhostCls } from "@/components/ui/page";
@@ -21,10 +21,16 @@ const STATUS: Record<string, { label: string; tone: string }> = {
 const INVOICE_STATUS: Record<string, string> = {
   PENDING: "Aguardando pagamento", RECEIVED: "Paga", CONFIRMED: "Paga", OVERDUE: "Vencida", REFUNDED: "Estornada", RECEIVED_IN_CASH: "Paga",
 };
-const FEATURES = {
-  cpf: ["Lançamentos ilimitados pelo WhatsApp (texto)", "Painel com gráficos, limites e objetivos", "Despesas, reserva de emergência e contas a pagar", "Categorias e subcategorias personalizáveis"],
-  mei: ["Tudo do plano CPF", "Categorias de negócio e de receitas de vendas", "Contas recorrentes (ex.: DAS) com lembrete", "Pensado para MEI e autônomo"],
-} as const;
+const FEATURES: Record<PlanId, string[]> = {
+  cpf: ["1 pessoa", "Lançamentos pelo WhatsApp com IA", "Painel com gráficos, limites e objetivos", "Despesas, reserva de emergência e contas a pagar", "Categorias e subcategorias personalizáveis"],
+  familia: ["Tudo do Essencial", `Até ${PLANS.familia.members} pessoas na mesma casa (gestão compartilhada)`, "Planejamento mensal e simulador", "Chat IA para perguntar sobre as suas finanças", "Investimentos e dívidas", "Relatórios e link para o seu contador"],
+  mei: ["Tudo do plano Família", "Controle do limite anual do MEI", "DASN, recibos e relatório do MEI", "Contas recorrentes (ex.: DAS) com lembrete"],
+};
+const SUBTITLE: Record<PlanId, string> = {
+  cpf: "Para organizar as suas finanças",
+  familia: "Para casal, família ou sócios",
+  mei: "Para MEI e autônomo",
+};
 
 export default function PlanosPage() {
   const { supabase, userId, ready } = useSupabase();
@@ -56,7 +62,7 @@ export default function PlanosPage() {
   }
 
   const st = STATUS[profile?.subscription_status ?? ""] ?? { label: "Sem assinatura", tone: "bg-gray-500/15 text-gray-500" };
-  const planKey = profile?.subscription_plan === "cpf" || profile?.subscription_plan === "mei" ? profile.subscription_plan : null;
+  const planKey: PlanId | null = isPlanId(profile?.subscription_plan) ? profile.subscription_plan : null;
   const hasSub = Boolean(profile?.asaas_subscription_id);
   const canCancel = hasSub && profile?.subscription_status !== "canceled";
 
@@ -84,7 +90,7 @@ export default function PlanosPage() {
             {planKey && (
               <dl className="mt-4 space-y-2 text-sm border-t border-gray-100 dark:border-[#262626] pt-4">
                 <div className="flex justify-between"><dt className="text-gray-500">Plano</dt><dd className="font-bold">{PLANS[planKey].name}</dd></div>
-                <div className="flex justify-between"><dt className="text-gray-500">Valor</dt><dd className="font-bold">{brl(PLANS[planKey].value)} / mês</dd></div>
+                <div className="flex justify-between"><dt className="text-gray-500">Valor</dt><dd className="font-bold">{planPrice(planKey)} / mês</dd></div>
                 {profile?.subscription_expires_at && <div className="flex justify-between"><dt className="text-gray-500">{profile.subscription_status === "trial" ? "Fim do teste" : "Próxima renovação"}</dt><dd className="font-bold">{formatDateBR(profile.subscription_expires_at.slice(0, 10))}</dd></div>}
               </dl>
             )}
@@ -125,15 +131,15 @@ export default function PlanosPage() {
       {tab === "plans" && (
         <div className="space-y-4">
           <Card><Label>CPF ou CNPJ (necessário para emitir a cobrança)</Label><input className={inputCls} inputMode="numeric" placeholder="Somente números" value={doc} onChange={(e) => setDoc(e.target.value)} /></Card>
-          {(["cpf", "mei"] as const).map((id) => (
+          {PLAN_IDS.map((id) => (
             <Card key={id} className={planKey === id ? "ring-2 ring-brand-dark" : ""}>
               <div className="flex items-start justify-between">
-                <div><p className="text-xl font-extrabold">{PLANS[id].name}</p><p className="text-sm text-gray-500">{id === "cpf" ? "Para organizar suas finanças pessoais" : "Para MEI e autônomo"}</p></div>
-                <span className="text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-600 px-3 py-1">7 dias grátis</span>
+                <div><p className="text-xl font-extrabold">{PLANS[id].name}</p><p className="text-sm text-gray-500">{SUBTITLE[id]}</p></div>
+                {hasSub ? null : <span className="text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-600 px-3 py-1">7 dias grátis</span>}
               </div>
-              <p className="my-5"><span className="text-4xl font-extrabold">{brl(PLANS[id].value)}</span><span className="text-gray-500"> / mês</span></p>
+              <p className="my-5"><span className="text-4xl font-extrabold">{planPrice(id)}</span><span className="text-gray-500"> / mês</span></p>
               <ul className="space-y-2 mb-5">{FEATURES[id].map((f) => <li key={f} className="flex gap-2 text-sm"><Check size={16} className="text-emerald-500 shrink-0 mt-0.5" />{f}</li>)}</ul>
-              {planKey === id && profile?.subscription_status !== "canceled" ? <p className="text-center text-sm font-bold text-brand-dark dark:text-brand-soft">Seu plano atual</p> : <CheckoutButton plan={id} cpfCnpj={doc} />}
+              {planKey === id && profile?.subscription_status !== "canceled" ? <p className="text-center text-sm font-bold text-brand-dark dark:text-brand-soft">Seu plano atual</p> : <CheckoutButton plan={id} cpfCnpj={doc} switching={hasSub && profile?.subscription_status !== "canceled"} onChanged={() => { setMsg(`Plano alterado para ${PLANS[id].name}. A nova cobrança vale a partir da próxima renovação.`); setTab("sub"); load(); }} />}
             </Card>
           ))}
           <p className="text-xs text-gray-400">Cobrança mensal, cancele quando quiser. Pagamento por Pix, cartão ou boleto.</p>

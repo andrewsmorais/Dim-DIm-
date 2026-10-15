@@ -33,9 +33,13 @@ export type RawPeriod = {
   series: SeriesBucket[]; costs: CostRow[]; costs_prev: CostRow[];
 };
 
+// Uma linha por plano: pagantes (ativos + em atraso), em teste e o que foi vendido no período escolhido.
+export type PlanRow = { plan: string; label: string; subscribers: number; trial: number; revenuePeriod: number };
+
 export type CurrentMetrics = {
-  paying: number; trial: number; active: number; pastDue: number;
+  paying: number; trial: number; active: number; pastDue: number; canceled: number;
   mrr: number; arr: number;
+  byPlan: PlanRow[];
 };
 
 export type PeriodFinance = PeriodTotals & {
@@ -54,7 +58,7 @@ export type Dashboard = {
   // "Now" metrics (current snapshot, independent of period):
   paying: number; trial: number; active: number; pastDue: number;
   canceled: number;
-  byPlan: { plan: string; label: string; subscribers: number; revenueMonth?: number }[];
+  byPlan: PlanRow[];
   mrr: number; arr: number; arpu: number;
   churnRate: number; ltv: number | null;
 };
@@ -66,7 +70,7 @@ const n = (v: unknown): number => {
 export const r2 = (x: number): number => Math.round(x * 100) / 100;
 
 export const PLAN_LABEL: Record<string, string> = {
-  cpf: 'Jakash CPF', mei: 'Jakash MEI', cnpj: 'CNPJ (legado)', zap: 'Zap (teste)', piloto: 'Piloto',
+  cpf: 'Jakash Essencial', familia: 'Jakash Família', mei: 'Jakash MEI', cnpj: 'CNPJ (legado)', zap: 'Zap (teste)', piloto: 'Piloto',
 };
 
 /** Prorate costs (Vercel, Supabase, etc.) to a fraction of a month. */
@@ -163,8 +167,8 @@ export function buildDashboard(raw: RawPeriod, current: CurrentMetrics, sync: Sy
     trial: current.trial,
     active: current.active,
     pastDue: current.pastDue,
-    canceled: 0, // Would need snapshot from DB
-    byPlan: [], // Would need snapshot from DB
+    canceled: current.canceled,
+    byPlan: current.byPlan,
     mrr: current.mrr,
     arr: r2(current.mrr * 12),
     arpu,

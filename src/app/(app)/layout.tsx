@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/AppLayout";
+import { PlanGate } from "@/components/PlanGate";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 
 export default function DashboardLayout({
@@ -8,7 +9,9 @@ export default function DashboardLayout({
 }) {
   return (
     <SettingsProvider>
-      <AppLayout>{children}</AppLayout>
+      <AppLayout>
+        <PlanGate>{children}</PlanGate>
+      </AppLayout>
     </SettingsProvider>
   );
 }

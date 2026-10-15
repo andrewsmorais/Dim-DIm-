@@ -96,27 +96,28 @@ export default function AdminPage() {
 
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
-              <h2 className="font-extrabold text-lg mb-3">Planos</h2>
-              {data.byPlan.length === 0 ? <Empty>Nenhum assinante ainda.</Empty> : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-gray-500 border-b border-gray-200 dark:border-white/5">
-                      <th className="py-2 font-bold">Plano</th>
-                      <th className="py-2 font-bold text-right">Assinantes</th>
-                      <th className="py-2 font-bold text-right">Vendido no mês</th>
+              <h2 className="font-extrabold text-lg mb-3">Assinantes por plano</h2>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-gray-500 border-b border-gray-200 dark:border-white/5">
+                    <th className="py-2 font-bold">Plano</th>
+                    <th className="py-2 font-bold text-right">Pagantes</th>
+                    <th className="py-2 font-bold text-right">Em teste</th>
+                    <th className="py-2 font-bold text-right">Vendido no período</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                  {data.byPlan.map((p) => (
+                    <tr key={p.plan}>
+                      <td className="py-2.5 font-bold">{p.label}</td>
+                      <td className="py-2.5 text-right tabular-nums">{p.subscribers}</td>
+                      <td className="py-2.5 text-right tabular-nums">{p.trial}</td>
+                      <td className="py-2.5 text-right tabular-nums">{brl(p.revenuePeriod)}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                    {data.byPlan.map((p) => (
-                      <tr key={p.plan}>
-                        <td className="py-2.5 font-bold">{p.label}</td>
-                        <td className="py-2.5 text-right tabular-nums">{p.subscribers}</td>
-                        <td className="py-2.5 text-right tabular-nums">{brl(p.revenueMonth ?? 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-xs text-gray-500 mt-2">Pagantes = assinatura ativa ou em atraso. {data.canceled > 0 && `${data.canceled} cancelada(s) no total.`}</p>
               <p className="text-xs text-gray-500 mt-3">
                 Ticket médio {brl(data.arpu)}/cliente · LTV estimado {data.ltv === null ? "— (sem cancelamentos)" : brl(data.ltv)}
               </p>

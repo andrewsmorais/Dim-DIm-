@@ -54,15 +54,35 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const { data: profile } = await admin
       .from('profiles')
-      .select('full_name, whatsapp_number, asaas_customer_id, asaas_subscription_id, subscription_status')
+      .select('full_name, whatsapp_number, asaas_customer_id, asaas_subscription_id, subscription_status, subscription_plan')
       .eq('id', user.id)
       .single();
 
     if (!profile) {
       return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 });
     }
+
+    // Troca de plano (upgrade/downgrade) de quem já tem assinatura: atualiza o valor da MESMA assinatura no Asaas,
+    // sem criar cobrança nova. Em teste ou com cobrança em aberto, a cobrança pendente também passa para o novo valor;
+    // em conta ativa, vale a partir da próxima renovação.
+    const hasSub = Boolean(profile.asaas_subscription_id) && ['trial', 'active', 'past_due', 'unpaid'].includes(String(profile.subscription_status));
+    if (hasSub && profile.subscription_plan !== planId) {
+      const updated = await asaas(`/subscriptions/${profile.asaas_subscription_id}`, apiKey, {
+        method: 'PUT',
+        body: JSON.stringify({ value: plan.value, description: `Assinatura ${plan.name}`, updatePendingPayments: true }),
+      });
+      if (updated.errors?.length || !updated.id) {
+        return NextResponse.json({ error: updated.errors?.[0]?.description || 'Não foi possível trocar o plano agora.' }, { status: 400 });
+      }
+      const { error: planError } = await admin.from('profiles').update({ subscription_plan: planId }).eq('id', user.id);
+      if (planError) {
+        console.error('Checkout: plano trocado no Asaas mas não salvo no perfil', planError);
+        return NextResponse.json({ error: 'Erro interno ao processar assinatura.' }, { status: 500 });
+      }
+      return NextResponse.json({ success: true, changed: true, plan: planId });
+    }
     if (profile.subscription_status === 'active') {
-      return NextResponse.json({ error: 'Você já tem uma assinatura ativa' }, { status: 409 });
+      return NextResponse.json({ error: 'Você já tem esse plano ativo' }, { status: 409 });
     }
 
     // 3. Cliente no Asaas (reaproveita o do perfil; senão busca por externalReference; senão cria)

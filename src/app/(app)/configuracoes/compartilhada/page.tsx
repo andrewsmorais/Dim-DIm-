@@ -64,9 +64,9 @@ export default function CompartilhadaPage() {
     changed();
   }
 
-  async function end() {
+  async function end(body?: { memberId?: string; invite?: boolean }) {
     setBusy(true);
-    const { ok, data: d } = await call("DELETE");
+    const { ok, data: d } = await call("DELETE", body);
     setBusy(false);
     if (!ok) { setError(d.error || "Não foi possível encerrar."); return; }
     setConfirmEnd(false);
@@ -82,13 +82,13 @@ export default function CompartilhadaPage() {
 
   return (
     <div className="max-w-xl mx-auto pb-20">
-      <BackTitle title="Gestão compartilhada" subtitle="Dividam as finanças da casa com outra pessoa." href="/configuracoes" />
+      <BackTitle title="Gestão compartilhada" subtitle="Dividam as finanças da casa com quem você quiser (até 3 pessoas no plano Família)." href="/configuracoes" />
 
       <Card className="mb-4">
         <p className="font-extrabold flex items-center gap-2 mb-2"><Heart size={18} className="text-brand-dark dark:text-brand-soft" /> Como funciona</p>
         <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc pl-5">
-          <li>Vocês dois passam a ver e editar <b>contas bancárias, lançamentos, cartões, contas a pagar, limites, objetivos, dívidas e investimentos</b> um do outro.</li>
-          <li>Cada lançamento mostra quem fez. O saldo e os totais passam a somar os dois.</li>
+          <li>Todos da casa passam a ver e editar <b>contas bancárias, lançamentos, cartões, contas a pagar, limites, objetivos, dívidas e investimentos</b> uns dos outros.</li>
+          <li>Cada lançamento mostra quem fez. O saldo e os totais passam a somar todos.</li>
           <li><b>Perfil, assinatura, WhatsApp e conversas do chat continuam privados.</b></li>
           <li>Qualquer um pode encerrar a qualquer momento: cada um volta a ver só o que é seu.</li>
         </ul>
@@ -105,11 +105,19 @@ export default function CompartilhadaPage() {
 
       {data?.state === "none" && (
         <>
-          <Card className="mb-4">
-            <p className="font-extrabold mb-1">Convidar alguém</p>
-            <p className="text-sm text-gray-500 mb-4">Você recebe um código para mandar à outra pessoa. Ela precisa ter (ou criar) uma conta no Jakash.</p>
-            <button onClick={invite} disabled={busy} className={btnCls + " w-full"}><Users size={16} /> Gerar convite</button>
-          </Card>
+          {data.limit <= 1 ? (
+            <Card className="mb-4">
+              <p className="font-extrabold mb-1">Convidar pessoas</p>
+              <p className="text-sm text-gray-500 mb-4">Seu plano é individual. Com o <b>plano Família</b> você divide as finanças com até 3 pessoas (casal, família ou sócios).</p>
+              <Link href="/configuracoes/planos" className={btnCls + " w-full"}>Ver o plano Família</Link>
+            </Card>
+          ) : (
+            <Card className="mb-4">
+              <p className="font-extrabold mb-1">Convidar alguém</p>
+              <p className="text-sm text-gray-500 mb-4">Você recebe um código para mandar à outra pessoa. Ela precisa ter (ou criar) uma conta no Jakash. Cabem até {data.limit} pessoas, contando com você.</p>
+              <button onClick={invite} disabled={busy} className={btnCls + " w-full"}><Users size={16} /> Gerar convite</button>
+            </Card>
+          )}
 
           <Card>
             <p className="font-extrabold mb-1">Recebi um código</p>
@@ -140,34 +148,68 @@ export default function CompartilhadaPage() {
             <button onClick={() => copy(data.code)} className={btnGhostCls + " !py-3"}>{copied ? <><Check size={14} /> Link copiado</> : <><Copy size={14} /> Copiar link</>}</button>
             <a href={whatsapp(data.code)} target="_blank" rel="noopener noreferrer" className={btnCls + " !py-3"}><MessageCircle size={16} /> Enviar no WhatsApp</a>
           </div>
-          <button onClick={end} disabled={busy} className="w-full text-sm font-bold text-red-500/80 py-3 mt-2">Cancelar convite</button>
+          <button onClick={() => end()} disabled={busy} className="w-full text-sm font-bold text-red-500/80 py-3 mt-2">Cancelar convite</button>
         </Card>
       )}
 
       {data?.state === "accepted" && (
-        <Card>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-brand-dark/10 dark:bg-[#262626] text-brand-dark dark:text-brand-soft font-extrabold flex items-center justify-center">
-              {data.partner.name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?"}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-gray-500">Compartilhando com</p>
-              <p className="font-extrabold truncate">{data.partner.name}</p>
-              {data.since && <p className="text-xs text-gray-500">desde {formatDateBR(data.since.slice(0, 10))}</p>}
-            </div>
-          </div>
+        <>
+        <Card className="mb-4">
+          <p className="text-xs text-gray-500 mb-3">Compartilhando com ({data.count} de {data.limit} pessoas)</p>
+          <ul className="space-y-3">
+            {data.others.map((m) => (
+              <li key={m.id} className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-brand-dark/10 dark:bg-[#262626] text-brand-dark dark:text-brand-soft font-extrabold flex items-center justify-center shrink-0">
+                  {m.name.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "?"}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-extrabold truncate">{m.name}</p>
+                  {data.since && <p className="text-xs text-gray-500">desde {formatDateBR(data.since.slice(0, 10))}</p>}
+                </div>
+                {data.role === "owner" && (
+                  <button onClick={() => end({ memberId: m.id })} disabled={busy} className="text-xs font-bold text-red-500/80 px-2 py-1">Remover</button>
+                )}
+              </li>
+            ))}
+          </ul>
           {confirmEnd ? (
             <div className="mt-5 rounded-2xl border border-red-500/30 bg-red-500/5 p-4 space-y-3">
-              <p className="text-sm">Ao encerrar, vocês deixam de ver os dados um do outro. Nada é apagado: cada um continua com o que lançou.</p>
+              <p className="text-sm">{data.role === "owner" ? "Ao encerrar, ninguém da casa vê mais os dados dos outros." : "Ao sair, você deixa de ver os dados da casa e eles deixam de ver os seus."} Nada é apagado: cada um continua com o que lançou.</p>
               <div className="flex gap-2">
                 <button onClick={() => setConfirmEnd(false)} className={btnGhostCls + " flex-1 !py-3"}>Voltar</button>
-                <button onClick={end} disabled={busy} className={btnCls + " flex-1 !bg-none !bg-red-500 !shadow-none"}>Encerrar</button>
+                <button onClick={() => end()} disabled={busy} className={btnCls + " flex-1 !bg-none !bg-red-500 !shadow-none"}>{data.role === "owner" ? "Encerrar" : "Sair"}</button>
               </div>
             </div>
           ) : (
-            <button onClick={() => setConfirmEnd(true)} className="w-full text-sm font-bold text-red-500/80 py-3 mt-3">Encerrar compartilhamento</button>
+            <button onClick={() => setConfirmEnd(true)} className="w-full text-sm font-bold text-red-500/80 py-3 mt-3">{data.role === "owner" ? "Encerrar compartilhamento" : "Sair da gestão compartilhada"}</button>
           )}
         </Card>
+
+        {data.role === "owner" && data.invite && (
+          <Card className="mb-4">
+            <p className="font-extrabold mb-1">Convite aberto</p>
+            <p className="text-sm text-gray-500 mb-4">Vale até {formatDateBR(data.invite.expiresAt.slice(0, 10))}.</p>
+            <div className="rounded-2xl bg-brand-dark/10 dark:bg-[#1E1E1E] py-5 text-center text-3xl font-extrabold tracking-[0.25em] select-all">{data.invite.code}</div>
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <button onClick={() => copy(data.invite!.code)} className={btnGhostCls + " !py-3"}>{copied ? <><Check size={14} /> Link copiado</> : <><Copy size={14} /> Copiar link</>}</button>
+              <a href={whatsapp(data.invite.code)} target="_blank" rel="noopener noreferrer" className={btnCls + " !py-3"}><MessageCircle size={16} /> Enviar no WhatsApp</a>
+            </div>
+            <button onClick={() => end({ invite: true })} disabled={busy} className="w-full text-sm font-bold text-red-500/80 py-3 mt-2">Cancelar convite</button>
+          </Card>
+        )}
+
+        {data.role === "owner" && !data.invite && (
+          data.count < data.limit ? (
+            <Card>
+              <p className="font-extrabold mb-1">Convidar mais uma pessoa</p>
+              <p className="text-sm text-gray-500 mb-4">Ainda cabem {data.limit - data.count} no seu plano.</p>
+              <button onClick={invite} disabled={busy} className={btnCls + " w-full"}><Users size={16} /> Gerar convite</button>
+            </Card>
+          ) : (
+            <Card><p className="text-sm text-gray-500">A casa está completa ({data.limit} pessoas). {data.limit < 3 && <>Para convidar mais gente, <Link href="/configuracoes/planos" className="font-bold text-brand-dark dark:text-brand-soft">veja o plano Família</Link>.</>}</p></Card>
+          )
+        )}
+        </>
       )}
 
       <ErrorNote message={error} />

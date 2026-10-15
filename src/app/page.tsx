@@ -6,13 +6,55 @@ import { Footer } from "@/components/Footer";
 import { CTAButton } from "@/components/CTAButton";
 import { FAQItem } from "@/components/FAQItem";
 import { SectionBadge } from "@/components/SectionBadge";
-import { 
+import { PLANS, planPrice, type PlanId } from "@/lib/plans";
+import {
   CalendarDays, StickyNote, Calculator, 
   CheckCircle2, Lock
 } from "lucide-react";
 
+// Preços NÃO ficam aqui: vêm de lib/plans (planPrice), a mesma fonte da cobrança.
+const LANDING_PLANS: { id: PlanId; title: string; subtitle: string; highlight?: boolean; features: string[] }[] = [
+  {
+    id: "cpf",
+    title: PLANS.cpf.name,
+    subtitle: "Para organizar as suas finanças",
+    features: [
+      "1 pessoa",
+      "Lançamentos pelo WhatsApp com IA",
+      "Painel com gráficos, limites e objetivos",
+      "Contas a pagar e reserva de emergência",
+      "Contas bancárias, cartões e categorias",
+    ],
+  },
+  {
+    id: "familia",
+    title: PLANS.familia.name,
+    subtitle: "Para casal, família ou sócios",
+    highlight: true,
+    features: [
+      "Tudo do Essencial",
+      `Até ${PLANS.familia.members} pessoas na mesma casa`,
+      "Planejamento mensal e simulador",
+      "Chat IA para perguntar sobre as suas finanças",
+      "Investimentos e dívidas",
+      "Relatórios e link para o seu contador",
+    ],
+  },
+  {
+    id: "mei",
+    title: PLANS.mei.name,
+    subtitle: "Para MEI e autônomo",
+    features: [
+      "Tudo do plano Família",
+      "Controle do limite anual do MEI",
+      "DASN, recibos e relatório do MEI",
+      "Contas recorrentes (ex.: DAS) com lembrete",
+    ],
+  },
+];
+
 export default function LandingPage() {
-  
+
   // Intersection Observer for fade-in animations on scroll
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -355,56 +397,45 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 10. SEÇÃO "PLANOS" (White) */}
+        {/* 10. SEÇÃO "PLANOS" (White) — preços vêm de lib/plans (mesma fonte da cobrança) */}
         <section id="planos" className="py-24 px-6 bg-white text-gray-900 text-center rounded-t-[3rem] shadow-[0_-10px_40px_rgba(0,0,0,0.02)] relative z-10">
-          <div className="max-w-7xl mx-auto fade-in-section">
+          <div className="max-w-6xl mx-auto fade-in-section">
             <SectionBadge text="✓ PLANOS" />
-            <h2 className="text-4xl md:text-5xl font-bold mb-10">
-              Um plano, <span className="text-brand-dark">tudo incluso</span>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Escolha o plano <span className="text-brand-dark">do seu jeito</span>
             </h2>
-            
-            <div className="flex justify-center mb-12">
-              <div className="bg-[var(--bg-1)] p-1 rounded-full inline-flex border border-gray-200">
-                <button className="px-6 py-2 rounded-full font-bold bg-white text-brand-dark shadow-sm">Anual</button>
-                <button className="px-6 py-2 rounded-full font-medium text-gray-500">Mensal</button>
-              </div>
+            <p className="text-gray-500 font-medium mb-12">7 dias grátis em qualquer plano, sem cadastrar cartão. Cancele quando quiser.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch text-left">
+              {LANDING_PLANS.map((p) => (
+                <div key={p.id} className={`relative flex flex-col bg-white rounded-[2rem] p-8 shadow-xl ${p.highlight ? "border-2 border-brand-dark" : "border-2 border-brand-dark/10"}`}>
+                  {p.highlight && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold text-white bg-brand-dark px-4 py-1 rounded-full uppercase tracking-widest">Mais escolhido</span>
+                  )}
+                  <p className="text-xl font-extrabold">{p.title}</p>
+                  <p className="text-sm text-gray-500 mb-5">{p.subtitle}</p>
+                  <p className="mb-6">
+                    <span className="text-5xl font-black text-gray-900">{planPrice(p.id)}</span>
+                    <span className="text-gray-400 font-medium"> /mês</span>
+                  </p>
+                  <ul className="space-y-3 mb-8 font-medium text-gray-600 flex-1">
+                    {p.features.map((item) => (
+                      <li key={item} className="flex items-start gap-3">
+                        <div className="w-5 h-5 rounded-full bg-brand-accent flex items-center justify-center shrink-0 text-white mt-0.5">
+                          <CheckCircle2 size={12} />
+                        </div>
+                        <span className="text-sm">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <CTAButton text="Começar teste grátis" className="w-full h-14" />
+                </div>
+              ))}
             </div>
 
-            <div className="max-w-md mx-auto bg-white rounded-[2rem] p-10 border-2 border-brand-dark/10 shadow-xl">
-              <div className="flex items-center gap-2 mb-6 text-sm font-bold text-brand-dark uppercase tracking-widest bg-brand-dark/5 w-max px-3 py-1 rounded-full mx-auto">
-                <CheckCircle2 size={16} /> TUDO INCLUSO
-              </div>
-              
-              <div className="text-center mb-8">
-                <div className="flex items-end justify-center gap-2 mb-1">
-                  <span className="text-6xl font-black text-gray-900">R$ 19</span>
-                  <span className="text-2xl font-bold mb-2">,90</span>
-                  <span className="text-gray-400 font-medium mb-2.5">/mês</span>
-                </div>
-                <p className="text-sm font-bold text-gray-400"><span className="line-through">R$ 29,90</span> · preço de turma fundadora</p>
-              </div>
-              
-              <ul className="space-y-4 mb-10 text-left font-medium text-gray-600 bg-[var(--bg-1)] p-6 rounded-[24px]">
-                {[
-                  'Conexões ilimitadas',
-                  'Insights sobre suas finanças',
-                  'IA ilimitada via WhatsApp',
-                  'Categorização automática'
-                ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-brand-accent flex items-center justify-center shrink-0 text-white">
-                      <CheckCircle2 size={12} />
-                    </div>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              
-              <CTAButton text="Começar teste grátis" className="w-full h-14" />
-              <div className="mt-6 flex flex-col gap-1 text-xs text-gray-400 font-bold">
-                <p>Cancele quando quiser, sem multa</p>
-                <p>Pagamento seguro via Asaas</p>
-              </div>
+            <div className="mt-8 flex flex-col gap-1 text-xs text-gray-400 font-bold">
+              <p>Cancele quando quiser, sem multa</p>
+              <p>Pagamento seguro via Asaas</p>
             </div>
           </div>
         </section>
@@ -438,7 +469,7 @@ export default function LandingPage() {
               />
               <FAQItem 
                 question="O aplicativo de controle financeiro Jakash é gratuito?" 
-                answer="O Jakash oferece 7 dias de teste totalmente gratuitos, sem a necessidade de cadastrar um cartão de crédito. Após esse período, para continuar desfrutando da gestão financeira automática e da IA no WhatsApp, o valor é de apenas R$ 19,90/mês, que pode ser cancelado a qualquer momento." 
+                answer={`O Jakash oferece 7 dias de teste totalmente gratuitos, sem a necessidade de cadastrar um cartão de crédito. Após esse período, para continuar desfrutando da gestão financeira automática e da IA no WhatsApp, os planos começam em ${planPrice('cpf')}/mês (Essencial), com o plano Família por ${planPrice('familia')}/mês para até 3 pessoas, e podem ser cancelados a qualquer momento.`} 
               />
             </div>
           </div>
@@ -451,7 +482,7 @@ export default function LandingPage() {
               7 dias grátis, sem cadastrar cartão
             </h2>
             <p className="text-xl text-white/70 mb-12 font-medium">
-              Depois, apenas R$ 19,90/mês. Cancele quando quiser, sem multa.
+              Depois, a partir de {planPrice("cpf")}/mês. Cancele quando quiser, sem multa.
             </p>
             <CTAButton text="Comece agora, é grátis →" size="lg" className="h-16 px-12 text-xl bg-brand-accent text-white hover:opacity-90" />
             <p className="mt-12 text-sm text-white/50 font-bold">Jakash, feito no Brasil 🇧🇷</p>

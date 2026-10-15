@@ -3,16 +3,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { planPrice, type PlanId } from "@/lib/plans";
 
 interface CheckoutButtonProps {
-  plan: "cpf" | "mei";
+  plan: PlanId;
   cpfCnpj: string;
   className?: string;
+  // true quando o usuário já assina outro plano: o botão vira "Trocar para este plano".
+  switching?: boolean;
+  onChanged?: () => void;
 }
 
-const PLAN_LABEL = { cpf: "Assinar por R$ 19,90", mei: "Assinar por R$ 39,90" } as const;
-
-export function CheckoutButton({ plan, cpfCnpj, className }: CheckoutButtonProps) {
+export function CheckoutButton({ plan, cpfCnpj, className, switching, onChanged }: CheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +34,12 @@ export function CheckoutButton({ plan, cpfCnpj, className }: CheckoutButtonProps
 
       if (!res.ok) {
         throw new Error(data.error || "Erro ao processar assinatura");
+      }
+
+      // Troca de plano numa assinatura existente: não há cobrança nova para pagar.
+      if (data.changed) {
+        onChanged?.();
+        return;
       }
 
       // Redireciona para o link gerado pelo Asaas
@@ -59,7 +67,7 @@ export function CheckoutButton({ plan, cpfCnpj, className }: CheckoutButtonProps
             Processando...
           </>
         ) : (
-          PLAN_LABEL[plan]
+          `${switching ? "Trocar para este plano" : "Assinar"} por ${planPrice(plan)}`
         )}
       </Button>
       {error && (

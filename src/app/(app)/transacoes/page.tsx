@@ -20,9 +20,9 @@ type Tx = {
 
 export default function TransacoesPage() {
   const { supabase, userId, ready } = useSupabase();
-  const { shared, partner, nameOf } = usePartnership();
+  const { shared, others, nameOf } = usePartnership();
   const { isMei } = useUsageType();
-  const [who, setWho] = useState<"all" | "me" | "partner">("all");
+  const [who, setWho] = useState<string>("all"); // "all" | "me" | id de um membro
   const [scope, setScope] = useState<"all" | "pf" | "pj">("all");
   const [cats, setCats] = useState<CatRow[]>([]);
   const [cardNames, setCardNames] = useState<Record<string, string>>({});
@@ -95,7 +95,7 @@ export default function TransacoesPage() {
   const catName = (id: string | null) => cats.find((c) => c.id === id)?.name ?? "Sem categoria";
   // Na gestão compartilhada dá para ver só os seus lançamentos ou só os do parceiro; os totais seguem o filtro.
   const scoped = txs
-    .filter((t) => !shared || who === "all" || (who === "me" ? t.user_id === userId : t.user_id === partner?.id))
+    .filter((t) => !shared || who === "all" || (who === "me" ? t.user_id === userId : t.user_id === who))
     .filter((t) => scope === "all" || (scope === "pj") === t.is_business);
   const showScope = isMei || txs.some((t) => t.is_business);
   const shown = scoped.filter((t) => filter === "all" || t.type === filter);
@@ -146,9 +146,9 @@ export default function TransacoesPage() {
             ))}
           </div>
         )}
-        {shared && partner && (
+        {shared && (
           <div className="flex items-center gap-1 rounded-full bg-brand-dark/10 dark:bg-[#161616] p-1">
-            {([["all", "Os dois"], ["me", "Você"], ["partner", partner.name.split(" ")[0]]] as const).map(([k, l]) => (
+            {([["all", others.length > 1 ? "Todos" : "Os dois"], ["me", "Você"], ...others.map((o) => [o.id, o.name.split(" ")[0]] as [string, string])] as [string, string][]).map(([k, l]) => (
               <button key={k} onClick={() => setWho(k)} className={`px-3 py-1.5 rounded-full text-xs font-bold ${who === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
             ))}
           </div>

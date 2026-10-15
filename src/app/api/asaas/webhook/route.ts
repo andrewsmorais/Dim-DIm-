@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { handleReferralPayment } from '@/lib/referrals';
-import { PLANS } from '@/lib/plans';
+import { PLANS, isPlanId } from '@/lib/plans';
 
 function safeEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a);
@@ -38,7 +38,7 @@ async function recordBillingEvent(
   if (!profile) return;
 
   const plan = (profile.subscription_plan as string | null) ?? null;
-  const planValue = plan === 'cpf' || plan === 'mei' ? PLANS[plan].value : 0;
+  const planValue = isPlanId(plan) ? PLANS[plan].value : 0;
   const amount = Number(body.payment?.value ?? planValue) || 0;
 
   const row = {

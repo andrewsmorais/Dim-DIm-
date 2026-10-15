@@ -5,6 +5,7 @@ import { extractText } from 'unpdf';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { aiDailyLimit } from '@/lib/plans';
+import { getEntitlement } from '@/lib/entitlements';
 
 // Lê PDF (com texto) e foto de extrato, fatura, nota ou comprovante e devolve uma lista de lançamentos para a pessoa CONFERIR.
 // Nada é salvo aqui: quem grava é a tela de importação, depois da confirmação. O conteúdo do arquivo é tratado só como dado.
@@ -57,8 +58,9 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Faça login para enviar arquivos.' }, { status: 401 });
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'A leitura de PDF e foto ainda não está ativada neste ambiente. Use OFX, CSV ou planilha.' }, { status: 503 });
 
-  const { data: profile } = await supabase.from('profiles').select('subscription_status, subscription_plan').maybeSingle();
-  if (!profile || !ALLOWED_STATUS.includes(String(profile.subscription_status))) {
+  const admin = createAdminClient();
+  const profile = await getEntitlement(admin, user.id);
+  if (!profile || !ALLOWED_STATUS.includes(String(profile.status))) {
     return NextResponse.json({ error: 'Sua assinatura não está ativa. Renove em Configurações › Planos.' }, { status: 402 });
   }
 
@@ -94,8 +96,7 @@ export async function POST(request: Request) {
   }
 
   const today = todayInSaoPaulo();
-  const limit = aiDailyLimit(profile.subscription_plan);
-  const admin = createAdminClient();
+  const limit = aiDailyLimit(profile.plan);
   const { data: used, error: usageError } = await admin.rpc('ai_usage_hit', { p_user: user.id, p_day: today, p_limit: limit });
   if (usageError) return NextResponse.json({ error: 'Não foi possível verificar seu limite agora.' }, { status: 500 });
   if (used === -1) return NextResponse.json({ error: `Você usou o limite de leituras por IA de hoje (${limit}). Amanhã tem mais, ou use OFX/CSV/planilha.` }, { status: 429 });

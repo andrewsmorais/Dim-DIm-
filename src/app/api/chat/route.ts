@@ -3,7 +3,8 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { aiDailyLimit } from '@/lib/plans';
+import { aiDailyLimit, hasFamilyFeatures } from '@/lib/plans';
+import { getEntitlement } from '@/lib/entitlements';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/chatPrompt';
 import { buildChatContext } from '@/lib/chatContext';
 import { parseChatOutput, type ChatAction } from '@/lib/chatActions';
@@ -27,9 +28,10 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Faça login' }, { status: 401 });
 
-  const { data: profile } = await supabase.from('profiles').select('subscription_plan').maybeSingle();
-  const limit = aiDailyLimit(profile?.subscription_plan);
-  const { data } = await createAdminClient().from('ai_usage').select('count').eq('user_id', user.id).eq('day', todayInSaoPaulo()).maybeSingle();
+  const admin = createAdminClient();
+  const ent = await getEntitlement(admin, user.id);
+  const limit = aiDailyLimit(ent?.plan);
+  const { data } = await admin.from('ai_usage').select('count').eq('user_id', user.id).eq('day', todayInSaoPaulo()).maybeSingle();
   return NextResponse.json({ limit, remaining: Math.max(limit - (data?.count ?? 0), 0), enabled: Boolean(process.env.OPENAI_API_KEY) });
 }
 
@@ -47,16 +49,19 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: 'Mensagem inválida (até 500 caracteres).' }, { status: 400 });
     const { message, history } = parsed.data;
 
-    const { data: profile } = await supabase.from('profiles').select('subscription_status, subscription_plan').maybeSingle();
-    if (!profile) return NextResponse.json({ error: 'Perfil não encontrado.' }, { status: 404 });
-    if (!ALLOWED_STATUS.includes(String(profile.subscription_status))) {
+    const admin = createAdminClient();
+    const ent = await getEntitlement(admin, user.id);
+    if (!ent) return NextResponse.json({ error: 'Perfil não encontrado.' }, { status: 404 });
+    if (!ALLOWED_STATUS.includes(String(ent.status))) {
       return NextResponse.json({ error: 'Sua assinatura não está ativa. Renove em Configurações › Planos para usar o chat.' }, { status: 402 });
+    }
+    if (!hasFamilyFeatures(ent.plan)) {
+      return NextResponse.json({ error: 'O Chat IA faz parte do plano Família. Faça upgrade em Configurações › Planos.' }, { status: 403 });
     }
 
     // Reserva uma mensagem do limite diário antes de gastar com a IA.
     const today = todayInSaoPaulo();
-    const limit = aiDailyLimit(profile.subscription_plan);
-    const admin = createAdminClient();
+    const limit = aiDailyLimit(ent.plan);
     const { data: used, error: usageError } = await admin.rpc('ai_usage_hit', { p_user: user.id, p_day: today, p_limit: limit });
     if (usageError) {
       console.error('[chat] ai_usage_hit', usageError);

@@ -3,10 +3,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSupabase } from "@/lib/useSupabase";
 
+export type Member = { id: string; name: string };
+
+// `limit` = quantas pessoas (com o dono) o plano da casa comporta.
 export type PartnershipState =
-  | { state: "none" }
-  | { state: "pending"; code: string; expiresAt: string }
-  | { state: "accepted"; role: "owner" | "partner"; me: { id: string; name: string }; partner: { id: string; name: string }; since: string | null };
+  | { state: "none"; limit: number }
+  | { state: "pending"; code: string; expiresAt: string; limit: number }
+  | {
+      state: "accepted"; role: "owner" | "partner"; me: Member;
+      partner: Member; // primeiro outro membro (compatibilidade)
+      others: Member[]; count: number; limit: number;
+      invite: { code: string; expiresAt: string } | null;
+      since: string | null;
+    };
 
 // Cache curto por usuário para as telas não pedirem a parceria a cada navegação.
 let cache: { userId: string; at: number; data: PartnershipState } | null = null;
@@ -37,13 +46,15 @@ export function usePartnership() {
     return () => window.removeEventListener("jakash:partnership", h);
   }, [load]);
 
-  const partner = data?.state === "accepted" ? data.partner : null;
-  // "Você" para o próprio usuário, primeiro nome do parceiro; vazio se não houver parceria.
+  const others: Member[] = data?.state === "accepted" ? data.others : [];
+  const partner = others[0] ?? null;
+  // "Você" para o próprio usuário, primeiro nome de cada membro; vazio se não houver gestão compartilhada.
   const nameOf = (id: string | null | undefined) => {
-    if (!id || !partner) return "";
+    if (!id || others.length === 0) return "";
     if (id === userId) return "Você";
-    return id === partner.id ? partner.name.split(" ")[0] : "";
+    const m = others.find((o) => o.id === id);
+    return m ? m.name.split(" ")[0] : "";
   };
 
-  return { data, error, partner, shared: Boolean(partner), nameOf, userId, ready, refresh: () => load(true) };
+  return { data, error, partner, others, shared: others.length > 0, nameOf, userId, ready, refresh: () => load(true) };
 }
