@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, parseMoney, monthStartAgo } from "@/lib/format";
-import { ESSENTIAL_CATEGORY_NAMES, requiredMonthly } from "@/lib/planner";
+import { requiredMonthly } from "@/lib/planner";
+import { buildClassifier } from "@/lib/essentials";
 import { PageHeader, Card, Label, Progress, ErrorNote, Disclaimer, inputCls, btnCls } from "@/components/ui/page";
 
 export default function ReservaPage() {
@@ -16,13 +18,14 @@ export default function ReservaPage() {
   const [info, setInfo] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [cats, tx] = await Promise.all([
-      supabase.from("categories").select("id,name").in("name", ESSENTIAL_CATEGORY_NAMES),
+    const [cats, flags, tx] = await Promise.all([
+      supabase.from("categories").select("id,name,parent_id"),
+      supabase.from("category_flags").select("category_id,is_essential,is_benefit"),
       supabase.from("transactions").select("amount,category_id").eq("type", "expense").gte("date", monthStartAgo(3)).lt("date", monthStartAgo(0)),
     ]);
     if (cats.error || tx.error) { setError("Não foi possível calcular suas despesas essenciais."); return; }
-    const ids = new Set((cats.data ?? []).map((c) => c.id));
-    const sum = (tx.data ?? []).filter((t) => t.category_id && ids.has(t.category_id)).reduce((s, t) => s + Number(t.amount), 0);
+    const { isEssential } = buildClassifier(cats.data ?? [], flags.data ?? []);
+    const sum = (tx.data ?? []).filter((t) => isEssential(t.category_id)).reduce((s, t) => s + Number(t.amount), 0);
     setEssential(sum / 3);
   }, [supabase]);
 
@@ -63,6 +66,7 @@ export default function ReservaPage() {
         <p className="text-sm text-gray-500 mb-4">
           Média dos seus gastos essenciais nos últimos 3 meses: <b>{brl(essential)}</b> por mês
           {essential === 0 && " (ainda sem dados: informe abaixo)"}.
+          {" "}<Link href="/categorias" className="underline font-bold">Ajustar quais categorias são essenciais</Link>.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div><Label>Despesas essenciais por mês (opcional: substitui a média)</Label><input className={inputCls} inputMode="decimal" value={manual} onChange={(e) => setManual(e.target.value)} placeholder={brl(essential)} /></div>
