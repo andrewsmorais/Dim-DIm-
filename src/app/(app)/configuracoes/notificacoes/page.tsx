@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { BellRing, Save } from "lucide-react";
+import { BellRing, Mail, MessageCircle, Save } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { BackTitle, Card, Label, Toggle, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
@@ -104,6 +104,16 @@ export default function NotificacoesPage() {
     else setError(d?.error || "Não foi possível enviar o teste.");
   }
 
+  // Teste de e-mail e de WhatsApp: manda uma mensagem de verdade para o seu e-mail / número.
+  async function sendChannelTest(channel: "email" | "whatsapp") {
+    setError(null); setMsg(null); setBusy(true);
+    const res = await fetch("/api/notifications/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel }) }).catch(() => null);
+    const d = await res?.json().catch(() => ({}));
+    setBusy(false);
+    if (res?.ok) setMsg(channel === "email" ? "E-mail de teste enviado. Olhe também a caixa de spam." : "Mensagem de teste enviada para o seu WhatsApp.");
+    else setError(d?.error || "Não foi possível enviar o teste.");
+  }
+
   const pushHint = !VAPID ? "Ainda não está ativado neste ambiente."
     : device?.needsInstall ? "No iPhone/iPad, instale o Jakash na Tela de Início (Compartilhar › Adicionar à Tela de Início) e abra por lá."
     : device && !device.supported ? "Este navegador não permite avisos no aparelho."
@@ -124,10 +134,16 @@ export default function NotificacoesPage() {
         )}
         <Toggle checked={n.whatsapp} onChange={(v) => setN({ ...n, whatsapp: v })} label="Notificações via WhatsApp"
           hint={phone ? "Enviadas para o número conectado ao Jakash." : undefined} />
+        {phone && n.whatsapp && (
+          <button onClick={() => sendChannelTest("whatsapp")} disabled={busy} className={btnGhostCls + " w-full"}><MessageCircle size={16} /> Enviar teste no WhatsApp</button>
+        )}
         {!phone && n.whatsapp && (
           <p className="text-xs text-amber-600 dark:text-amber-400 px-1">Você ainda não conectou seu WhatsApp. <Link href="/configuracoes/whatsapp" className="font-bold underline">Conectar agora</Link></p>
         )}
         <Toggle checked={n.email} onChange={(v) => setN({ ...n, email: v })} label="Notificações via e-mail" hint="Enviadas para o e-mail da sua conta." />
+        {n.email && (
+          <button onClick={() => sendChannelTest("email")} disabled={busy} className={btnGhostCls + " w-full"}><Mail size={16} /> Enviar teste por e-mail</button>
+        )}
         <div className="pt-2"><Label>Quando notificar</Label>
           <select className={inputCls} value={n.when} onChange={(e) => setN({ ...n, when: e.target.value })}>
             {WHEN.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}

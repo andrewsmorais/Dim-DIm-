@@ -12,19 +12,22 @@ export function whatsappConfigured(): boolean {
 
 const oneLine = (s: string) => s.replace(/[\n\t]+/g, ' ').replace(/ {2,}/g, ' ').trim();
 
-export async function sendWhatsAppReminder(toPhone: string, input: { name: string; summary: string; text: string }): Promise<boolean> {
-  if (!whatsappConfigured()) return false;
-  const to = toPhone.replace(/\D/g, '');
-  if (to.length < 10) return false;
+export type WhatsAppResult = { ok: boolean; reason?: 'not_configured' | 'bad_number' | 'rejected' | 'network'; status?: number; template: boolean };
 
-  const template = process.env.WHATSAPP_REMINDER_TEMPLATE;
+/** Igual ao sendWhatsAppReminder, mas devolve o motivo da falha (usado pelo botão "Enviar teste"). */
+export async function sendWhatsAppResult(toPhone: string, input: { name: string; summary: string; text: string }): Promise<WhatsAppResult> {
+  const template = Boolean(process.env.WHATSAPP_REMINDER_TEMPLATE);
+  if (!whatsappConfigured()) return { ok: false, reason: 'not_configured', template };
+  const to = toPhone.replace(/\D/g, '');
+  if (to.length < 10) return { ok: false, reason: 'bad_number', template };
+
   const payload = template
     ? {
         messaging_product: 'whatsapp',
         to,
         type: 'template',
         template: {
-          name: template,
+          name: process.env.WHATSAPP_REMINDER_TEMPLATE,
           language: { code: process.env.WHATSAPP_REMINDER_LANG || 'pt_BR' },
           components: [{ type: 'body', parameters: [{ type: 'text', text: oneLine(input.name) || 'tudo bem' }, { type: 'text', text: oneLine(input.summary).slice(0, 900) }] }],
         },
@@ -39,9 +42,13 @@ export async function sendWhatsAppReminder(toPhone: string, input: { name: strin
       body: JSON.stringify(payload),
     });
     if (!res.ok) console.error('[whatsapp] lembrete recusado', res.status, template ? '(modelo)' : '(texto livre)');
-    return res.ok;
+    return res.ok ? { ok: true, status: res.status, template } : { ok: false, reason: 'rejected', status: res.status, template };
   } catch (err) {
     console.error('[whatsapp] falha no envio', (err as Error).message);
-    return false;
+    return { ok: false, reason: 'network', template };
   }
+}
+
+export async function sendWhatsAppReminder(toPhone: string, input: { name: string; summary: string; text: string }): Promise<boolean> {
+  return (await sendWhatsAppResult(toPhone, input)).ok;
 }
