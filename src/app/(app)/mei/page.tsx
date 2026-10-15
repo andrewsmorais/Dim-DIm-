@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, CalendarClock, FileText, Users, ClipboardCheck } from "lucide-react";
+import { AlertTriangle, CalendarClock, FileText, Users, ClipboardCheck, Calculator } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
@@ -10,6 +10,7 @@ import {
   ACTIVITY_LABEL, EMPTY_SUMMARY, MEI_DEFAULT_LIMIT, dasDueDate, limitForYear, limitStatus, meiObligations, monthlySeries, planLimit, profitSummary,
   projectYearRevenue, reportMonthFor, toSummary, type MeiActivity, type YearSummary,
 } from "@/lib/mei";
+import { computeDas } from "@/lib/meiConstants";
 import { PixCharge, type PixProfile } from "@/components/mei/PixCharge";
 import { AccountantLinks } from "@/components/mei/AccountantLinks";
 import { BackTitle, Card, Empty, ErrorNote, Label, Progress, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
@@ -152,6 +153,18 @@ export default function MeiPage() {
             <p className="text-sm text-gray-500 mt-1">Quem ainda não pagou, cobrança no WhatsApp com Pix e histórico por cliente.</p>
           </Card>
         </Link>
+        <Link href="/mei/preco" className="block">
+          <Card className="h-full hover:shadow-lg transition-shadow">
+            <p className="font-extrabold flex items-center gap-2"><Calculator size={18} /> Calculadora de preço</p>
+            <p className="text-sm text-gray-500 mt-1">Quanto cobrar pela hora/produto para cobrir custos, DAS e sua margem.</p>
+          </Card>
+        </Link>
+        <Link href="/mei/recibos" className="block">
+          <Card className="h-full hover:shadow-lg transition-shadow">
+            <p className="font-extrabold flex items-center gap-2"><FileText size={18} /> Recibos</p>
+            <p className="text-sm text-gray-500 mt-1">Registre e imprima recibos simples das faturas emitidas.</p>
+          </Card>
+        </Link>
       </div>
 
       <Card>
@@ -253,15 +266,24 @@ export default function MeiPage() {
 
         <div className="mt-4 rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-4">
           <p className="font-bold text-sm">DAS mensal automático</p>
-          {das ? (
-            <p className="text-xs text-gray-500 mt-0.5">Agendado em Contas a pagar: {brl(das.amount)}, próximo vencimento {formatDateBR(das.due_date)}. Ao dar baixa, o do mês seguinte é criado sozinho.</p>
-          ) : (
-            <p className="text-xs text-gray-500 mt-0.5">Cria a conta &quot;DAS MEI&quot; que se repete todo dia 20, com aviso antes de vencer. O valor muda com o salário mínimo e com a atividade: use o que aparece no seu boleto.</p>
+          {prof && (
+            <>
+              <div className="mt-3 p-3 rounded-lg bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/10">
+                <p className="text-xs text-gray-500">Valor calculado para {ACTIVITY_LABEL[prof.mei_activity]}</p>
+                <p className="text-2xl font-extrabold mt-1">{brl(computeDas(prof.mei_activity === "servicos" ? "servicos" : prof.mei_activity))}</p>
+                <p className="text-xs text-gray-500 mt-1">5% do salário mínimo + impostos fixos. Confirme com seu contador.</p>
+              </div>
+              {das ? (
+                <p className="text-xs text-gray-500 mt-3">✓ Agendado em Contas a pagar: {brl(das.amount)}, próximo vencimento {formatDateBR(das.due_date)}. Ao dar baixa, o do mês seguinte é criado sozinho.</p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-3">Cria a conta &quot;DAS MEI&quot; que se repete todo dia 20. Se o valor acima diferir do seu boleto PGMEI, ajuste abaixo.</p>
+              )}
+              <div className="flex flex-wrap gap-2 mt-3">
+                <input className={inputCls + " !w-40"} inputMode="decimal" value={dasValue} onChange={(e) => setDasValue(e.target.value)} placeholder="Valor do DAS" aria-label="Valor do DAS" />
+                {das ? <button type="button" className={btnGhostCls + " !py-2.5 !px-4"} onClick={updateDas}>Atualizar valor</button> : <button type="button" className={btnCls} onClick={createDas}>Agendar todo dia 20</button>}
+              </div>
+            </>
           )}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <input className={inputCls + " !w-40"} inputMode="decimal" value={dasValue} onChange={(e) => setDasValue(e.target.value)} placeholder="Valor do DAS" aria-label="Valor do DAS" />
-            {das ? <button type="button" className={btnGhostCls + " !py-2.5 !px-4"} onClick={updateDas}>Atualizar valor</button> : <button type="button" className={btnCls} onClick={createDas}>Agendar todo dia 20</button>}
-          </div>
         </div>
       </Card>
 
