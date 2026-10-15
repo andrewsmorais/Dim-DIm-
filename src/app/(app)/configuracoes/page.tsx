@@ -33,21 +33,22 @@ export default function ConfiguracoesPage() {
     <div className="max-w-2xl mx-auto pb-20">
       <BackTitle title="Configurações" subtitle="Ajuste o Jakash do seu jeito." href="/menu" />
 
-      {isAdmin && (
-        <Card className="mb-4 border-brand-dark/30 bg-gradient-to-br from-brand-dark/5 to-brand-dark/2 dark:from-brand-soft/10 dark:to-brand-soft/5">
-          <Link href="/admin" className="flex items-center gap-4 px-3 py-4 hover:opacity-75 transition-opacity">
-            <div className="w-11 h-11 rounded-2xl bg-brand-dark/20 dark:bg-brand-soft/20 text-brand-dark dark:text-brand-soft flex items-center justify-center shrink-0"><BarChart3 size={20} /></div>
-            <div className="min-w-0 flex-1">
-              <p className="font-extrabold">Painel do dono</p>
-              <p className="text-xs text-gray-500">Métricas, receita e lucro</p>
-            </div>
-            <ChevronRight size={18} className="text-gray-300" />
-          </Link>
-        </Card>
-      )}
-
       <Card className="!p-2">
         <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
+          {isAdmin && (
+            <li>
+              <Link href="/admin" className="block hover:bg-brand-dark/5 dark:hover:bg-[#1E1E1E] rounded-2xl">
+                <div className="flex items-center gap-4 px-3 py-4">
+                  <div className="w-11 h-11 rounded-2xl bg-brand-dark/20 dark:bg-brand-soft/20 text-brand-dark dark:text-brand-soft flex items-center justify-center shrink-0"><BarChart3 size={20} /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-extrabold">Painel do dono</p>
+                    <p className="text-xs text-gray-500">Métricas, receita e lucro</p>
+                  </div>
+                  <ChevronRight size={18} className="text-gray-300" />
+                </div>
+              </Link>
+            </li>
+          )}
           {ITEMS.map((it) => {
             const inner = (
               <div className="flex items-center gap-4 px-3 py-4">
