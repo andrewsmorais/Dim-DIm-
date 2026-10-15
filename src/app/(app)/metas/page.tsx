@@ -6,6 +6,7 @@ import { useSupabase } from "@/lib/useSupabase";
 import { brl, parseMoney, formatDateBR } from "@/lib/format";
 import { GOAL_TYPES, monthsBetween, requiredMonthly, type GoalType } from "@/lib/planner";
 import { PageHeader, Card, Label, Progress, Empty, ErrorNote, Disclaimer, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
+import { GoalTypeSelector } from "@/components/GoalTypeSelector";
 
 type Goal = { id: string; name: string; icon: string | null; type: GoalType; target_amount: number; current_amount: number; deadline: string | null; status: string };
 
@@ -75,12 +76,8 @@ export default function MetasPage() {
       <PageHeader title="Objetivos" subtitle="Viagem, bebê, reserva, carro... defina o valor, a data e veja quanto guardar por mês" />
 
       <Card className="mb-6">
-        <div className="flex flex-wrap gap-2 mb-4">
-          {(Object.keys(GOAL_TYPES) as GoalType[]).map((k) => (
-            <button key={k} type="button" onClick={() => setForm({ ...form, type: k, icon: "" })} className={form.type === k ? btnCls : btnGhostCls}>
-              {GOAL_TYPES[k].icon} {GOAL_TYPES[k].label}
-            </button>
-          ))}
+        <div className="mb-4">
+          <GoalTypeSelector selected={form.type} onChange={(type) => setForm({ ...form, type, icon: "" })} />
         </div>
         <form onSubmit={add} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
           <div><Label>{form.type === "custom" ? "Nome do objetivo" : "Nome"}</Label><input className={inputCls} maxLength={60} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={form.type === "custom" ? "Ex.: Moto nova, Festa de 15 anos..." : GOAL_TYPES[form.type].label} /></div>
@@ -89,10 +86,10 @@ export default function MetasPage() {
           <div><Label>Data-alvo</Label><input type="date" className={inputCls} value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></div>
           <div className="md:col-span-4">
             <Label>Ícone (opcional)</Label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="grid grid-cols-9 gap-2">
               {ICONS.map((ic) => (
                 <button key={ic} type="button" onClick={() => setForm({ ...form, icon: form.icon === ic ? "" : ic })} aria-pressed={form.icon === ic} aria-label={`Ícone ${ic}`}
-                  className={`w-10 h-10 rounded-xl text-xl border transition-colors ${form.icon === ic ? "bg-brand-dark/15 border-brand-dark" : "border-gray-200 dark:border-[#262626] hover:bg-brand-dark/5"}`}>{ic}</button>
+                  className={`aspect-square rounded-lg text-2xl border-2 transition-all flex items-center justify-center ${form.icon === ic ? "bg-brand-dark/10 dark:bg-brand-soft/10 border-brand-dark dark:border-brand-soft shadow-sm" : "border-gray-200 dark:border-[#262626] hover:border-brand-dark/50 dark:hover:border-brand-soft/50 hover:bg-brand-dark/5 dark:hover:bg-brand-soft/5"}`}>{ic}</button>
               ))}
             </div>
           </div>
