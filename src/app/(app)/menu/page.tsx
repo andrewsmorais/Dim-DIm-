@@ -10,7 +10,7 @@ import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 
 const TILES: { icon: LucideIcon; label: string; href: string }[] = [
-  { icon: Home, label: "Resumo do mês", href: "/dashboard" },
+  { icon: Home, label: "Dashboard", href: "/dashboard" },
   { icon: MessageSquare, label: "Chat IA", href: "/chat" },
   { icon: Landmark, label: "Contas bancárias", href: "/contas-bancarias" },
   { icon: CreditCard, label: "Cartões", href: "/cartoes" },

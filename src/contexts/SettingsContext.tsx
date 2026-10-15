@@ -2,12 +2,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { setDisplayCurrency, type CurrencyCode } from "@/lib/format";
 
 type Language = "pt" | "en" | "es";
 
 interface SettingsContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
+  currency: CurrencyCode;
+  setCurrency: (c: CurrencyCode) => void;
   t: (key: string) => string;
 }
 
@@ -142,8 +145,11 @@ const translations = {
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
+const CURRENCY_CODES = ["BRL", "USD", "EUR", "GBP", "ARS", "CAD", "AUD"];
+
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("pt");
+  const [currency, setCurrencyState] = useState<CurrencyCode>("BRL");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -152,11 +158,24 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     if (savedLang && ["pt", "en", "es"].includes(savedLang)) {
       setLanguageState(savedLang);
     }
+    const savedCur = localStorage.getItem("app-currency") as CurrencyCode;
+    if (savedCur && CURRENCY_CODES.includes(savedCur)) {
+      setCurrencyState(savedCur);
+      setDisplayCurrency(savedCur);
+    }
   }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem("app-language", lang);
+  };
+
+  // Troca só o símbolo/formato exibido (sem conversão). Avisa as telas já abertas para reformatarem os valores.
+  const setCurrency = (c: CurrencyCode) => {
+    setCurrencyState(c);
+    setDisplayCurrency(c);
+    localStorage.setItem("app-currency", c);
+    window.dispatchEvent(new Event("jakash:changed"));
   };
 
   const t = (key: string) => {
@@ -170,7 +189,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <NextThemesProvider attribute="class" defaultTheme="light" enableSystem={false} themes={["light", "dark"]} storageKey="jakash-theme">
-      <SettingsContext.Provider value={{ language, setLanguage, t }}>
+      <SettingsContext.Provider value={{ language, setLanguage, currency, setCurrency, t }}>
         {children}
       </SettingsContext.Provider>
     </NextThemesProvider>

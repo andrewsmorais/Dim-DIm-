@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Check, Copy, Heart, MessageCircle, Users } from "lucide-react";
 import { usePartnership } from "@/lib/usePartnership";
 import { formatDateBR } from "@/lib/format";
-import { BackTitle, Card, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
+import { BackTitle, Card, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type Lookup = { ownerName: string; ownerEmail: string };
 
@@ -15,7 +16,7 @@ async function call(method: "POST" | "DELETE", body?: unknown) {
 }
 
 export default function CompartilhadaPage() {
-  const { data, refresh } = usePartnership();
+  const { data, error: loadError, ready, userId, refresh } = usePartnership();
   const [code, setCode] = useState("");
   const [found, setFound] = useState<Lookup | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +94,14 @@ export default function CompartilhadaPage() {
         </ul>
       </Card>
 
-      {!data && <Card><p className="text-center text-sm text-gray-400 py-6">Carregando...</p></Card>}
+      {ready && !userId ? (
+        <Card><Empty>Você está sem login. <Link href="/login" className="font-bold text-brand-dark dark:text-brand-soft">Entre na sua conta</Link> para gerenciar a gestão compartilhada.</Empty></Card>
+      ) : !data && loadError ? (
+        <Card>
+          <p className="text-center text-sm text-gray-500 py-4">Não foi possível carregar agora.</p>
+          <button onClick={refresh} className={btnGhostCls + " w-full"}>Tentar de novo</button>
+        </Card>
+      ) : !data && <Card><p className="text-center text-sm text-gray-400 py-6">Carregando...</p></Card>}
 
       {data?.state === "none" && (
         <>

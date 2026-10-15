@@ -15,17 +15,19 @@ let cache: { userId: string; at: number; data: PartnershipState } | null = null;
 export function usePartnership() {
   const { userId, ready } = useSupabase();
   const [data, setData] = useState<PartnershipState | null>(null);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async (force = false) => {
     if (!userId) return;
-    if (!force && cache && cache.userId === userId && Date.now() - cache.at < 60_000) { setData(cache.data); return; }
+    if (!force && cache && cache.userId === userId && Date.now() - cache.at < 60_000) { setData(cache.data); setError(false); return; }
     try {
       const res = await fetch("/api/partnership", { cache: "no-store" });
-      if (!res.ok) return;
+      if (!res.ok) { setError(true); return; }
       const json = (await res.json()) as PartnershipState;
       cache = { userId, at: Date.now(), data: json };
       setData(json);
-    } catch { /* sem rede: mantém o que tinha */ }
+      setError(false);
+    } catch { setError(true); /* sem rede: mantém o que tinha na tela, mas para de "carregar" */ }
   }, [userId]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
@@ -43,5 +45,5 @@ export function usePartnership() {
     return id === partner.id ? partner.name.split(" ")[0] : "";
   };
 
-  return { data, partner, shared: Boolean(partner), nameOf, userId, refresh: () => load(true) };
+  return { data, error, partner, shared: Boolean(partner), nameOf, userId, ready, refresh: () => load(true) };
 }

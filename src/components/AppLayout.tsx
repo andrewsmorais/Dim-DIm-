@@ -19,7 +19,7 @@ const SECTIONS: Section[] = [
   {
     title: "MENU",
     items: [
-      { icon: Home, label: "Resumo", href: "/dashboard" },
+      { icon: Home, label: "Dashboard", href: "/dashboard" },
       { icon: Send, label: "Transações", href: "/transacoes" },
       { icon: Bank, label: "Contas bancárias", href: "/contas-bancarias" },
       { icon: CreditCard, label: "Cartões", href: "/cartoes" },
