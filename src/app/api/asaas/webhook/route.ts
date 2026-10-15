@@ -34,12 +34,15 @@ async function recordBillingEvent(
     .eq('asaas_customer_id', customerId)
     .maybeSingle();
 
-  const plan = (profile?.subscription_plan as string | null) ?? null;
+  // A conta do Asaas é compartilhada com outros projetos: cobrança de cliente que não é do Jakash não entra nas métricas.
+  if (!profile) return;
+
+  const plan = (profile.subscription_plan as string | null) ?? null;
   const planValue = plan === 'cpf' || plan === 'mei' ? PLANS[plan].value : 0;
   const amount = Number(body.payment?.value ?? planValue) || 0;
 
   const row = {
-    user_id: profile?.id ?? null,
+    user_id: profile.id,
     asaas_customer_id: customerId,
     payment_id: body.payment?.id ?? null,
     kind,

@@ -81,7 +81,9 @@ export async function syncAsaasPayments(
           const { data: profs } = await admin.from('profiles').select('id, asaas_customer_id, subscription_plan').in('asaas_customer_id', customers);
           const byCustomer = new Map((profs ?? []).map((p) => [p.asaas_customer_id as string, p]));
 
-          const rows = payments.map((p) => {
+          // A conta do Asaas é compartilhada com outros projetos: só entram cobranças de clientes que são do Jakash.
+          const mine = payments.filter((p) => p.customer && byCustomer.has(p.customer));
+          const rows = mine.map((p) => {
             const prof = p.customer ? byCustomer.get(p.customer) : undefined;
             const value = Number(p.value) || 0;
             const when = kind === 'paid' ? (p.confirmedDate || p.paymentDate || p.clientPaymentDate || p.dateCreated) : (p.paymentDate || p.confirmedDate || p.dateCreated);
@@ -98,12 +100,14 @@ export async function syncAsaasPayments(
           });
 
           // Insere só o que falta (o webhook pode já ter gravado: nesse caso a data dele é mantida).
-          const { data: ins, error: insErr } = await admin
-            .from('billing_events')
-            .upsert(rows, { onConflict: 'payment_id,kind', ignoreDuplicates: true })
-            .select('id');
-          if (insErr) throw new Error(insErr.message);
-          inserted += ins?.length ?? 0;
+          if (rows.length) {
+            const { data: ins, error: insErr } = await admin
+              .from('billing_events')
+              .upsert(rows, { onConflict: 'payment_id,kind', ignoreDuplicates: true })
+              .select('id');
+            if (insErr) throw new Error(insErr.message);
+            inserted += ins?.length ?? 0;
+          }
 
           // Completa a taxa real (valor líquido) em eventos que o webhook gravou sem ela.
           if (kind === 'paid') {
