@@ -52,7 +52,7 @@ export function Footer() {
           {/* Lado direito: todas as páginas */}
           <nav aria-label="Links institucionais">
             <p className="text-xs font-extrabold tracking-widest text-gray-400 mb-4">INSTITUCIONAL</p>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-14 gap-y-3 text-sm font-semibold">
+            <ul className="flex flex-col gap-3 text-sm font-semibold">
               {LINKS.map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="text-gray-600 hover:text-brand-dark transition-colors">{l.label}</Link>
