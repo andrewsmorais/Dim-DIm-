@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, Lock, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
+import { buildClassifier, type CatFlagRow } from "@/lib/essentials";
 import { BackTitle, Card, Label, Empty, ErrorNote, Toggle, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type Cat = { id: string; name: string; type: "income" | "expense"; parent_id: string | null; color: string | null; is_default: boolean; user_id: string | null };
@@ -22,6 +23,7 @@ function colorOf(c: Cat, parent?: Cat): string {
 export default function CategoriasPage() {
   const { supabase, userId, ready } = useSupabase();
   const [cats, setCats] = useState<Cat[]>([]);
+  const [flags, setFlags] = useState<CatFlagRow[]>([]);
   const [tab, setTab] = useState<"expense" | "income">("expense");
   const [q, setQ] = useState("");
   const [onlySubs, setOnlySubs] = useState(false);
@@ -30,11 +32,24 @@ export default function CategoriasPage() {
   const [editing, setEditing] = useState<{ id?: string; name: string; parent_id: string; color: string } | null>(null);
 
   const load = useCallback(async () => {
-    const { data, error: err } = await supabase.from("categories").select("id,name,type,parent_id,color,is_default,user_id").order("name");
-    if (err) { setError("Não foi possível carregar as categorias."); return; }
+    const [c, f] = await Promise.all([
+      supabase.from("categories").select("id,name,type,parent_id,color,is_default,user_id").order("name"),
+      supabase.from("category_flags").select("category_id,is_essential,is_benefit"),
+    ]);
+    if (c.error) { setError("Não foi possível carregar as categorias."); return; }
     setError(null);
-    setCats((data ?? []) as Cat[]);
+    setCats((c.data ?? []) as Cat[]);
+    setFlags((f.data ?? []) as CatFlagRow[]);
   }, [supabase]);
+
+  const classifier = useMemo(() => buildClassifier(cats, flags), [cats, flags]);
+
+  // Essencial/benefício é uma preferência (não exige dono da categoria, nem mexe na categoria padrão).
+  async function setFlag(categoryId: string, patch: { is_essential?: boolean } | { is_benefit?: boolean }) {
+    const { error: err } = await supabase.from("category_flags").upsert({ user_id: userId, category_id: categoryId, ...patch }, { onConflict: "user_id,category_id" });
+    if (err) { setError("Não foi possível salvar a marcação."); return; }
+    load();
+  }
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
   useEffect(() => {
@@ -73,12 +88,26 @@ export default function CategoriasPage() {
     if (err) setError("Não foi possível excluir."); else load();
   }
 
+  // Pill de "Essencial"/"Benefício": funciona em qualquer categoria, inclusive as padrão (é uma preferência à parte).
+  const FlagPill = ({ c, kind }: { c: Cat; kind: "essential" | "benefit" }) => {
+    const on = kind === "essential" ? classifier.isEssential(c.id) : classifier.isBenefit(c.id);
+    const label = kind === "essential" ? "Essencial" : "Benefício";
+    return (
+      <button type="button" onClick={() => setFlag(c.id, kind === "essential" ? { is_essential: !on } : { is_benefit: !on })}
+        aria-pressed={on}
+        className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold border ${on ? "bg-brand-dark text-white border-brand-dark dark:bg-brand-vivid dark:border-brand-vivid" : "border-gray-200 dark:border-white/10 text-gray-400"}`}>
+        {label}
+      </button>
+    );
+  };
+
   const Row = ({ c, parent }: { c: Cat; parent?: Cat }) => {
     const own = !c.is_default && c.user_id === userId;
     return (
       <div className="flex items-center gap-3 py-2.5">
         <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: colorOf(c, parent) }} />
         <span className="flex-1 text-sm font-medium truncate">{c.name}</span>
+        <FlagPill c={c} kind={c.type === "income" ? "benefit" : "essential"} />
         {own ? (
           <span className="flex gap-3 text-gray-400">
             <button aria-label="Editar" onClick={() => setEditing({ id: c.id, name: c.name, parent_id: c.parent_id ?? "", color: c.color ?? colorOf(c, parent) })}><Pencil size={15} /></button>
@@ -92,6 +121,11 @@ export default function CategoriasPage() {
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <BackTitle title="Categorias" subtitle="Organize suas receitas e despesas com categorias e subcategorias." />
+      <p className="text-xs text-gray-400 -mt-3 mb-4">
+        {tab === "expense"
+          ? "Toque em “Essencial” para marcar o que é básico (moradia, alimentação...). Usado na Reserva e no resumo em Relatórios."
+          : "Toque em “Benefício” para marcar vale-alimentação, vale-refeição etc. — contam na renda, mas não como dinheiro livre."}
+      </p>
 
       <button onClick={() => setEditing({ name: "", parent_id: "", color: SWATCHES[6] })} className={btnCls + " w-full mb-4"}><Plus size={18} /> Adicionar categoria</button>
 
@@ -121,6 +155,7 @@ export default function CategoriasPage() {
               <div className="flex items-center gap-3">
                 <span className="w-5 h-5 rounded-full shrink-0" style={{ background: colorOf(p) }} />
                 <span className="flex-1 font-extrabold truncate">{p.name}</span>
+                <FlagPill c={p} kind={p.type === "income" ? "benefit" : "essential"} />
                 {!p.is_default && p.user_id === userId && (
                   <span className="flex gap-3 text-gray-400 mr-1">
                     <button aria-label="Editar" onClick={() => setEditing({ id: p.id, name: p.name, parent_id: "", color: p.color ?? colorOf(p) })}><Pencil size={15} /></button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, ArchiveRestore, ChevronDown, ChevronUp, Pencil, Plus, X } from "lucide-react";
+import { Archive, AlertCircle, ArchiveRestore, ChevronDown, ChevronUp, Pencil, Plus, X } from "lucide-react";
 import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useSupabase } from "@/lib/useSupabase";
 import { useHideValues } from "@/lib/useHideValues";
@@ -68,6 +68,8 @@ export default function InvestimentosPage() {
   }, [load]);
 
   const active = invs.filter((x) => !x.archived);
+  // Hábito de investir todo mês (o método "primo pobre" trata investimento como obrigatório, não sobra).
+  const investedThisMonth = movs.some((m) => m.kind === "aporte" && m.moved_on.slice(0, 7) === currentMonth());
   const shown = invs.filter((x) => (tab === "active" ? !x.archived : x.archived));
   const totalValue = active.reduce((s, x) => s + x.current_value, 0);
   const totalInvested = active.reduce((s, x) => s + x.invested, 0);
@@ -168,6 +170,18 @@ export default function InvestimentosPage() {
       <BackTitle title="Investimentos" subtitle="Acompanhe o que você já investiu e quanto rendeu." />
 
       <button onClick={openNew} className={btnCls + " w-full mb-5"}><Plus size={18} /> Adicionar investimento</button>
+
+      {active.length > 0 && tab === "active" && !investedThisMonth && (
+        <Card className="mb-4 !bg-amber-50 dark:!bg-amber-500/10 border-amber-200 dark:border-amber-500/20">
+          <div className="flex items-start gap-3">
+            <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm">Você ainda não fez nenhum aporte este mês</p>
+              <p className="text-xs text-gray-500 mt-0.5">Investir todo mês, mesmo um valor pequeno, é o que mais faz diferença no longo prazo.</p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {active.length > 0 && tab === "active" && (
         <>

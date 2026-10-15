@@ -1,10 +1,6 @@
 // Motor de planejamento: tudo é conta em código (custo zero, sem IA).
 // Conteúdo educativo: não é recomendação de investimento ou de crédito.
 
-export const ESSENTIAL_CATEGORY_NAMES = [
-  "Alimentação", "Transporte", "Moradia", "Saúde", "Educação", "Serviços", "Taxas/Impostos",
-];
-
 export type GoalType =
   | "custom" | "viagem" | "bebe" | "reserva" | "casamento" | "carro" | "imovel" | "curso" | "reforma";
 
