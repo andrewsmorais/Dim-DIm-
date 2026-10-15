@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, FileUp, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileUp, Sparkles } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 import { brl, formatDateBR } from "@/lib/format";
 import { categoryOptions, type CatRow } from "@/lib/categories";
-import { invoiceMonthFor } from "@/lib/cards";
+import { addMonthsClamped, invoiceMonthFor } from "@/lib/cards";
 import {
-  buildPreview, buildRules, suggestInvert,
-  type ExistingTx, type ParseResult, type PreviewRow, type Rules,
+  amountStats, buildPreview, buildRules, suggestInvert,
+  type ExistingTx, type ParseResult, type PreviewRow, type Rules, type StatsByType,
 } from "@/lib/importer";
 import { ACCEPT, readAnyFile, takeFile, usesAI } from "@/lib/fileImport";
+import { removeOrphanReceipts, uploadReceipt } from "@/lib/receipts";
 import { BackTitle, Card, Label, Toggle, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type Acc = { id: string; name: string; is_business: boolean };
@@ -25,6 +26,7 @@ export default function ImportarPage() {
   const [cards, setCards] = useState<CardT[]>([]);
   const [cats, setCats] = useState<CatRow[]>([]);
   const [rules, setRules] = useState<Rules>({});
+  const [stats, setStats] = useState<StatsByType | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
   const [targetKind, setTargetKind] = useState<"account" | "card">("account");
@@ -34,6 +36,7 @@ export default function ImportarPage() {
   const [existing, setExisting] = useState<ExistingTx[]>([]);
   const [invert, setInvert] = useState(false);
   const [asBusiness, setAsBusiness] = useState(false);
+  const [future, setFuture] = useState(false);
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +49,7 @@ export default function ImportarPage() {
         supabase.from("accounts").select("id,name,is_business").eq("user_id", userId).eq("archived", false).order("created_at"),
         supabase.from("credit_cards").select("id,name,closing_day,due_day,is_business").eq("user_id", userId).eq("archived", false).eq("kind", "credito").order("created_at"),
         supabase.from("categories").select("id,name,type,parent_id").order("name"),
-        supabase.from("transactions").select("description,type,category_id").eq("user_id", userId).not("category_id", "is", null)
+        supabase.from("transactions").select("description,type,category_id,amount").eq("user_id", userId)
           .order("date", { ascending: false }).limit(3000),
       ]);
       if (a.error || k.error || c.error) setError("Não foi possível carregar suas contas e categorias.");
@@ -55,7 +58,9 @@ export default function ImportarPage() {
       setAccounts(accs);
       setCards(crds);
       setCats((c.data ?? []) as CatRow[]);
-      setRules(buildRules((h.data ?? []) as { description: string; type: string; category_id: string | null }[]));
+      const hist = (h.data ?? []) as { description: string; type: string; category_id: string | null; amount: number | string }[];
+      setRules(buildRules(hist.filter((x) => x.category_id)));
+      setStats(amountStats(hist.map((x) => ({ amount: Number(x.amount), type: x.type }))));
       if (accs.length) { setTargetKind("account"); setTargetId(accs[0].id); }
       else if (crds.length) { setTargetKind("card"); setTargetId(crds[0].id); }
       setLoading(false);
@@ -77,11 +82,13 @@ export default function ImportarPage() {
   // A prévia é refeita quando muda o arquivo, o destino ou o sinal.
   useEffect(() => {
     if (!parsed) { setRows([]); return; }
-    setRows(buildPreview({ rows: parsed.rows, invert, targetId: targetId || "x", rules, cats, existing }));
-  }, [parsed, invert, targetId, rules, cats, existing]);
+    setRows(buildPreview({ rows: parsed.rows, invert, targetId: targetId || "x", rules, cats, existing, stats, detectInstallments: targetKind === "card" }));
+  }, [parsed, invert, targetId, rules, cats, existing, stats, targetKind]);
 
   const [reading, setReading] = useState(false);
   const [viaAI, setViaAI] = useState(false);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [attachSource, setAttachSource] = useState(true);
 
   async function processFile(file: File) {
     setError(null);
@@ -90,11 +97,12 @@ export default function ImportarPage() {
     try {
       const res = await readAnyFile(file);
       const dates = res.rows.map((r) => r.date).sort();
-      const ex = await supabase.from("transactions").select("date,amount,type,import_key").eq("user_id", userId!)
+      const ex = await supabase.from("transactions").select("date,amount,type,import_key,description").eq("user_id", userId!)
         .gte("date", dates[0]).lte("date", dates[dates.length - 1]).limit(5000);
       setExisting(((ex.data ?? []) as ExistingTx[]).map((x) => ({ ...x, amount: Number(x.amount) })));
       setFileName(file.name);
       setViaAI(usesAI(file));
+      setSourceFile(usesAI(file) ? file : null);
       setInvert(suggestInvert(res, targetKind));
       if (res.kind === "card" && cards.length) { setTargetKind("card"); setTargetId(cards[0].id); }
       setParsed(res);
@@ -127,6 +135,10 @@ export default function ImportarPage() {
   const inSum = chosen.filter((r) => r.type === "income").reduce((s, r) => s + r.amount, 0);
   const outSum = chosen.filter((r) => r.type === "expense").reduce((s, r) => s + r.amount, 0);
   const uncategorized = chosen.filter((r) => !r.categoryId).length;
+  const warned = chosen.filter((r) => r.warn).length;
+  const canAttach = viaAI && Boolean(sourceFile) && (parsed?.document === "comprovante" || parsed?.document === "nota") && chosen.length > 0 && chosen.length <= 3;
+  const instRows = targetKind === "card" ? chosen.filter((r) => r.inst && r.type === "expense") : [];
+  const futureCount = instRows.reduce((n, r) => n + (r.inst ? r.inst.total - r.inst.n : 0), 0);
 
   function applyToBlank(type: "income" | "expense", catId: string) {
     if (!catId) return;
@@ -138,12 +150,30 @@ export default function ImportarPage() {
     setBusy(true);
     setError(null);
     const card = targetKind === "card" ? cards.find((c) => c.id === targetId) : undefined;
-    const payload = chosen.map((r) => {
+    const mk = (r: PreviewRow, date: string, key: string, description: string, inst?: { group: string; n: number; total: number }) => {
       const base = {
-        user_id: userId, description: r.description, amount: r.amount, type: r.type, date: r.date, category_id: r.categoryId,
-        origin: "manual" as const, import_key: r.key, is_business: asBusiness,
+        user_id: userId, description, amount: r.amount, type: r.type, date, category_id: r.categoryId,
+        origin: "manual" as const, import_key: key, is_business: asBusiness,
+        ...(inst ? { installment_group: inst.group, installment_number: inst.n, installment_total: inst.total } : {}),
       };
-      return card ? { ...base, card_id: card.id, invoice_month: invoiceMonthFor(card, r.date) } : { ...base, account_id: targetId };
+      return card ? { ...base, card_id: card.id, invoice_month: invoiceMonthFor(card, date) } : { ...base, account_id: targetId };
+    };
+    // Nota/comprovante com poucos lançamentos: guarda o arquivo original junto, para o MEI e o contador.
+    let att: { attachment_path: string; attachment_name: string } | null = null;
+    if (canAttach && attachSource && sourceFile) {
+      try { const rc = await uploadReceipt(supabase, userId, sourceFile); att = { attachment_path: rc.path, attachment_name: rc.name }; }
+      catch (err) { setBusy(false); setError(err instanceof Error ? err.message : "Não foi possível enviar o comprovante."); return; }
+    }
+    const payload: ReturnType<typeof mk>[] = [];
+    chosen.forEach((r) => {
+      const inst = card && r.inst && r.type === "expense" ? r.inst : undefined;
+      payload.push(att ? { ...mk(r, r.date, r.key, r.description, inst), ...att } : mk(r, r.date, r.key, r.description, inst));
+      // Parcelas que faltam: entram nas próximas faturas, com a mesma chave que a parcela real terá quando vier no extrato do mês (sem duplicar).
+      if (future && inst && payload.length < 3000) {
+        for (let k = inst.n + 1; k <= inst.total; k++) {
+          payload.push(mk(r, addMonthsClamped(r.date, k - inst.n), `inst:${inst.group}:${k}`, `${inst.base} (${k}/${inst.total})`, { group: inst.group, n: k, total: inst.total }));
+        }
+      }
     });
     let inserted = 0;
     for (let i = 0; i < payload.length; i += 200) {
@@ -151,6 +181,7 @@ export default function ImportarPage() {
       const { data, error: err } = await supabase.from("transactions").upsert(chunk, { onConflict: "user_id,import_key", ignoreDuplicates: true }).select("id");
       if (err) {
         setBusy(false);
+        if (att) await removeOrphanReceipts(supabase, [att.attachment_path]).catch(() => {});
         setError(`Parei no lançamento ${i + 1} de ${payload.length} (${inserted} já salvos). Tente de novo: o que já entrou é ignorado, sem duplicar.`);
         if (inserted) window.dispatchEvent(new Event("jakash:changed"));
         return;
@@ -158,6 +189,7 @@ export default function ImportarPage() {
       inserted += data?.length ?? 0;
     }
     setBusy(false);
+    if (att) await removeOrphanReceipts(supabase, [att.attachment_path]).catch(() => {});
     window.dispatchEvent(new Event("jakash:changed"));
     setDone({ inserted, ignored: payload.length - inserted, kind: targetKind, id: targetId });
     setParsed(null);
@@ -229,6 +261,13 @@ export default function ImportarPage() {
             <div className="space-y-3 mt-4">
               <Toggle checked={invert} onChange={setInvert} label="Inverter entradas e saídas"
                 hint={targetKind === "card" ? "Ligue se as compras aparecem como valores positivos no arquivo (comum em fatura)." : "Ligue se as despesas apareceram como receitas."} />
+              {canAttach && (
+                <Toggle checked={attachSource} onChange={setAttachSource} label="Guardar o arquivo junto do lançamento" hint="Fica no clipe do lançamento, em Transações, para consultar depois (útil para o MEI e o contador)." />
+              )}
+              {futureCount > 0 && (
+                <Toggle checked={future} onChange={setFuture} label={`Criar as ${futureCount} parcelas que faltam`}
+                  hint="Lança as próximas parcelas nas faturas dos meses seguintes. Quando a parcela vier no extrato do mês, o app reconhece e não duplica." />
+              )}
               {(isMei || target?.is_business) && (
                 <Toggle checked={asBusiness} onChange={setAsBusiness} label="Lançar como da empresa (MEI)" hint="Marca estes lançamentos como PJ. Eles entram na receita bruta e no limite do MEI." />
               )}
@@ -243,6 +282,9 @@ export default function ImportarPage() {
                 <button type="button" className={btnGhostCls} onClick={() => setRows((rs) => rs.map((r) => ({ ...r, include: false })))}>Desmarcar</button>
               </div>
             </div>
+            {warned > 0 && (
+              <p className="text-xs rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 p-3 my-3 flex items-start gap-2"><AlertTriangle size={14} className="shrink-0 mt-0.5" /> {warned} {warned === 1 ? "lançamento pede" : "lançamentos pedem"} conferência (marcados com aviso abaixo). Desmarque o que não for seu.</p>
+            )}
             {uncategorized > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 my-3 rounded-2xl bg-amber-50 dark:bg-amber-500/10 p-3">
                 <p className="text-xs text-amber-700 dark:text-amber-300 sm:col-span-2 font-bold">{uncategorized} sem categoria. Aplique uma só vez a todas as que faltam:</p>
@@ -272,6 +314,7 @@ export default function ImportarPage() {
                       {!r.note && r.catSource === "aprendida" && <span> · categoria do seu histórico</span>}
                       {!r.note && r.catSource === "padrao" && <span> · categoria sugerida</span>}
                     </p>
+                    {r.warn && <p className="text-xs mt-1 flex items-start gap-1.5 text-amber-700 dark:text-amber-300"><AlertTriangle size={13} className="shrink-0 mt-0.5" /> {r.warn}</p>}
                     <select className={inputCls + " mt-2 !py-2"} value={r.categoryId ?? ""} onChange={(e) => setRow(r.uid, { categoryId: e.target.value || null, catSource: null })} aria-label={`Categoria de ${r.description}`}>
                       <option value="">Sem categoria</option>
                       {(r.type === "income" ? optsIncome : optsExpense).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}

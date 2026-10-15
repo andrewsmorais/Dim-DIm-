@@ -1,5 +1,6 @@
 "use client";
 
+import { removeAllReceipts } from "@/lib/receipts";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Download, RotateCcw, UserX, X } from "lucide-react";
@@ -63,6 +64,7 @@ export default function DadosPage() {
       const { error: err } = await supabase.from(table).delete().eq("user_id", userId);
       if (err) { setError("Não foi possível apagar tudo. Tente de novo."); setBusy(false); return; }
     }
+    if (userId && picked.includes("transactions")) await removeAllReceipts(supabase, userId).catch(() => {});
     setBusy(false); setModal(null); setPicked([]); setConfirm("");
     setMsg("Dados apagados.");
     window.dispatchEvent(new Event("jakash:changed"));
