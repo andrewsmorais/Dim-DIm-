@@ -7,7 +7,15 @@ import { createClient } from "@/lib/supabase/client";
 
 type LinkInfo = { code: string; expiresInMinutes: number; waLink: string | null; botNumber: string | null };
 
+// 5511999998888 -> +55 (11) 99999-8888 (celular brasileiro); outros formatos aparecem só com "+".
+function formatPhone(digits: string): string {
+  const m = digits.match(/^55(\d{2})(\d{4,5})(\d{4})$/);
+  return m ? `+55 (${m[1]}) ${m[2]}-${m[3]}` : `+${digits}`;
+}
+
 export function WhatsAppConfig() {
+  const [botNumber, setBotNumber] = useState<string | null>(null);
+  const [numberCopied, setNumberCopied] = useState(false);
   const [connectedNumber, setConnectedNumber] = useState<string | null>(null);
   const [link, setLink] = useState<LinkInfo | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,6 +38,24 @@ export function WhatsAppConfig() {
   useEffect(() => {
     checkConnection();
   }, [checkConnection]);
+
+  useEffect(() => {
+    fetch("/api/whatsapp/bot")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setBotNumber(j?.number ?? null))
+      .catch(() => setBotNumber(null));
+  }, []);
+
+  const copyBotNumber = async () => {
+    if (!botNumber) return;
+    try {
+      await navigator.clipboard.writeText(`+${botNumber}`);
+      setNumberCopied(true);
+      setTimeout(() => setNumberCopied(false), 2000);
+    } catch {
+      // clipboard indisponível: o número continua visível na tela
+    }
+  };
 
   // Enquanto há um código ativo, confere a cada 4s se o número já foi vinculado
   useEffect(() => {
@@ -80,6 +106,24 @@ export function WhatsAppConfig() {
           <p className="text-sm text-white/50">Converse com seu assistente e organize gastos.</p>
         </div>
       </div>
+
+      {botNumber && (
+        <div className="bg-[#25D366]/10 border border-[#25D366]/30 rounded-xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-xs text-white/50">Número do assistente Jakash</p>
+            <p className="font-extrabold text-xl tracking-wide">{formatPhone(botNumber)}</p>
+            <p className="text-xs text-white/40">Salve nos contatos para conversar com ele.</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={copyBotNumber} className="flex items-center gap-1.5 text-sm font-bold px-3 py-2 rounded-lg border border-white/15 hover:bg-white/5">
+              <Copy size={14} /> {numberCopied ? "Copiado!" : "Copiar"}
+            </button>
+            <a href={`https://wa.me/${botNumber}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm font-bold px-3 py-2 rounded-lg bg-[#25D366] text-black hover:bg-[#1ebe5b]">
+              <MessageCircle size={14} /> Abrir conversa
+            </a>
+          </div>
+        </div>
+      )}
 
       <div className="bg-black/50 p-6 rounded-xl border border-white/5 mb-6 text-center">
         {connectedNumber ? (
