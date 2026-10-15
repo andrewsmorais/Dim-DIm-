@@ -19,11 +19,13 @@ const MSG: Record<string, string> = {
   revoked: "Este link foi cancelado por quem o enviou.",
 };
 
-export default async function ContadorPage({ params, searchParams }: { params: { token: string }; searchParams: { y?: string } }) {
+export default async function ContadorPage(props: { params: Promise<{ token: string }>; searchParams: Promise<{ y?: string }> }) {
+  const { token } = await props.params;
+  const searchParams = await props.searchParams;
   const yearNow = new Date().getFullYear();
   const y = Number(searchParams.y);
   const year = Number.isInteger(y) && y >= 2000 && y <= 2100 ? y : yearNow;
-  const res = await loadAccountantView(createAdminClient(), params.token, year);
+  const res = await loadAccountantView(createAdminClient(), token, year);
 
   if (res.status !== "ok") {
     return (
@@ -38,7 +40,7 @@ export default async function ContadorPage({ params, searchParams }: { params: {
   const totalExp = v.monthly.reduce((s, m) => s + m.expenses, 0);
   const shown = v.tx.slice(-400).reverse();
   const tone = v.limit.level === "excedido" ? "bg-red-500" : v.limit.level === "perigo" ? "bg-amber-500" : "bg-indigo-500";
-  const csvHref = `/api/contador/${params.token}?y=${year}`;
+  const csvHref = `/api/contador/${token}?y=${year}`;
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-black text-gray-800 dark:text-gray-100 p-4 md:p-8">

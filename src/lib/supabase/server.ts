@@ -1,6 +1,7 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+// No Next 15 cookies() é assíncrono; mantemos createClient() síncrono e esperamos os cookies só quando o Supabase precisar deles.
 export function createClient() {
   const cookieStore = cookies()
 
@@ -11,33 +12,19 @@ export function createClient() {
     throw new Error('As variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (ou ANON_KEY) estão ausentes no ambiente.');
   }
 
-  return createServerClient(
-    supabaseUrl,
-    supabaseKey,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch {
-            // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch {
-            // The `delete` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
+  return createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      async getAll() {
+        return (await cookieStore).getAll()
       },
-    }
-  )
+      async setAll(cookiesToSet) {
+        try {
+          const store = await cookieStore
+          cookiesToSet.forEach(({ name, value, options }) => store.set(name, value, options))
+        } catch {
+          // Chamado de um Server Component: o middleware já renova a sessão, então pode ignorar.
+        }
+      },
+    },
+  })
 }

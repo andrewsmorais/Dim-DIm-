@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // Renova a sessão do Supabase a cada acesso e manda para o login quem não está logado nas telas do app.
@@ -13,16 +13,11 @@ export async function middleware(request: NextRequest) {
 
   const supabase = createServerClient(url, key, {
     cookies: {
-      get: (name: string) => request.cookies.get(name)?.value,
-      set: (name: string, value: string, options: CookieOptions) => {
-        request.cookies.set({ name, value, ...options });
+      getAll: () => request.cookies.getAll(),
+      setAll: (list) => {
+        list.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        response.cookies.set({ name, value, ...options });
-      },
-      remove: (name: string, options: CookieOptions) => {
-        request.cookies.set({ name, value: '', ...options });
-        response = NextResponse.next({ request });
-        response.cookies.set({ name, value: '', ...options });
+        list.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },
   });
