@@ -54,7 +54,7 @@ export async function parseWithAI(file: File): Promise<ParseResult> {
   if (!res.ok) throw new Error(body.error ?? "Não consegui ler este arquivo.");
   const rows: ParsedRow[] = (body.transactions ?? []).map((t) => ({ date: t.date, description: t.description, amount: t.type === "income" ? t.amount : -t.amount }));
   if (!rows.length) throw new Error("Não encontrei lançamentos neste arquivo. Confira se a imagem está nítida e mostra os valores.");
-  return { format: "ai", kind: body.document === "fatura" ? "card" : undefined, rows, skipped: 0 };
+  return { format: "ai", kind: body.document === "fatura" ? "card" : undefined, document: body.document, rows, skipped: 0 };
 }
 
 export async function readAnyFile(file: File): Promise<ParseResult> {

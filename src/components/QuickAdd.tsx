@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileUp, X } from "lucide-react";
+import { FileUp, Paperclip, X } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
 import { categoryOptions, type CatRow } from "@/lib/categories";
 import { buildCardPurchase, dueDateFor, invoiceMonthFor, splitInstallments } from "@/lib/cards";
 import { ACCEPT, stashFile } from "@/lib/fileImport";
+import { RECEIPT_ACCEPT, uploadReceipt } from "@/lib/receipts";
 import { Label, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
 
 type Acc = { id: string; name: string; is_business: boolean };
@@ -26,6 +27,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
   const [cards, setCards] = useState<CardOpt[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [receipt, setReceipt] = useState<File | null>(null);
   const [f, setF] = useState({
     type: "expense" as "income" | "expense", amount: "", description: "", category_id: "", account_id: "", date: todayISO(), paid: true,
     method: "account" as "account" | "card" | "debit", card_id: "", installments: 1, biz: false,
@@ -73,22 +75,27 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     if (useCard && !card) { setError("Escolha o cartão."); return; }
     if (useDebit && (!debit || !debit.pay_account_id)) { setError(debit ? "Este cartão de débito está sem conta vinculada. Edite o cartão e escolha a conta." : "Escolha o cartão de débito."); return; }
     setSaving(true);
+    let att: { attachment_path?: string; attachment_name?: string } = {};
+    if (receipt && !(!useCard && !useDebit && !f.paid)) {
+      try { const r = await uploadReceipt(supabase, userId!, receipt); att = { attachment_path: r.path, attachment_name: r.name }; }
+      catch (err) { setSaving(false); setError(err instanceof Error ? err.message : "Não foi possível enviar o comprovante."); return; }
+    }
     let res;
     if (useCard && card) {
       const rows = buildCardPurchase(card, {
         userId: userId!, description: f.description.trim(), total: amount, installments: f.installments, date: f.date, category_id: f.category_id || null,
       });
-      res = await supabase.from("transactions").insert(rows.map((r) => ({ ...r, is_business: f.biz })));
+      res = await supabase.from("transactions").insert(rows.map((r) => ({ ...r, is_business: f.biz, ...att })));
     } else if (useDebit && debit) {
       // Débito sai da conta na hora: lançamento normal na conta do cartão, marcado com o cartão usado.
       res = await supabase.from("transactions").insert({
         user_id: userId, description: f.description.trim(), amount, type: "expense", date: f.date,
-        category_id: f.category_id || null, account_id: debit.pay_account_id, debit_card_id: debit.id, origin: "manual", is_business: f.biz,
+        category_id: f.category_id || null, account_id: debit.pay_account_id, debit_card_id: debit.id, origin: "manual", is_business: f.biz, ...att,
       });
     } else if (f.paid) {
       res = await supabase.from("transactions").insert({
         user_id: userId, description: f.description.trim(), amount, type: f.type, date: f.date,
-        category_id: f.category_id || null, account_id: f.account_id || null, origin: "manual", is_business: f.biz,
+        category_id: f.category_id || null, account_id: f.account_id || null, origin: "manual", is_business: f.biz, ...att,
       });
     } else {
       res = await supabase.from("bills").insert({
@@ -98,6 +105,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     setSaving(false);
     if (res.error) { setError("Não foi possível salvar."); return; }
     setF({ ...f, amount: "", description: "", installments: 1 });
+    setReceipt(null);
     window.dispatchEvent(new Event("jakash:changed"));
     onClose();
   }
@@ -197,6 +205,18 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           </label>
         )}
         <ErrorNote message={error} />
+        {(useCard || useDebit || f.paid) && (
+          <div>
+            <label className="flex items-center gap-2 text-sm font-bold text-brand-dark dark:text-brand-soft cursor-pointer w-fit">
+              <Paperclip size={16} /> {receipt ? "Trocar comprovante" : "Anexar comprovante (opcional)"}
+              <input type="file" className="hidden" accept={RECEIPT_ACCEPT} onChange={(e) => { setReceipt(e.target.files?.[0] ?? null); e.target.value = ""; }} />
+            </label>
+            {receipt && (
+              <p className="text-xs text-gray-500 mt-1 flex items-center gap-2 min-w-0"><span className="truncate">{receipt.name}</span>
+                <button type="button" onClick={() => setReceipt(null)} className="text-red-500 font-bold shrink-0">remover</button></p>
+            )}
+          </div>
+        )}
         <button className={btnCls + " w-full"} disabled={saving} type="submit">{saving ? "Salvando..." : "Salvar"}</button>
       </form>
     </div>

@@ -2,18 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { CreditCard, FileUp, Plus, Trash2 } from "lucide-react";
+import { CreditCard, FileUp, Paperclip, Plus, Trash2 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, parseMoney, todayISO, formatDateBR, currentMonth, monthRange } from "@/lib/format";
 import { categoryOptions, type CatRow } from "@/lib/categories";
 import { usePartnership } from "@/lib/usePartnership";
 import { useUsageType } from "@/lib/useUsageType";
+import { openReceipt, removeOrphanReceipts, RECEIPT_ACCEPT, uploadReceipt } from "@/lib/receipts";
 import { WhoBadge } from "@/components/WhoBadge";
 import { PageHeader, Card, Label, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type Tx = {
   id: string; user_id: string; description: string; amount: number; type: "income" | "expense"; date: string; category_id: string | null;
   card_id: string | null; installment_group: string | null; is_business: boolean; debit_card_id: string | null;
+  attachment_path: string | null;
 };
 
 export default function TransacoesPage() {
@@ -37,7 +39,7 @@ export default function TransacoesPage() {
     const { start, end } = monthRange(month);
     const [c, t, k] = await Promise.all([
       supabase.from("categories").select("id,name,type,parent_id").order("name"),
-      supabase.from("transactions").select("id,user_id,description,amount,type,date,category_id,card_id,installment_group,is_business,debit_card_id")
+      supabase.from("transactions").select("id,user_id,description,amount,type,date,category_id,card_id,installment_group,is_business,debit_card_id,attachment_path")
         .gte("date", start).lt("date", end).order("date", { ascending: false }).limit(500),
       supabase.from("credit_cards").select("id,name"),
     ]);
@@ -72,8 +74,22 @@ export default function TransacoesPage() {
   async function remove(t: Tx, all = false) {
     setDelTx(null);
     const q = supabase.from("transactions").delete();
+    const gone = all && t.installment_group ? txs.filter((x) => x.installment_group === t.installment_group) : [t];
     const { error: err } = all && t.installment_group ? await q.eq("installment_group", t.installment_group) : await q.eq("id", t.id);
-    if (err) setError("Não foi possível excluir."); else load();
+    if (err) setError("Não foi possível excluir."); else { void removeOrphanReceipts(supabase, gone.map((x) => x.attachment_path)); load(); }
+  }
+
+  async function view(t: Tx) {
+    if (t.attachment_path && !(await openReceipt(supabase, t.attachment_path))) setError("Não foi possível abrir o comprovante.");
+  }
+
+  async function attach(t: Tx, file: File | undefined) {
+    if (!file || !userId) return;
+    try {
+      const r = await uploadReceipt(supabase, userId, file);
+      const { error: err } = await supabase.from("transactions").update({ attachment_path: r.path, attachment_name: r.name }).eq("id", t.id);
+      if (err) { await removeOrphanReceipts(supabase, [r.path]); setError("Não foi possível anexar."); } else load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível anexar."); }
   }
 
   const catName = (id: string | null) => cats.find((c) => c.id === id)?.name ?? "Sem categoria";
@@ -152,6 +168,14 @@ export default function TransacoesPage() {
                   <span className={`font-bold whitespace-nowrap ${t.type === "income" ? "text-emerald-500" : "text-red-500"}`}>
                     {t.type === "income" ? "+" : "-"}{brl(t.amount)}
                   </span>
+                  {t.attachment_path ? (
+                    <button onClick={() => view(t)} aria-label="Ver comprovante" title="Ver comprovante" className="text-brand-dark dark:text-brand-soft"><Paperclip size={16} /></button>
+                  ) : t.user_id === userId && (
+                    <label aria-label="Anexar comprovante" title="Anexar comprovante" className="text-gray-300 hover:text-brand-dark cursor-pointer">
+                      <Paperclip size={16} />
+                      <input type="file" className="hidden" accept={RECEIPT_ACCEPT} onChange={(e) => { void attach(t, e.target.files?.[0]); e.target.value = ""; }} />
+                    </label>
+                  )}
                   <button onClick={() => (t.installment_group ? setDelTx(t) : remove(t))} aria-label="Excluir" className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
                 </div>
               </li>

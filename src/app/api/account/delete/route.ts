@@ -41,7 +41,18 @@ export async function POST(request: Request) {
     if (error) console.error('Delete account: falha ao limpar fila do WhatsApp', error);
   }
 
-  // 3. Remove o usuário (as tabelas ligadas ao usuário apagam em cascata)
+  // 3. Comprovantes anexados (arquivos no armazenamento; melhor esforço)
+  try {
+    for (let i = 0; i < 50; i++) {
+      const { data } = await admin.storage.from('receipts').list(user.id, { limit: 100 });
+      if (!data?.length) break;
+      await admin.storage.from('receipts').remove(data.map((o) => `${user.id}/${o.name}`));
+    }
+  } catch (e) {
+    console.error('Delete account: falha ao apagar comprovantes', e);
+  }
+
+  // 4. Remove o usuário (as tabelas ligadas ao usuário apagam em cascata)
   const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error) {
     console.error('Delete account: falha ao excluir usuário', error);

@@ -14,6 +14,7 @@ export type ParseResult = {
   format: "ofx" | "csv" | "xlsx" | "ai";
   kind?: "bank" | "card"; // só o OFX informa
   rows: ParsedRow[];
+  document?: string; // só PDF/foto lidos por IA: extrato, fatura, nota, comprovante...
   skipped: number; // linhas sem data/valor (cabeçalhos, saldos, totais)
 };
 
@@ -469,7 +470,74 @@ export function importKeyFor(r: ParsedRow, targetId: string, occurrence: number)
   return `h:${targetId}:${r.date}:${Math.round(Math.abs(r.amount) * 100)}:${fnv(lightNorm(r.description))}:${occurrence}`;
 }
 
-export type ExistingTx = { date: string; amount: number; type: string; import_key: string | null };
+// ---------- parcelas ("Notebook 2/6", "PARC 02/06", "(2/6)") ----------
+
+export type Installment = { n: number; total: number; group: string; base: string };
+
+const INST_RES: RegExp[] = [
+  /parc(?:ela)?s?\.?\s*(\d{1,2})\s*(?:\/|de)\s*(\d{1,2})/i,
+  /\(\s*(\d{1,2})\s*\/\s*(\d{1,2})\s*\)/,
+  /(?:^|[\s-])(\d{1,2})\/(\d{1,2})\s*$/,
+];
+
+/** Reconhece o marcador de parcela na descrição de uma compra de cartão e devolve o grupo (igual em todas as parcelas da mesma compra). */
+export function parseInstallment(desc: string, targetId: string, amount: number): Installment | null {
+  for (const re of INST_RES) {
+    const m = re.exec(desc);
+    if (!m) continue;
+    const n = Number(m[1]), total = Number(m[2]);
+    if (!(total >= 2 && total <= 48 && n >= 1 && n <= total)) continue;
+    const base = prettyDesc(desc.replace(m[0], " ").replace(/\s+/g, " ").trim());
+    const seed = `${targetId}|${merchantTokens(base).join(" ")}|${total}|${Math.round(amount)}`;
+    const hex = ["a", "b", "c", "d"].map((salt) => (parseInt(fnv(salt + seed), 36) >>> 0).toString(16).padStart(8, "0")).join("");
+    const group = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+    return { n, total, group, base };
+  }
+  return null;
+}
+
+export type ExistingTx = { date: string; amount: number; type: string; import_key: string | null; description?: string | null };
+
+// ---------- avisos: valores fora do padrão e possíveis duplicados ----------
+
+export type AmountStats = { n: number; median: number; p90: number };
+export type StatsByType = { income: AmountStats; expense: AmountStats };
+
+const quantile = (sorted: number[], q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1) + 0.5))];
+
+/** Mediana e percentil 90 dos valores que a pessoa já lançou (por tipo). */
+export function amountStats(history: { amount: number; type: string }[]): StatsByType {
+  const mk = (t: string): AmountStats => {
+    const v = history.filter((h) => h.type === t && h.amount > 0).map((h) => h.amount).sort((a, b) => a - b);
+    return v.length ? { n: v.length, median: quantile(v, 0.5), p90: quantile(v, 0.9) } : { n: 0, median: 0, p90: 0 };
+  };
+  return { income: mk("income"), expense: mk("expense") };
+}
+
+/** Texto de aviso quando o valor é muito maior do que o histórico (precisa de pelo menos 8 lançamentos do tipo). */
+export function outlierWarning(amount: number, type: "income" | "expense", stats?: StatsByType): string | undefined {
+  const st = stats?.[type];
+  if (!st || st.n < 8 || amount < 200) return undefined;
+  const limit = Math.max(st.p90 * 3, st.median * 5);
+  if (amount <= limit) return undefined;
+  const times = Math.round(amount / Math.max(st.median, 1));
+  return `Valor bem acima do seu normal (cerca de ${times}x a mediana). Confira se não tem zero a mais.`;
+}
+
+const dayDiff = (a: string, b: string) => Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000;
+
+/** Já existe lançamento com o mesmo valor e descrição parecida em até 3 dias (de outro dia: o mesmo dia já é tratado à parte). */
+export function nearDuplicate(r: { date: string; amount: number; type: string; description: string }, existing: ExistingTx[]): ExistingTx | undefined {
+  const mine = new Set(merchantTokens(r.description));
+  return existing.find((e) => {
+    if (e.type !== r.type || Math.round(e.amount * 100) !== Math.round(r.amount * 100)) return false;
+    const d = dayDiff(e.date, r.date);
+    if (d === 0 || d > 3) return false;
+    if (!e.description) return false;
+    const theirs = merchantTokens(e.description);
+    return theirs.some((t) => mine.has(t));
+  });
+}
 
 export type PreviewRow = {
   uid: number;
@@ -482,6 +550,8 @@ export type PreviewRow = {
   key: string;
   include: boolean;
   note?: string;
+  inst?: Installment;
+  warn?: string; // aviso que não desmarca o lançamento, só pede conferência
 };
 
 export function buildPreview(opts: {
@@ -491,8 +561,10 @@ export function buildPreview(opts: {
   rules: Rules;
   cats: CatRow[];
   existing: ExistingTx[];
+  stats?: StatsByType;
+  detectInstallments?: boolean; // compras de cartão: reconhece "2/6"
 }): PreviewRow[] {
-  const { rows, invert, targetId, rules, cats, existing } = opts;
+  const { rows, invert, targetId, rules, cats, existing, stats, detectInstallments } = opts;
   const seen: Record<string, number> = {};
   const importedKeys: Record<string, boolean> = {};
   const manual: Record<string, number> = {};
@@ -509,7 +581,8 @@ export function buildPreview(opts: {
     const amount = Math.round(Math.abs(signed) * 100) / 100;
     const base = `${r.date}|${amount}|${lightNorm(r.description)}`;
     seen[base] = (seen[base] || 0) + 1;
-    const key = importKeyFor(r, targetId, seen[base]);
+    const inst = detectInstallments && type === "expense" ? parseInstallment(r.description, targetId, amount) : null;
+    const key = inst ? `inst:${inst.group}:${inst.n}` : importKeyFor(r, targetId, seen[base]);
     const learned = lookupRule(rules, type, r.description);
     const fallback = learned ? null : defaultCategory(cats, type, r.description);
     let include = true;
@@ -519,6 +592,13 @@ export function buildPreview(opts: {
     else if (looksLikeCardPayment(r.description)) { include = false; note = "Pagamento de fatura: já está nas compras do cartão"; }
     else if (looksLikeInternalMove(r.description)) { include = false; note = "Parece movimentação entre suas contas/investimentos"; }
     else if (manual[mk] > 0) { manual[mk]--; include = false; note = "Já existe um lançamento igual neste dia"; }
-    return { uid: i, date: r.date, amount, type, description: prettyDesc(r.description), categoryId: learned || fallback, catSource: learned ? "aprendida" : fallback ? "padrao" : null, key, include, note };
+    let warn: string | undefined;
+    if (include) {
+      const dup = nearDuplicate({ date: r.date, amount, type, description: r.description }, existing);
+      if (dup) warn = `Parece repetido: já existe "${dup.description}" de mesmo valor em ${dup.date.slice(8, 10)}/${dup.date.slice(5, 7)}.`;
+      else if (seen[base] > 1 && !(r.fitid)) warn = "Linha igual a outra do mesmo arquivo (mesmo dia, valor e descrição). Pode ser repetida.";
+      else warn = outlierWarning(amount, type, stats);
+    }
+    return { uid: i, date: r.date, amount, type, description: inst ? `${inst.base} (${inst.n}/${inst.total})` : prettyDesc(r.description), categoryId: learned || fallback, catSource: learned ? "aprendida" : fallback ? "padrao" : null, key, include, note, warn, inst: inst ?? undefined };
   });
 }
