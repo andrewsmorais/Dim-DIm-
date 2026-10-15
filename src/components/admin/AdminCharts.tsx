@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { brl } from "@/lib/format";
-import type { PeriodFinance } from "@/lib/adminMetrics";
+import type { SeriesPoint } from "@/lib/adminMetrics";
 
 const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const labelMonth = (d: string) => `${MONTHS[Number(d.slice(5, 7)) - 1]}/${d.slice(2, 4)}`;
@@ -13,10 +13,10 @@ const C_CPF = "#A78BFA";
 const C_OK = "#10B981";
 const C_BAD = "#EF4444";
 
-export function RevenueChart({ series, grain }: { series: PeriodFinance[]; grain: 'day' | 'month' }) {
+export function RevenueChart({ series, grain }: { series: SeriesPoint[]; grain: 'day' | 'month' }) {
   const labelFn = grain === 'day' ? labelDay : labelMonth;
-  const data = series.map((m, i) => ({
-    name: labelFn((m as any).from || (m as any).bucket || `2026-01-${String(i + 1).padStart(2, '0')}`),
+  const data = series.map((m) => ({
+    name: labelFn(m.from),
     CPF: m.revenue_cpf,
     MEI: m.revenue_mei,
   }));
@@ -35,10 +35,10 @@ export function RevenueChart({ series, grain }: { series: PeriodFinance[]; grain
   );
 }
 
-export function CustomersChart({ series, grain }: { series: PeriodFinance[]; grain: 'day' | 'month' }) {
+export function CustomersChart({ series, grain }: { series: SeriesPoint[]; grain: 'day' | 'month' }) {
   const labelFn = grain === 'day' ? labelDay : labelMonth;
-  const data = series.map((m, i) => ({
-    name: labelFn((m as any).from || (m as any).bucket || `2026-01-${String(i + 1).padStart(2, '0')}`),
+  const data = series.map((m) => ({
+    name: labelFn(m.from),
     Novos: m.new_customers,
     Cancelamentos: m.churned,
   }));

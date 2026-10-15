@@ -26,15 +26,17 @@ export async function GET(req: Request) {
   }
 
   // Current snapshot metrics
-  const profiles = snapshot.data || [];
-  const paying = profiles.filter((p: any) => p.subscription_status === 'active' || p.subscription_status === 'past_due').length;
-  const trial = profiles.filter((p: any) => p.subscription_status === 'trial').length;
-  const active = profiles.filter((p: any) => p.subscription_status === 'active').length;
-  const pastDue = profiles.filter((p: any) => p.subscription_status === 'past_due').length;
+  type SnapRow = { subscription_status: string | null; subscription_plan: string | null };
+  const profiles = (snapshot.data || []) as SnapRow[];
+  const live = (p: SnapRow) => p.subscription_status === 'active' || p.subscription_status === 'past_due' || p.subscription_status === 'trial';
+  const paying = profiles.filter((p) => p.subscription_status === 'active' || p.subscription_status === 'past_due').length;
+  const trial = profiles.filter((p) => p.subscription_status === 'trial').length;
+  const active = profiles.filter((p) => p.subscription_status === 'active').length;
+  const pastDue = profiles.filter((p) => p.subscription_status === 'past_due').length;
 
   // Calculate MRR from paying + trial
-  const cpfCount = profiles.filter((p: any) => p.subscription_plan === 'cpf' && (p.subscription_status === 'active' || p.subscription_status === 'past_due' || p.subscription_status === 'trial')).length;
-  const meiCount = profiles.filter((p: any) => p.subscription_plan === 'mei' && (p.subscription_status === 'active' || p.subscription_status === 'past_due' || p.subscription_status === 'trial')).length;
+  const cpfCount = profiles.filter((p) => p.subscription_plan === 'cpf' && live(p)).length;
+  const meiCount = profiles.filter((p) => p.subscription_plan === 'mei' && live(p)).length;
   const mrr = cpfCount * 19.9 + meiCount * 39.9;
 
   const current: CurrentMetrics = {

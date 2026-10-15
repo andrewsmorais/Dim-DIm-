@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Mode = "day" | "month" | "year" | "range";
 

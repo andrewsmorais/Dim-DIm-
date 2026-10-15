@@ -42,11 +42,13 @@ export type PeriodFinance = PeriodTotals & {
   directCosts: number; operatingCost: number; grossProfit: number; netProfit: number;
 };
 
+export type SeriesPoint = PeriodFinance & { from: string };
+
 export type Dashboard = {
   from: string; to: string; days: number; grain: 'day' | 'month';
   current: PeriodFinance;
   previous: PeriodFinance;
-  series: PeriodFinance[];
+  series: SeriesPoint[];
   costs: CostRow[];
   sync: SyncState;
   // "Now" metrics (current snapshot, independent of period):
@@ -137,7 +139,7 @@ export function buildDashboard(raw: RawPeriod, current: CurrentMetrics, sync: Sy
   const series = raw.series.map((bucket) => {
     const [from, to] = [bucket.from, bucket.to];
     const costForPeriod = raw.costs.filter((c) => c.month >= from && c.month <= to);
-    return finance(bucket.totals, costForPeriod, from, to);
+    return { ...finance(bucket.totals, costForPeriod, from, to), from } as SeriesPoint;
   });
 
   // Current-state metrics (snapshot, not period-based)
