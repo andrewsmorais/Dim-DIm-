@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Banknote, CircleDollarSign, Percent, Receipt, TrendingDown, TrendingUp, UserMinus, UserPlus, Users, Wallet } from "lucide-react";
 import { BackTitle, Card, Empty, ErrorNote } from "@/components/ui/page";
 import { KpiCard } from "@/components/admin/KpiCard";
 import { CustomersChart, RevenueChart } from "@/components/admin/AdminCharts";
 import { CostsForm } from "@/components/admin/CostsForm";
 import { SyncBar } from "@/components/admin/SyncBar";
+import { PeriodPicker } from "@/components/admin/PeriodPicker";
 import { brl } from "@/lib/format";
 import type { CostRow, Dashboard } from "@/lib/adminMetrics";
 
@@ -16,14 +17,22 @@ const pct = (cur: number, prev: number | undefined): number | null =>
 
 export default function AdminPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<Dashboard | null>(null);
   const [costs, setCosts] = useState<CostRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  // Default to this month if no params
+  const defaultFrom = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+  const defaultTo = new Date().toISOString().split("T")[0];
+  const from = searchParams?.get("from") || defaultFrom;
+  const to = searchParams?.get("to") || defaultTo;
+
+  const load = useCallback(async (fromDate: string, toDate: string) => {
+    setLoading(true);
     setError(null);
-    const res = await fetch("/api/admin/metrics", { cache: "no-store" });
+    const res = await fetch(`/api/admin/metrics?from=${fromDate}&to=${toDate}`, { cache: "no-store" });
     if (res.status === 404 || res.status === 401) { router.replace("/menu"); return; }
     if (!res.ok) { setError("Não foi possível carregar as métricas."); setLoading(false); return; }
     const d = (await res.json()) as Dashboard;
@@ -32,7 +41,11 @@ export default function AdminPage() {
     setLoading(false);
   }, [router]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(from, to); }, [from, to, load]);
+
+  const handlePeriodChange = (newFrom: string, newTo: string) => {
+    router.push(`?from=${newFrom}&to=${newTo}`);
+  };
 
   if (loading) return <div className="max-w-5xl mx-auto"><Empty>Carregando…</Empty></div>;
 
@@ -46,26 +59,38 @@ export default function AdminPage() {
 
       {data && cur && (
         <>
-          <SyncBar sync={data.sync} onDone={load} />
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <SyncBar sync={data.sync} onDone={() => { load(from, to); }} />
+            </div>
+            <div className="flex-1">
+              <PeriodPicker from={from} to={to} onApply={handlePeriodChange} />
+            </div>
+          </div>
+
+          <div className="text-sm text-gray-500">
+            Período: <b className="text-gray-900 dark:text-white">{from}</b> até <b className="text-gray-900 dark:text-white">{to}</b> ({data.days} dias) · Anterior: {data.previous.revenue > 0 ? brl(data.previous.revenue) : "—"}
+          </div>
+
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <KpiCard icon={Users} label="Clientes pagantes" value={String(data.paying)} hint={`${data.trial} em teste · ${data.pastDue} em atraso`} />
-            <KpiCard icon={Banknote} label="Vendido no mês" value={brl(cur.revenue)} delta={pct(cur.revenue, prev?.revenue)} hint={`${cur.payments} pagamento(s)`} />
-            <KpiCard icon={CircleDollarSign} label="MRR (recorrente)" value={brl(data.mrr)} hint={`ARR ${brl(data.arr)}`} />
-            <KpiCard icon={UserMinus} label="Desistências no mês" value={String(cur.churned)} delta={pct(cur.churned, prev?.churned)} invert hint={`churn ≈ ${data.churnRate.toFixed(1)}%`} />
-            <KpiCard icon={UserPlus} label="Novos clientes no mês" value={String(cur.new_customers)} delta={pct(cur.new_customers, prev?.new_customers)} hint={`${data.payersTotal} já pagaram na vida`} />
-            <KpiCard icon={Wallet} label="Custo operacional" value={brl(cur.operatingCost)} hint={cur.hasCosts ? undefined : "lance os custos abaixo"} />
+            <KpiCard icon={Users} label="Clientes pagantes (agora)" value={String(data.paying)} hint={`${data.trial} em teste · ${data.pastDue} em atraso`} />
+            <KpiCard icon={Banknote} label={`Vendido ${data.grain === 'day' && data.days === 1 ? 'hoje' : 'no período'}`} value={brl(cur.revenue)} delta={pct(cur.revenue, prev?.revenue)} hint={`${cur.payments} pagamento(s)`} />
+            <KpiCard icon={CircleDollarSign} label="MRR (agora)" value={brl(data.mrr)} hint={`ARR ${brl(data.arr)}`} />
+            <KpiCard icon={UserMinus} label={`Desistências ${data.grain === 'day' && data.days === 1 ? 'hoje' : 'no período'}`} value={String(cur.churned)} delta={pct(cur.churned, prev?.churned)} invert hint={`churn ≈ ${data.churnRate.toFixed(1)}%`} />
+            <KpiCard icon={UserPlus} label={`Novos clientes ${data.grain === 'day' && data.days === 1 ? 'hoje' : 'no período'}`} value={String(cur.new_customers)} delta={pct(cur.new_customers, prev?.new_customers)} hint={`${cur.payers ?? 0} pagantes no período`} />
+            <KpiCard icon={Wallet} label="Custo operacional" value={brl(cur.operatingCost)} hint={cur.fees_known > 0 ? `${cur.fees_known} com taxa conhecida` : "—"} />
             <KpiCard icon={TrendingUp} label="Lucro bruto" value={brl(cur.grossProfit)} delta={pct(cur.grossProfit, prev?.grossProfit)} />
             <KpiCard icon={cur.netProfit >= 0 ? Receipt : TrendingDown} label="Lucro líquido" value={brl(cur.netProfit)} delta={pct(cur.netProfit, prev?.netProfit)} />
           </section>
 
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
-              <h2 className="font-extrabold text-lg mb-3">Vendas por mês</h2>
-              <RevenueChart series={data.series} />
+              <h2 className="font-extrabold text-lg mb-3">Vendas por {data.grain === 'day' ? 'dia' : 'mês'}</h2>
+              <RevenueChart series={data.series} grain={data.grain} />
             </Card>
             <Card>
-              <h2 className="font-extrabold text-lg mb-3">Novos clientes x cancelamentos</h2>
-              <CustomersChart series={data.series} />
+              <h2 className="font-extrabold text-lg mb-3">Novos clientes x cancelamentos por {data.grain === 'day' ? 'dia' : 'mês'}</h2>
+              <CustomersChart series={data.series} grain={data.grain} />
             </Card>
           </section>
 
@@ -86,7 +111,7 @@ export default function AdminPage() {
                       <tr key={p.plan}>
                         <td className="py-2.5 font-bold">{p.label}</td>
                         <td className="py-2.5 text-right tabular-nums">{p.subscribers}</td>
-                        <td className="py-2.5 text-right tabular-nums">{brl(p.revenueMonth)}</td>
+                        <td className="py-2.5 text-right tabular-nums">{brl(p.revenueMonth ?? 0)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -111,7 +136,7 @@ export default function AdminPage() {
             </Card>
           </section>
 
-          <CostsForm costs={costs} onSaved={load} />
+          <CostsForm costs={costs} onSaved={() => load(from, to)} />
         </>
       )}
     </div>

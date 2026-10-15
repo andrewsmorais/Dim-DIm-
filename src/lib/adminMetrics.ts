@@ -1,7 +1,7 @@
-// Cálculos do painel admin. Funções puras: recebem o JSON de public.admin_metrics() e devolvem números prontos.
+// Cálculos do painel admin. Funções puras: recebem o JSON de public.admin_period() e devolvem números prontos.
 //
 // Definições (as mesmas mostradas no painel):
-//  - Receita            = pagamentos confirmados no mês (eventos do webhook do Asaas)
+//  - Receita            = pagamentos confirmados no período (eventos do webhook do Asaas)
 //  - Custos diretos     = taxas de pagamento + Vercel + Supabase + IA + WhatsApp
 //  - Lucro bruto        = receita - reembolsos - custos diretos
 //  - Custo operacional  = tudo que foi lançado, menos impostos (diretos + domínio + outros)
@@ -12,11 +12,14 @@ export type CostRow = {
   domain: number; payment_fees: number; taxes: number; other: number; notes: string | null;
 };
 
-export type MonthRow = {
-  month: string; revenue: number; revenue_cpf: number; revenue_mei: number; refunds: number;
-  payments: number; new_customers: number; churned: number;
-  /** Taxa real do Asaas (valor − líquido) nos pagamentos em que o líquido é conhecido, e quantos são. */
-  fees: number; fees_known: number;
+export type PeriodTotals = {
+  revenue: number; revenue_cpf: number; revenue_mei: number;
+  refunds: number; payments: number; new_customers: number; churned: number;
+  fees: number; fees_known: number; payers: number;
+};
+
+export type SeriesBucket = {
+  bucket: string; from: string; to: string; totals: PeriodTotals;
 };
 
 export type SyncState = {
@@ -24,35 +27,34 @@ export type SyncState = {
   last_result: { scanned: number; inserted: number; feesFilled: number } | null;
 } | null;
 
-export type RawMetrics = {
-  sync: SyncState;
-  generated_at: string;
-  total_users: number;
-  payers_total: number;
-  mrr: number;
-  snapshot: { status: string; plan: string; count: number }[];
-  months: MonthRow[];
-  costs: CostRow[];
+export type RawPeriod = {
+  from: string; to: string; days: number; grain: 'day' | 'month';
+  totals: PeriodTotals; prev: { from: string; to: string; totals: PeriodTotals };
+  series: SeriesBucket[]; costs: CostRow[]; costs_prev: CostRow[];
 };
 
-export type MonthFinance = MonthRow & {
-  directCosts: number; operatingCost: number; grossProfit: number; netProfit: number; hasCosts: boolean;
+export type CurrentMetrics = {
+  paying: number; trial: number; active: number; pastDue: number;
+  mrr: number; arr: number;
+};
+
+export type PeriodFinance = PeriodTotals & {
+  directCosts: number; operatingCost: number; grossProfit: number; netProfit: number;
 };
 
 export type Dashboard = {
-  generatedAt: string;
-  totalUsers: number;
-  payersTotal: number;
-  trial: number; active: number; pastDue: number; canceledTotal: number;
-  paying: number;
-  byPlan: { plan: string; label: string; subscribers: number; revenueMonth: number }[];
-  mrr: number; arr: number; arpu: number;
-  churnRate: number; ltv: number | null;
-  current: MonthFinance | null;
-  previous: MonthFinance | null;
-  series: MonthFinance[];
+  from: string; to: string; days: number; grain: 'day' | 'month';
+  current: PeriodFinance;
+  previous: PeriodFinance;
+  series: PeriodFinance[];
   costs: CostRow[];
   sync: SyncState;
+  // "Now" metrics (current snapshot, independent of period):
+  paying: number; trial: number; active: number; pastDue: number;
+  canceled: number;
+  byPlan: { plan: string; label: string; subscribers: number; revenueMonth?: number }[];
+  mrr: number; arr: number; arpu: number;
+  churnRate: number; ltv: number | null;
 };
 
 const n = (v: unknown): number => {
@@ -65,63 +67,106 @@ export const PLAN_LABEL: Record<string, string> = {
   cpf: 'Jakash CPF', mei: 'Jakash MEI', cnpj: 'CNPJ (legado)', zap: 'Zap (teste)', piloto: 'Piloto',
 };
 
-function finance(row: MonthRow, cost: CostRow | undefined): MonthFinance {
-  const c = cost ?? ({} as Partial<CostRow>);
-  // Taxa automática (vem do Asaas) tem prioridade sobre o valor lançado à mão, para não contar duas vezes.
-  const fees = n(row.fees_known) > 0 ? n(row.fees) : n(c.payment_fees);
-  const direct = fees + n(c.vercel) + n(c.supabase) + n(c.ai) + n(c.whatsapp);
-  const other = n(c.domain) + n(c.other);
-  const revenue = n(row.revenue);
-  const refunds = n(row.refunds);
-  const gross = revenue - refunds - direct;
+/** Prorate costs (Vercel, Supabase, etc.) to a fraction of a month. */
+function prorateMonthCosts(cost: CostRow, fromDate: string, toDate: string): Partial<CostRow> {
+  if (!cost) return {};
+  const from = new Date(fromDate);
+  const to = new Date(toDate);
+  const daysInPeriod = Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1;
+  const daysInMonth = 30; // approximation
+  const ratio = daysInPeriod / daysInMonth;
   return {
-    ...row,
-    revenue: r2(revenue), revenue_cpf: r2(n(row.revenue_cpf)), revenue_mei: r2(n(row.revenue_mei)), refunds: r2(refunds),
-    payments: n(row.payments), new_customers: n(row.new_customers), churned: n(row.churned),
-    fees: r2(fees), fees_known: n(row.fees_known),
-    directCosts: r2(direct),
-    operatingCost: r2(direct + other),
-    grossProfit: r2(gross),
-    netProfit: r2(gross - other - n(c.taxes)),
-    hasCosts: !!cost,
+    vercel: n(cost.vercel) * ratio,
+    supabase: n(cost.supabase) * ratio,
+    ai: n(cost.ai) * ratio,
+    whatsapp: n(cost.whatsapp) * ratio,
+    payment_fees: n(cost.payment_fees) * ratio,
+    taxes: n(cost.taxes) * ratio,
+    domain: n(cost.domain) * ratio, // domain is fixed, prorate too
+    other: n(cost.other) * ratio,
   };
 }
 
-export function buildDashboard(raw: RawMetrics): Dashboard {
-  const costByMonth = new Map(raw.costs.map((c) => [c.month.slice(0, 7), c]));
-  const series = raw.months.map((m) => finance(m, costByMonth.get(m.month.slice(0, 7))));
-  const current = series.length ? series[series.length - 1] : null;
-  const previous = series.length > 1 ? series[series.length - 2] : null;
+function finance(totals: PeriodTotals, costs: CostRow[], fromDate: string, toDate: string): PeriodFinance {
+  // Sum all prorated costs in the period
+  const costSum: Partial<CostRow> = {};
+  for (const cost of costs) {
+    const prorated = prorateMonthCosts(cost, fromDate, toDate);
+    costSum.vercel = (costSum.vercel ?? 0) + (prorated.vercel ?? 0);
+    costSum.supabase = (costSum.supabase ?? 0) + (prorated.supabase ?? 0);
+    costSum.ai = (costSum.ai ?? 0) + (prorated.ai ?? 0);
+    costSum.whatsapp = (costSum.whatsapp ?? 0) + (prorated.whatsapp ?? 0);
+    costSum.payment_fees = (costSum.payment_fees ?? 0) + (prorated.payment_fees ?? 0);
+    costSum.taxes = (costSum.taxes ?? 0) + (prorated.taxes ?? 0);
+    costSum.domain = (costSum.domain ?? 0) + (prorated.domain ?? 0);
+    costSum.other = (costSum.other ?? 0) + (prorated.other ?? 0);
+  }
 
-  const count = (status: string[], plan?: string) =>
-    raw.snapshot
-      .filter((s) => status.includes(s.status) && (plan === undefined || s.plan === plan))
-      .reduce((a, s) => a + n(s.count), 0);
+  // Taxa automática (vem do Asaas) tem prioridade sobre o valor lançado à mão.
+  const fees = n(totals.fees_known) > 0 ? n(totals.fees) : n(costSum.payment_fees);
+  const direct = fees + n(costSum.vercel) + n(costSum.supabase) + n(costSum.ai) + n(costSum.whatsapp);
+  const other = n(costSum.domain) + n(costSum.other);
+  const revenue = n(totals.revenue);
+  const refunds = n(totals.refunds);
+  const gross = revenue - refunds - direct;
 
-  const paying = count(['active', 'past_due']);
-  const plans = Array.from(new Set(raw.snapshot.map((s) => s.plan).filter(Boolean)));
-  const byPlan = plans
-    .map((plan) => ({
-      plan,
-      label: PLAN_LABEL[plan] ?? plan,
-      subscribers: count(['active', 'past_due', 'trial'], plan),
-      revenueMonth: plan === 'cpf' ? current?.revenue_cpf ?? 0 : plan === 'mei' ? current?.revenue_mei ?? 0 : 0,
-    }))
-    .sort((a, b) => b.subscribers - a.subscribers);
+  return {
+    revenue: r2(revenue),
+    revenue_cpf: r2(n(totals.revenue_cpf)),
+    revenue_mei: r2(n(totals.revenue_mei)),
+    refunds: r2(refunds),
+    payments: n(totals.payments),
+    new_customers: n(totals.new_customers),
+    churned: n(totals.churned),
+    fees: r2(fees),
+    fees_known: n(totals.fees_known),
+    payers: n(totals.payers),
+    directCosts: r2(direct),
+    operatingCost: r2(direct + other),
+    grossProfit: r2(gross),
+    netProfit: r2(gross - other - n(costSum.taxes)),
+  };
+}
 
-  const mrr = r2(n(raw.mrr));
-  const arpu = paying > 0 ? r2(mrr / paying) : 0;
-  // Aproximação: base do início do mês ~ pagantes de hoje + quem saiu no mês.
-  const base = paying + (current?.churned ?? 0);
-  const churnRate = base > 0 ? r2(((current?.churned ?? 0) / base) * 100) : 0;
+export function buildDashboard(raw: RawPeriod, current: CurrentMetrics, sync: SyncState): Dashboard {
+  // Main period calculations
+  const cur = finance(raw.totals, raw.costs, raw.from, raw.to);
+  const prev = finance(raw.prev.totals, raw.costs_prev, raw.prev.from, raw.prev.to);
+
+  // Series for charts
+  const series = raw.series.map((bucket) => {
+    const [from, to] = [bucket.from, bucket.to];
+    const costForPeriod = raw.costs.filter((c) => c.month >= from && c.month <= to);
+    return finance(bucket.totals, costForPeriod, from, to);
+  });
+
+  // Current-state metrics (snapshot, not period-based)
+  const paying = current.paying;
+  const arpu = paying > 0 ? r2(current.mrr / paying) : 0;
+  const base = paying + cur.churned;
+  const churnRate = base > 0 ? r2(((cur.churned / base) * 100)) : 0;
   const ltv = churnRate > 0 ? r2(arpu / (churnRate / 100)) : null;
 
   return {
-    generatedAt: raw.generated_at,
-    totalUsers: n(raw.total_users),
-    payersTotal: n(raw.payers_total),
-    trial: count(['trial']), active: count(['active']), pastDue: count(['past_due']),
-    canceledTotal: count(['canceled', 'unpaid']),
-    paying, byPlan, mrr, arr: r2(mrr * 12), arpu, churnRate, ltv, current, previous, series, costs: raw.costs, sync: raw.sync ?? null,
+    from: raw.from,
+    to: raw.to,
+    days: raw.days,
+    grain: raw.grain,
+    current: cur,
+    previous: prev,
+    series,
+    costs: raw.costs,
+    sync,
+    paying: current.paying,
+    trial: current.trial,
+    active: current.active,
+    pastDue: current.pastDue,
+    canceled: 0, // Would need snapshot from DB
+    byPlan: [], // Would need snapshot from DB
+    mrr: current.mrr,
+    arr: r2(current.mrr * 12),
+    arpu,
+    churnRate,
+    ltv,
   };
 }

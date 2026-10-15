@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronRight, Database, Globe, LogOut, MessageCircle, Palette, Sparkles, User, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, ChevronRight, Database, Globe, LogOut, MessageCircle, Palette, Sparkles, User, Users, type LucideIcon } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
+import { useIsAdmin } from "@/lib/useIsAdmin";
 import { BackTitle, Card } from "@/components/ui/page";
 import { InstallGuide } from "@/components/InstallGuide";
 
@@ -21,6 +22,7 @@ const ITEMS: { icon: LucideIcon; title: string; desc: string; href?: string; soo
 export default function ConfiguracoesPage() {
   const router = useRouter();
   const { supabase } = useSupabase();
+  const isAdmin = useIsAdmin();
 
   async function logout() {
     await supabase.auth.signOut();
@@ -30,6 +32,20 @@ export default function ConfiguracoesPage() {
   return (
     <div className="max-w-2xl mx-auto pb-20">
       <BackTitle title="Configurações" subtitle="Ajuste o Jakash do seu jeito." href="/menu" />
+
+      {isAdmin && (
+        <Card className="mb-4 border-brand-dark/30 bg-gradient-to-br from-brand-dark/5 to-brand-dark/2 dark:from-brand-soft/10 dark:to-brand-soft/5">
+          <Link href="/admin" className="flex items-center gap-4 px-3 py-4 hover:opacity-75 transition-opacity">
+            <div className="w-11 h-11 rounded-2xl bg-brand-dark/20 dark:bg-brand-soft/20 text-brand-dark dark:text-brand-soft flex items-center justify-center shrink-0"><BarChart3 size={20} /></div>
+            <div className="min-w-0 flex-1">
+              <p className="font-extrabold">Painel do dono</p>
+              <p className="text-xs text-gray-500">Métricas, receita e lucro</p>
+            </div>
+            <ChevronRight size={18} className="text-gray-300" />
+          </Link>
+        </Card>
+      )}
+
       <Card className="!p-2">
         <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
           {ITEMS.map((it) => {
