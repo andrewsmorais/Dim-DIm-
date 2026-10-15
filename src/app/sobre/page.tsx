@@ -5,11 +5,12 @@ import { LegalPage } from "@/components/LegalPage";
 export const metadata: Metadata = {
   title: "Sobre o Jakash",
   description: "Quem somos e por que criamos o Jakash: finanças simples, direto no WhatsApp.",
+  alternates: { canonical: "/sobre" },
 };
 
 export default function SobrePage() {
   return (
-    <LegalPage title="Sobre o Jakash" subtitle="Finanças simples, direto no WhatsApp." updated={false}>
+    <LegalPage path="/sobre" title="Sobre o Jakash" subtitle="Finanças simples, direto no WhatsApp." updated={false}>
       <p>O Jakash nasceu de uma ideia simples: controlar o dinheiro não deveria dar trabalho. Em vez de abrir planilhas e preencher campos, você manda uma mensagem, tipo <em>&ldquo;gastei 45 no mercado&rdquo;</em>, e o assistente lança, categoriza e mostra no painel para onde o seu dinheiro está indo.</p>
 
       <h2>O que fazemos</h2>

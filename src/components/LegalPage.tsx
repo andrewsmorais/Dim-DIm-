@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbJsonLd } from "@/lib/seo";
 
 export const LEGAL_UPDATED = "15 de outubro de 2026";
 
 // Casca das páginas institucionais (termos, privacidade, reembolso, cookies, sobre, contato).
-export function LegalPage({ title, subtitle, updated = true, children }: { title: string; subtitle?: string; updated?: boolean; children: React.ReactNode }) {
+export function LegalPage({ title, subtitle, path, updated = true, children }: { title: string; subtitle?: string; path: string; updated?: boolean; children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[var(--bg-1)] text-gray-900 flex flex-col">
       <header className="border-b border-gray-200 bg-white/70 backdrop-blur-md">
@@ -20,6 +22,10 @@ export function LegalPage({ title, subtitle, updated = true, children }: { title
 
       <main className="flex-1 px-6 py-12">
         <article className="max-w-3xl mx-auto">
+          <JsonLd data={breadcrumbJsonLd([{ name: "Início", path: "/" }, { name: title, path }])} />
+          <nav aria-label="Você está em" className="text-xs font-bold text-gray-400 mb-4">
+            <Link href="/" className="hover:text-brand-dark">Início</Link> <span aria-hidden="true">›</span> <span aria-current="page" className="text-gray-500">{title}</span>
+          </nav>
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">{title}</h1>
           {subtitle && <p className="text-gray-500 font-medium mt-2">{subtitle}</p>}
           {updated && <p className="text-xs font-bold text-gray-400 mt-3">Última atualização: {LEGAL_UPDATED}</p>}

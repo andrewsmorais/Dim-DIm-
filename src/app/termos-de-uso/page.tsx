@@ -5,11 +5,12 @@ import { LegalPage } from "@/components/LegalPage";
 export const metadata: Metadata = {
   title: "Termos de uso | Jakash",
   description: "As regras para usar o Jakash: conta, planos, pagamento, cancelamento e responsabilidades.",
+  alternates: { canonical: "/termos-de-uso" },
 };
 
 export default function TermosPage() {
   return (
-    <LegalPage title="Termos de uso" subtitle="As regras para usar o Jakash, em linguagem simples.">
+    <LegalPage path="/termos-de-uso" title="Termos de uso" subtitle="As regras para usar o Jakash, em linguagem simples.">
       <p>Ao criar uma conta ou usar o Jakash (site, aplicativo e assistente no WhatsApp), você concorda com estes termos. Se não concordar, não use o serviço.</p>
 
       <h2>1. O que é o Jakash</h2>

@@ -5,11 +5,12 @@ import { LegalPage } from "@/components/LegalPage";
 export const metadata: Metadata = {
   title: "Política de privacidade | Jakash",
   description: "Quais dados o Jakash coleta, para que usamos, com quem compartilhamos e como exercer seus direitos (LGPD).",
+  alternates: { canonical: "/politica-de-privacidade" },
 };
 
 export default function PrivacidadePage() {
   return (
-    <LegalPage title="Política de privacidade" subtitle="Como o Jakash trata os seus dados, de acordo com a LGPD (Lei 13.709/2018).">
+    <LegalPage path="/politica-de-privacidade" title="Política de privacidade" subtitle="Como o Jakash trata os seus dados, de acordo com a LGPD (Lei 13.709/2018).">
       <p>Seus dados financeiros são sensíveis para você, e tratamos assim. Esta página explica o que coletamos, por quê, com quem compartilhamos e como você controla tudo.</p>
 
       <h2>1. Quais dados coletamos</h2>

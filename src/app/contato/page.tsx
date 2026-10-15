@@ -6,6 +6,7 @@ import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from "@/components/Footer";
 export const metadata: Metadata = {
   title: "Contato | Jakash",
   description: "Fale com o Jakash: Instagram, WhatsApp do assistente e canais de suporte.",
+  alternates: { canonical: "/contato" },
 };
 
 // Lê no servidor a cada acesso, para refletir a variável da Vercel sem novo build.
@@ -15,7 +16,7 @@ export default function ContatoPage() {
   const bot = (process.env.WHATSAPP_BOT_NUMBER || "").replace(/\D/g, "");
 
   return (
-    <LegalPage title="Contato" subtitle="Dúvidas, suporte, pedidos sobre seus dados ou reembolso." updated={false}>
+    <LegalPage path="/contato" title="Contato" subtitle="Dúvidas, suporte, pedidos sobre seus dados ou reembolso." updated={false}>
       <h2>Como falar com a gente</h2>
       <ul>
         <li>

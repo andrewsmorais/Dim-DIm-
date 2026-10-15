@@ -5,11 +5,12 @@ import { LegalPage } from "@/components/LegalPage";
 export const metadata: Metadata = {
   title: "Política de reembolso | Jakash",
   description: "Teste grátis de 7 dias, cancelamento a qualquer momento e como pedir reembolso no Jakash.",
+  alternates: { canonical: "/politica-de-reembolso" },
 };
 
 export default function ReembolsoPage() {
   return (
-    <LegalPage title="Política de reembolso" subtitle="Cancelar é simples e sem multa.">
+    <LegalPage path="/politica-de-reembolso" title="Política de reembolso" subtitle="Cancelar é simples e sem multa.">
       <h2>1. Teste grátis</h2>
       <p>Todo plano começa com <strong>7 dias grátis, sem cadastrar cartão</strong>. Se você cancelar antes do fim do teste, nada é cobrado.</p>
 

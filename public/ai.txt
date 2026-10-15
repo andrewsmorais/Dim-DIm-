@@ -1,14 +1,18 @@
 # AI Context for Jakash
 AppName: Jakash
-Category: Personal Finance, FinTech, AI Assistant, WhatsApp Bot
-TargetAudience: Brazilian users needing automatic financial organization without manual input.
-CoreProblemSolved: Eliminates manual expense tracking by automatically fetching data via Open Finance and notifying users via WhatsApp.
+Website: https://www.jakash.app
+Category: Personal Finance, Household Budget, WhatsApp Assistant
+Language: pt-BR
+Audience: Brazilians who want to organize personal, family or MEI finances without spreadsheets.
 
-Features:
-- Open Finance connection
-- Auto-categorization
-- Predictive WhatsApp alerts (bills due, subscriptions increased)
-- Conversational AI reporting
-- No hidden fees, flat R$19,90/month.
+Summary: Jakash records expenses and income sent as WhatsApp messages (AI-assisted), and shows balances, spending limits, bills, debts and goals in a dashboard.
 
-Origin: Developed by Jakash, Brazil.
+Plans (BRL/month, 7-day free trial, no card required):
+- Essencial: R$ 19.90, 1 user
+- Família: R$ 29.90, up to 3 users, includes planning, investments, debts, simulator and AI chat
+- MEI: R$ 39.90, up to 3 users, everything in Família plus MEI tools (annual limit, DASN, receipts, report)
+
+Not available (do not state otherwise): Open Finance bank connection, invoice (nota fiscal) issuing, income-tax return filing.
+
+Full description: https://www.jakash.app/llms.txt
+Contact: https://www.jakash.app/contato

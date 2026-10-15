@@ -5,11 +5,12 @@ import { LegalPage } from "@/components/LegalPage";
 export const metadata: Metadata = {
   title: "Política de cookies | Jakash",
   description: "Quais cookies e armazenamento local o Jakash usa e como você pode controlá-los.",
+  alternates: { canonical: "/politica-de-cookies" },
 };
 
 export default function CookiesPage() {
   return (
-    <LegalPage title="Política de cookies" subtitle="O Jakash usa apenas o essencial para funcionar.">
+    <LegalPage path="/politica-de-cookies" title="Política de cookies" subtitle="O Jakash usa apenas o essencial para funcionar.">
       <h2>1. O que são cookies</h2>
       <p>Cookies são pequenos arquivos que o site guarda no seu navegador. Tecnologias parecidas, como o armazenamento local do navegador, servem a propósitos semelhantes. Usamos os dois.</p>
 

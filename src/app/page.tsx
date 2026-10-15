@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CTAButton } from "@/components/CTAButton";
 import { FAQItem } from "@/components/FAQItem";
 import { SectionBadge } from "@/components/SectionBadge";
 import { PLANS, planPrice, type PlanId } from "@/lib/plans";
+import { formatPhone } from "@/lib/phone";
+import { FAQS, homeJsonLd } from "@/lib/seo";
+import { JsonLd } from "@/components/JsonLd";
 import {
   CalendarDays, StickyNote, Calculator, 
   CheckCircle2, Lock
@@ -54,6 +57,10 @@ const LANDING_PLANS: { id: PlanId; title: string; subtitle: string; highlight?: 
 ];
 
 export default function LandingPage() {
+  const [botNumber, setBotNumber] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/whatsapp/bot").then((r) => (r.ok ? r.json() : null)).then((j) => setBotNumber(j?.number ?? null)).catch(() => setBotNumber(null));
+  }, []);
 
   // Intersection Observer for fade-in animations on scroll
   useEffect(() => {
@@ -74,6 +81,7 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-sans bg-[var(--bg-1)]">
+      <JsonLd data={homeJsonLd()} />
       <Header />
 
       <main>
@@ -92,7 +100,7 @@ export default function LandingPage() {
               </div>
               
               <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]">
-                O Melhor Aplicativo de Controle Financeiro Integrado ao <span className="text-brand-dark italic">WhatsApp</span>
+                Controle financeiro com Inteligência Artificial, direto no <span className="text-brand-dark italic">WhatsApp</span>
               </h1>
               
               <p className="text-lg md:text-xl text-gray-500 mb-10 leading-relaxed max-w-xl font-medium">
@@ -112,17 +120,17 @@ export default function LandingPage() {
                     {/* Floating Notifications */}
                     <div className="bg-white border border-gray-100 p-3 rounded-2xl shadow-sm relative -left-8 w-[110%]">
                       <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Jakash - agora</span></div>
-                      <p className="text-sm text-gray-700 font-medium">Sua fatura do Itaú vence amanhã: <span className="font-bold text-brand-dark">R$ 1.247,90</span></p>
+                      <p className="text-sm text-gray-700 font-medium">Sua conta de luz vence amanhã: <span className="font-bold text-brand-dark">R$ 187,40</span></p>
                     </div>
 
                     <div className="bg-white border border-gray-100 p-3 rounded-2xl shadow-sm relative left-4 w-[100%]">
                       <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Jakash - há 12 min</span></div>
-                      <p className="text-sm text-gray-700 font-medium">Sua assinatura da Netflix subiu para <span className="font-bold text-yellow-600">R$ 59,90</span></p>
+                      <p className="text-sm text-gray-700 font-medium">Anotei ✅ Mercado, <span className="font-bold text-brand-dark">R$ 45,00</span> em Alimentação</p>
                     </div>
 
                     <div className="bg-white border border-gray-100 p-3 rounded-2xl shadow-sm relative -left-4 w-[105%]">
                       <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Jakash - há 1h</span></div>
-                      <p className="text-sm text-gray-700 font-medium">Seu saldo no Nubank ficou negativo: <span className="font-bold text-red-500">-R$ 120,00</span></p>
+                      <p className="text-sm text-gray-700 font-medium">Entrada registrada ✅ Salário, <span className="font-bold text-emerald-600">R$ 4.200,00</span></p>
                     </div>
                  </div>
               </div>
@@ -179,8 +187,8 @@ export default function LandingPage() {
                 <div className="w-16 h-16 bg-white text-brand-dark rounded-2xl flex items-center justify-center mb-8 shadow-sm">
                   <CalendarDays size={32} />
                 </div>
-                <h3 className="text-xl font-bold mb-4">Gerenciamento automático de faturas e vencimentos</h3>
-                <p className="text-gray-500 font-medium leading-relaxed">Fatura, boleto, assinatura. A IA alerta no WhatsApp para você não pagar juros.</p>
+                <h3 className="text-xl font-bold mb-4">Lembretes de contas e vencimentos</h3>
+                <p className="text-gray-500 font-medium leading-relaxed">Contas a pagar, boletos e faturas de cartão no painel, com lembrete no WhatsApp para você não pagar juros.</p>
               </div>
               
               <div className="bg-[var(--bg-1)] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
@@ -195,8 +203,8 @@ export default function LandingPage() {
                 <div className="w-16 h-16 bg-white text-brand-dark rounded-2xl flex items-center justify-center mb-8 shadow-sm">
                   <Calculator size={32} />
                 </div>
-                <h3 className="text-xl font-bold mb-4">Conferência unificada de contas</h3>
-                <p className="text-gray-500 font-medium leading-relaxed">Abrir cada app de banco, somar, comparar. Quando sobra tempo, o mês já acabou. O Jakash unifica tudo.</p>
+                <h3 className="text-xl font-bold mb-4">Todas as suas contas num lugar só</h3>
+                <p className="text-gray-500 font-medium leading-relaxed">Abrir cada app de banco, somar, comparar. Cadastre suas contas e cartões e veja saldos e gastos juntos.</p>
               </div>
             </div>
           </div>
@@ -212,7 +220,7 @@ export default function LandingPage() {
                 <span className="text-brand-dark">sem anotar nada.</span>
               </h2>
               <p className="text-lg text-gray-500 font-medium mb-10 leading-relaxed">
-                Ele acompanha suas contas todo dia e avisa no WhatsApp do que precisa de você: fatura vencendo, assinatura que subiu de preço, saldo que não cobre o débito. Você só decide.
+                Você manda a mensagem e ele lança e categoriza. Nas contas a pagar, o Jakash lembra você no WhatsApp antes do vencimento. Você só decide.
               </p>
               <CTAButton text="Testar 7 dias grátis →" />
             </div>
@@ -312,13 +320,13 @@ export default function LandingPage() {
                 A <span className="text-brand-accent italic">Inteligência Artificial</span> que responde sobre o seu dinheiro
               </h2>
               <p className="text-lg text-white/70 font-medium mb-8 leading-relaxed">
-                Com tudo importado e categorizado, o WhatsApp vira o lugar onde o Jakash avisa e responde: cobrança estranha, resumo da semana, quanto foi de delivery.
+                Com os gastos lançados e categorizados, o Chat IA do Jakash responde às suas perguntas: quanto gastei com delivery, quanto ainda sobra do limite, o que vence nesta semana.
               </p>
               <ul className="space-y-4 mb-10">
                 {[
-                  'Cobrança estranha? Alerta na hora',
-                  'Resumo da semana, sem abrir app',
-                  'Pergunte. "Quanto gastei com delivery?"'
+                  'Pergunte ao Chat IA do app, no plano Família ou MEI',
+                  'Insights mensais sobre as suas finanças',
+                  'Exemplo: "Quanto gastei com delivery?"'
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3 text-lg font-medium">
                     <CheckCircle2 size={24} className="text-brand-accent shrink-0" />
@@ -363,7 +371,7 @@ export default function LandingPage() {
                 <div className="h-32 flex items-center justify-center mb-6">
                   <div className="bg-gray-50 px-6 py-3 rounded-full font-mono font-bold text-lg border border-gray-100 flex items-center gap-3 text-gray-700">
                     <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center">W</div>
-                    +55 11 9 8765-4321
+                    {botNumber ? formatPhone(botNumber) : "Assistente no WhatsApp"}
                   </div>
                 </div>
                 <h3 className="font-bold text-xl mb-2 text-brand-dark">Passo 1</h3>
@@ -389,7 +397,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <h3 className="font-bold text-xl mb-2 text-brand-dark">Passo 3</h3>
-                <p className="text-gray-500 font-medium">Pronto! Dados importados e categorizados, sem você digitar nada.</p>
+                <p className="text-gray-500 font-medium">Pronto! Mande suas mensagens e o Jakash lança e categoriza para você.</p>
               </div>
             </div>
             
@@ -450,27 +458,9 @@ export default function LandingPage() {
               </h2>
             </div>
             <div className="md:w-2/3">
-              <FAQItem 
-                isOpenDefault
-                question="Qual o melhor aplicativo de controle financeiro via WhatsApp?" 
-                answer="O Jakash une Inteligência Artificial e WhatsApp: você manda uma mensagem com o gasto ou a receita e ele registra e categoriza para você, sem precisar abrir planilhas." 
-              />
-              <FAQItem 
-                question="Como a Inteligência Artificial ajuda na minha organização financeira?" 
-                answer="A IA entende suas mensagens no WhatsApp, identifica valor, categoria e data e lança tudo para você. No painel você acompanha saldo, limites de gastos, contas a pagar, dívidas e objetivos." 
-              />
-              <FAQItem 
-                question="Meus dados financeiros estão seguros no Jakash?" 
-                answer="O Jakash não pede senha do seu banco e não movimenta dinheiro. Seus dados ficam protegidos por login e por regras de acesso individuais no banco de dados, e você pode exportar ou apagar tudo quando quiser, direto nas configurações." 
-              />
-              <FAQItem 
-                question="Funciona com o meu banco?" 
-                answer="Funciona com qualquer banco, porque você registra os lançamentos pelo WhatsApp ou pelo app e informa o saldo das suas contas. A conexão automática com bancos (Open Finance) ainda não está disponível." 
-              />
-              <FAQItem 
-                question="O aplicativo de controle financeiro Jakash é gratuito?" 
-                answer={`O Jakash oferece 7 dias de teste totalmente gratuitos, sem a necessidade de cadastrar um cartão de crédito. Após esse período, para continuar desfrutando da gestão financeira automática e da IA no WhatsApp, os planos começam em ${planPrice('cpf')}/mês (Essencial), com o plano Família por ${planPrice('familia')}/mês para até 3 pessoas, e podem ser cancelados a qualquer momento.`} 
-              />
+              {FAQS.map((f, i) => (
+                <FAQItem key={f.q} isOpenDefault={i === 0} question={f.q} answer={f.a} />
+              ))}
             </div>
           </div>
         </section>

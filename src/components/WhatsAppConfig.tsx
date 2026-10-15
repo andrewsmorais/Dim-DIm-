@@ -4,14 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle, Copy, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { formatPhone } from "@/lib/phone";
 
 type LinkInfo = { code: string; expiresInMinutes: number; waLink: string | null; botNumber: string | null };
-
-// 5511999998888 -> +55 (11) 99999-8888 (celular brasileiro); outros formatos aparecem só com "+".
-function formatPhone(digits: string): string {
-  const m = digits.match(/^55(\d{2})(\d{4,5})(\d{4})$/);
-  return m ? `+55 (${m[1]}) ${m[2]}-${m[3]}` : `+${digits}`;
-}
 
 export function WhatsAppConfig() {
   const [botNumber, setBotNumber] = useState<string | null>(null);

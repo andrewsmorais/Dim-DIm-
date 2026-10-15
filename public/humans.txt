@@ -1,10 +1,8 @@
-/* TEAM */
-Author: Escola de SEO / Jakash
-Role: Estratégia AEO, SEO & Desenvolvimento Full-Stack
-Site: https://www.jakash.app
-
 /* SITE */
-Last update: 2025
+Name: Jakash
+Site: https://www.jakash.app
+Instagram: https://www.instagram.com/jakashfinancas/
+Last update: 2026/10/15
 Language: Português (Brasil)
-Doctype: HTML5
-IDE: Antigravity IDE
+Standards: HTML5, Schema.org JSON-LD
+Stack: Next.js, Supabase, Asaas
