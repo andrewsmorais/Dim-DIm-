@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { addDays } from '@/lib/cards';
+import { addDays, type CardCfg } from '@/lib/cards';
 import { brl } from '@/lib/format';
 import {
-  billItems, buildReminder, cardItems, meiItems, offsetFor, targetDateFor, todayInSaoPaulo,
-  type BillLite, type CardDueRow, type DueItem,
+  billItems, buildReminder, cardItems, finalInstallmentItems, meiItems, offsetFor, targetDateFor, todayInSaoPaulo,
+  type BillLite, type CardDueRow, type DueItem, type InstallmentLite,
 } from '@/lib/reminders';
 import { pushConfigured, sendPush } from '@/lib/push';
 import { emailConfigured, reminderEmail, sendEmail } from '@/lib/email';
@@ -110,6 +110,21 @@ export async function GET(request: Request) {
     const cardRows = await readAll<CardDueRow>((from, to) =>
       admin.rpc('card_invoices_due_on', { p_dates: targets }).order('card_id').range(from, to));
 
+    // Última parcela de parcelamentos que vence nessas datas (a fatura de um mês vence no próprio mês).
+    const targetMonths = Array.from(new Set(targets.map((t) => `${t.slice(0, 7)}-01`)));
+    const lastInstallments = (await readAll<InstallmentLite>((from, to) =>
+      admin.from('transactions').select('user_id,card_id,description,amount,invoice_month,installment_number,installment_total')
+        .in('invoice_month', targetMonths).gte('installment_total', 2).not('card_id', 'is', null).order('id').range(from, to)
+    )).filter((r) => r.installment_number === r.installment_total);
+    const cfgs: (CardCfg & { id: string })[] = [];
+    const cardIds = Array.from(new Set(lastInstallments.map((r) => r.card_id as string)));
+    for (let i = 0; i < cardIds.length; i += 200) {
+      const { data } = await admin.from('credit_cards').select('id,closing_day,due_day').in('id', cardIds.slice(i, i + 200));
+      cfgs.push(...((data ?? []) as (CardCfg & { id: string })[]));
+    }
+    const lastBy = new Map<string, InstallmentLite[]>();
+    for (const r of lastInstallments) lastBy.set(r.user_id, [...(lastBy.get(r.user_id) ?? []), r]);
+
     const billsBy = new Map<string, BillLite[]>();
     for (const b of bills) billsBy.set(b.user_id, [...(billsBy.get(b.user_id) ?? []), b]);
     const cardsBy = new Map<string, CardDueRow[]>();
@@ -127,6 +142,7 @@ export async function GET(request: Request) {
       const items: DueItem[] = [
         ...billItems(members.flatMap((m) => billsBy.get(m) ?? []), target),
         ...cardItems(members.flatMap((m) => cardsBy.get(m) ?? []), target),
+        ...finalInstallmentItems(members.flatMap((m) => lastBy.get(m) ?? []), cfgs, target),
         // Obrigações do MEI (relatório mensal, DAS sem conta agendada, DASN-SIMEI): só para quem usa o app para a empresa.
         ...(p.usage_type === 'empresarial' || p.usage_type === 'ambos'
           ? meiItems(target, (billsBy.get(p.id) ?? []).some((b) => b.type === 'expense' && b.due_date === target && /^das/i.test(b.description)))
