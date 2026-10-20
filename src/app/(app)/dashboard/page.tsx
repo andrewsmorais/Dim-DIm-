@@ -13,6 +13,7 @@ import { InvoiceChip } from "@/components/CardBits";
 import { brl, currentMonth, monthRange, formatDateBR, daysUntil, todayISO } from "@/lib/format";
 import { Card, Progress, Empty, MonthNav } from "@/components/ui/page";
 import { FirstWeek } from "@/components/growth/FirstWeek";
+import { HomeShortcuts } from "@/components/HomeShortcuts";
 import { MonthlyInsight } from "@/components/growth/MonthlyInsight";
 
 type Tx = { id: string; description: string; amount: number; type: "income" | "expense"; date: string; category_id: string | null };
@@ -144,6 +145,7 @@ export default function DashboardPage() {
 
       <FirstWeek />
       <MonthlyInsight />
+      <HomeShortcuts />
 
       {/* Saldo atual */}
       <div className="rounded-[28px] p-6 mb-4 text-white shadow-xl shadow-brand-dark/30 bg-gradient-to-br from-[#6C6CF5] via-[#7C6CF7] to-brand-soft dark:from-brand-vivid dark:via-brand-vivid dark:to-brand-vivid dark:shadow-none flex items-center gap-4">
