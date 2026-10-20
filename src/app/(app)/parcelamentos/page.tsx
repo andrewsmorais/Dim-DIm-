@@ -11,6 +11,7 @@ import { brl, monthLabel, todayISO, formatDateBR } from "@/lib/format";
 import { activePlans, buildPlans, buildTimeline, missingInstallmentRows, monthlyCommitted, nextRelief, totalRemaining, type InstallmentRow } from "@/lib/installments";
 import { WhoBadge } from "@/components/WhoBadge";
 import { BackTitle, Card, Empty, ErrorNote, Progress, btnCls } from "@/components/ui/page";
+import { SectionTabs } from "@/components/SectionTabs";
 
 const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const shortMonth = (m: string) => `${SHORT[Number(m.slice(5, 7)) - 1]}/${m.slice(2, 4)}`;
@@ -73,6 +74,7 @@ export default function ParcelamentosPage() {
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <BackTitle title="Parcelamentos" subtitle="O que você ainda está pagando, até quando, e quanto sobra quando acaba." href="/cartoes" />
+      <SectionTabs group="contas" />
 
       {error && <ErrorNote message="Não foi possível carregar os parcelamentos." />}
       <ErrorNote message={addError} />

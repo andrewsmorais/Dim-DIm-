@@ -7,6 +7,7 @@ import { brl, parseMoney, formatDateBR } from "@/lib/format";
 import { GOAL_TYPES, monthsBetween, requiredMonthly, type GoalType } from "@/lib/planner";
 import { PageHeader, Card, Label, Progress, Empty, ErrorNote, Disclaimer, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 import { GoalTypeSelector } from "@/components/GoalTypeSelector";
+import { SectionTabs } from "@/components/SectionTabs";
 
 type Goal = { id: string; name: string; icon: string | null; type: GoalType; target_amount: number; current_amount: number; deadline: string | null; status: string };
 
@@ -74,6 +75,7 @@ export default function MetasPage() {
   return (
     <div className="max-w-5xl mx-auto pb-20">
       <PageHeader title="Objetivos" subtitle="Viagem, bebê, reserva, carro... defina o valor, a data e veja quanto guardar por mês" />
+      <SectionTabs group="guardar" />
 
       <Card className="mb-6">
         <div className="mb-4">

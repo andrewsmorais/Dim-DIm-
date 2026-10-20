@@ -7,6 +7,7 @@ import { useSupabase } from "@/lib/useSupabase";
 import { brl, parseMoney, currentMonth, monthRange, shiftMonth, monthProgress } from "@/lib/format";
 import { rootId, type CatRow } from "@/lib/categories";
 import { BackTitle, Card, Label, MonthNav, Progress, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
+import { SectionTabs } from "@/components/SectionTabs";
 
 type Budget = { id: string; category_id: string | null; amount_limit: number };
 type Tx = { amount: number; type: "income" | "expense"; date: string; category_id: string | null };
@@ -104,6 +105,7 @@ export default function LimitesPage() {
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <BackTitle title="Limites de gastos" subtitle="Acompanhe seus gastos e planeje os limites do mês." />
+      <SectionTabs group="orcamento" />
       <div className="mb-4"><MonthNav month={month} onChange={setMonth} /></div>
       <ErrorNote message={error} />
 

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { brl, parseMoney } from "@/lib/format";
 import { PageHeader, Card, Label, Disclaimer, inputCls } from "@/components/ui/page";
+import { SectionTabs } from "@/components/SectionTabs";
 
 // Simulador: dois cálculos simples, feitos só com os números que a pessoa digita (nada sai do aparelho).
 // Taxa anual -> mensal equivalente: (1 + a)^(1/12) - 1.
@@ -57,6 +58,7 @@ export default function SimuladorPage() {
   return (
     <div className="max-w-4xl mx-auto pb-20 space-y-6">
       <PageHeader title="Simulador" subtitle="Veja quanto o dinheiro cresce guardando todo mês, ou quanto guardar para chegar em uma meta." />
+      <SectionTabs group="guardar" />
       <div className="flex gap-2" role="tablist">{tabBtn("crescer", "Quanto vou ter")}{tabBtn("meta", "Quanto guardar por mês")}</div>
 
       <Card>

@@ -86,7 +86,7 @@ export default function DividasPage() {
 
   return (
     <div className="max-w-5xl mx-auto pb-20">
-      <PageHeader title="Despesas" subtitle="Veja quanto falta e compare estratégias para quitar" />
+      <PageHeader title="Dívidas" subtitle="Veja quanto falta e compare estratégias para quitar" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <Card><p className="text-xs font-bold text-gray-500">Total devido</p><p className="text-2xl font-bold text-red-500">{brl(totalBalance)}</p></Card>

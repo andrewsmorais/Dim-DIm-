@@ -7,6 +7,7 @@ import { brl, parseMoney, monthStartAgo } from "@/lib/format";
 import { requiredMonthly } from "@/lib/planner";
 import { buildClassifier } from "@/lib/essentials";
 import { PageHeader, Card, Label, Progress, ErrorNote, Disclaimer, inputCls, btnCls } from "@/components/ui/page";
+import { SectionTabs } from "@/components/SectionTabs";
 
 export default function ReservaPage() {
   const { supabase, userId, ready } = useSupabase();
@@ -61,6 +62,7 @@ export default function ReservaPage() {
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <PageHeader title="Reserva de emergência" subtitle="Quanto você precisa ter guardado para ficar tranquilo" />
+      <SectionTabs group="guardar" />
 
       <Card className="mb-6">
         <p className="text-sm text-gray-500 mb-4">

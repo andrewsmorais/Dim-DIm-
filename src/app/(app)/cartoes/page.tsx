@@ -12,6 +12,7 @@ import { InvoiceChip } from "@/components/CardBits";
 import { WhoBadge } from "@/components/WhoBadge";
 import { usePartnership } from "@/lib/usePartnership";
 import { BackTitle, Card, Label, Empty, ErrorNote, Progress, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
+import { SectionTabs } from "@/components/SectionTabs";
 
 type Acc = { id: string; name: string };
 const EMPTY_FORM = { kind: "credito" as "credito" | "debito", name: "", brand: "outro", limit: "", closing: "", due: "", pay_account_id: "" };
@@ -108,6 +109,7 @@ export default function CartoesPage() {
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <BackTitle title="Cartões" subtitle="Crédito com faturas e limites. Débito saindo direto da conta." />
+      <SectionTabs group="contas" />
 
       <button onClick={openNew} className={btnCls + " w-full mb-3"}><Plus size={18} /> Adicionar cartão</button>
       <Link href="/parcelamentos" className="mb-5 flex items-center justify-between rounded-2xl bg-white/60 dark:bg-[#1E1E1E] border border-white/70 dark:border-white/5 px-4 py-3">

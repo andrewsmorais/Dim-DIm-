@@ -8,6 +8,7 @@ import { usePartnership } from "@/lib/usePartnership";
 import { WhoBadge } from "@/components/WhoBadge";
 import { brl, parseMoney } from "@/lib/format";
 import { BackTitle, Card, Label, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
+import { SectionTabs } from "@/components/SectionTabs";
 
 type Row = { id: string; user_id: string; name: string; kind: string; initial_balance: number; archived: boolean };
 type Bal = { id: string; balance: number };
@@ -82,6 +83,7 @@ export default function ContasBancariasPage() {
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <BackTitle title="Contas bancárias" subtitle="Acompanhe os saldos das suas contas em um só lugar." />
+      <SectionTabs group="contas" />
 
       <button onClick={openNew} className={btnCls + " w-full mb-5"}><Plus size={18} /> Adicionar conta</button>
 

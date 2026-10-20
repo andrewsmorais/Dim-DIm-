@@ -7,6 +7,7 @@ import { useSupabase } from "@/lib/useSupabase";
 import { useHideValues } from "@/lib/useHideValues";
 import { brl, currentMonth, formatDateBR, monthRange, parseMoney, shiftMonth, todayISO } from "@/lib/format";
 import { BackTitle, Card, Disclaimer, Empty, ErrorNote, Label, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
+import { SectionTabs } from "@/components/SectionTabs";
 
 type Inv = { id: string; name: string; kind: string; institution: string | null; invested: number; current_value: number; archived: boolean };
 type MovKind = "aporte" | "resgate" | "valor";
@@ -168,6 +169,7 @@ export default function InvestimentosPage() {
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <BackTitle title="Investimentos" subtitle="Acompanhe o que você já investiu e quanto rendeu." />
+      <SectionTabs group="guardar" />
 
       <button onClick={openNew} className={btnCls + " w-full mb-5"}><Plus size={18} /> Adicionar investimento</button>
 

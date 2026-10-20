@@ -35,7 +35,7 @@ export function hasFamilyFeatures(plan?: string | null): boolean {
 }
 
 // Telas que so existem do plano Familia em diante.
-export const FAMILY_ONLY_PATHS = ['/planejamento', '/investimentos', '/simulador', '/dividas', '/chat'] as const;
+export const FAMILY_ONLY_PATHS = ['/planejamento', '/investimentos', '/simulador', '/chat'] as const;
 
 export function isFamilyOnlyPath(pathname: string): boolean {
   return FAMILY_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

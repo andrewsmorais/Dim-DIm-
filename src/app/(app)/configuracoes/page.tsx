@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bell, ChevronRight, Database, Globe, LogOut, MessageCircle, Palette, Sparkles, User, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, ChevronRight, Database, Globe, LogOut, MessageCircle, Palette, Sparkles, Tag, User, Users, type LucideIcon } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { BackTitle, Card } from "@/components/ui/page";
@@ -12,6 +12,7 @@ const ITEMS: { icon: LucideIcon; title: string; desc: string; href?: string; soo
   { icon: User, title: "Meu perfil", desc: "Nome, e-mail e telefone.", href: "/configuracoes/perfil" },
   { icon: Globe, title: "Preferências", desc: "Idioma e moeda.", href: "/configuracoes/preferencias" },
   { icon: Bell, title: "Notificações", desc: "Lembretes de contas a pagar e receber.", href: "/configuracoes/notificacoes" },
+  { icon: Tag, title: "Categorias", desc: "Crie e organize as categorias dos lançamentos.", href: "/categorias" },
   { icon: Palette, title: "Aparência", desc: "Tema claro/escuro e cor do app.", href: "/configuracoes/aparencia" },
   { icon: MessageCircle, title: "WhatsApp", desc: "Conecte o número que registra seus gastos.", href: "/configuracoes/whatsapp" },
   { icon: Sparkles, title: "Planos e assinatura", desc: "Seu plano, faturas e cancelamento.", href: "/configuracoes/planos" },

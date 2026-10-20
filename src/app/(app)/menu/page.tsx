@@ -2,34 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  Settings, Landmark, FileText, Tag, Target, Gauge, CalendarClock, ShieldCheck, Calculator, CalendarRange, Briefcase, TrendingDown, Home, Sparkles,
-  CreditCard, TrendingUp, MessageSquare, Users, BarChart3, Layers, type LucideIcon,
-} from "lucide-react";
+import { Sparkles, BarChart3, type LucideIcon } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { useUsageType } from "@/lib/useUsageType";
+import { NAV_FOOTER, groupsFor } from "@/lib/nav";
 
-const TILES: { icon: LucideIcon; label: string; href: string }[] = [
-  { icon: Home, label: "Dashboard", href: "/dashboard" },
-  { icon: MessageSquare, label: "Chat IA", href: "/chat" },
-  { icon: Landmark, label: "Contas bancárias", href: "/contas-bancarias" },
-  { icon: CreditCard, label: "Cartões", href: "/cartoes" },
-  { icon: Layers, label: "Parcelamentos", href: "/parcelamentos" },
-  { icon: CalendarClock, label: "Contas a pagar", href: "/contas" },
-  { icon: Gauge, label: "Limites de gastos", href: "/limites" },
-  { icon: Target, label: "Objetivos", href: "/metas" },
-  { icon: TrendingDown, label: "Despesas", href: "/dividas" },
-  { icon: ShieldCheck, label: "Reserva", href: "/reserva" },
-  { icon: TrendingUp, label: "Investimentos", href: "/investimentos" },
-  { icon: Tag, label: "Categorias", href: "/categorias" },
-  { icon: FileText, label: "Relatórios", href: "/relatorios" },
-  { icon: Calculator, label: "Simulador", href: "/simulador" },
-  { icon: CalendarRange, label: "Planejamento", href: "/planejamento" },
-  { icon: Users, label: "Gestão compartilhada", href: "/configuracoes/compartilhada" },
-  { icon: Sparkles, label: "Planos", href: "/configuracoes/planos" },
-  { icon: Settings, label: "Configurações", href: "/configuracoes" },
-];
+type Tile = { icon: LucideIcon; label: string; href: string };
 
 function greeting() {
   const h = new Date().getHours();
@@ -41,8 +20,9 @@ export default function MenuPage() {
   const [name, setName] = useState("");
   const { isMei } = useUsageType();
   const isAdmin = useIsAdmin();
-  const base = isMei ? TILES.slice(0, 4).concat([{ icon: Briefcase, label: "Pacote MEI", href: "/mei" }], TILES.slice(4)) : TILES;
-  const tiles = isAdmin ? base.concat([{ icon: BarChart3, label: "Painel do dono", href: "/admin" }]) : base;
+  const groups = groupsFor(isMei).map((g) => ({ title: g.title, tiles: g.items as Tile[] }));
+  const more: Tile[] = [...NAV_FOOTER, { icon: Sparkles, label: "Planos", href: "/configuracoes/planos" }, ...(isAdmin ? [{ icon: BarChart3, label: "Painel do dono", href: "/admin" }] : [])];
+  const sections = [...groups, { title: "MAIS", tiles: more }];
 
   useEffect(() => {
     if (!ready || !userId) return;
@@ -60,20 +40,21 @@ export default function MenuPage() {
           <p className="font-extrabold text-lg leading-tight">{name || "Bem-vindo"}</p>
         </div>
       </div>
-      <h1 className="text-2xl font-extrabold mb-4">Tudo</h1>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {tiles.map((t, i) => (
-          <Link key={t.href} href={t.href}
-            className={`rounded-[24px] p-4 h-32 flex flex-col justify-between border transition-transform active:scale-95 ${
-              i === 0
-                ? "bg-gradient-to-br from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid text-white border-transparent shadow-lg shadow-brand-dark/30 dark:shadow-none"
-                : "bg-white/75 dark:bg-[#161616] border-white/80 dark:border-white/5 text-gray-800 dark:text-gray-100"
-            }`}>
-            <t.icon size={26} className={i === 0 ? "" : "text-brand-dark dark:text-brand-soft"} />
-            <span className="font-bold text-sm leading-tight">{t.label}</span>
-          </Link>
-        ))}
-      </div>
+      <h1 className="text-2xl font-extrabold mb-1">Tudo</h1>
+      {sections.map((sec) => (
+        <section key={sec.title} className="mt-5">
+          <h2 className="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-widest mb-2">{sec.title}</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {sec.tiles.map((t) => (
+              <Link key={t.href} href={t.href}
+                className="rounded-[24px] p-4 h-28 flex flex-col justify-between border transition-transform active:scale-95 bg-white/75 dark:bg-[#161616] border-white/80 dark:border-white/5 text-gray-800 dark:text-gray-100">
+                <t.icon size={26} className="text-brand-dark dark:text-brand-soft" />
+                <span className="font-bold text-sm leading-tight">{t.label}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
