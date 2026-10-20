@@ -25,6 +25,7 @@ export default function PrivacidadePage() {
       <h2>2. Para que usamos</h2>
       <ul>
         <li>Prestar o serviço: registrar lançamentos, calcular saldos, relatórios e lembretes.</li>
+        <li>Montar o plano para quitar suas dívidas: as contas são feitas no próprio app com os valores que você cadastrou, e a inteligência artificial só escreve a explicação.</li>
         <li>Cobrar a assinatura e dar suporte.</li>
         <li>Enviar avisos que você ativou (contas a vencer, por push, e-mail ou WhatsApp).</li>
         <li>Manter a segurança, prevenir fraudes e cumprir obrigações legais.</li>
@@ -42,7 +43,7 @@ export default function PrivacidadePage() {
         <li><strong>Vercel:</strong> hospedagem do site e do aplicativo.</li>
         <li><strong>Asaas:</strong> processamento de pagamentos e assinaturas.</li>
         <li><strong>Meta (WhatsApp Business):</strong> envio e recebimento das mensagens do assistente.</li>
-        <li><strong>OpenAI:</strong> interpretação das mensagens e arquivos pela inteligência artificial.</li>
+        <li><strong>OpenAI:</strong> interpretação das mensagens e arquivos pela inteligência artificial e redação da explicação do plano de dívidas (ela recebe valores e nomes das dívidas que você cadastrou, nunca CPF).</li>
         <li><strong>Resend:</strong> envio de e-mails do serviço.</li>
       </ul>
       <p>Alguns desses prestadores ficam fora do Brasil, o que significa transferência internacional de dados, feita com as garantias previstas na LGPD. Também podemos compartilhar dados quando a lei ou uma ordem de autoridade exigir.</p>

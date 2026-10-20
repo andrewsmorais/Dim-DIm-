@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Flame, Trash2, Trophy } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
-import { brl, parseMoney, formatDateBR } from "@/lib/format";
+import { brl, parseMoney, formatDateBR, todayISO, monthRange, shiftMonth, monthLabel } from "@/lib/format";
+import { milestones, monthLeftover, streakMonths } from "@/lib/savings";
 import { GOAL_TYPES, monthsBetween, requiredMonthly, type GoalType } from "@/lib/planner";
 import { PageHeader, Card, Label, Progress, Empty, ErrorNote, Disclaimer, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 import { GoalTypeSelector } from "@/components/GoalTypeSelector";
@@ -19,6 +20,9 @@ export default function MetasPage() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ type: "custom" as GoalType, name: "", icon: "", target: "", current: "", deadline: "" });
   const [contrib, setContrib] = useState<Record<string, string>>({});
+  const [dates, setDates] = useState<string[]>([]);
+  const [leftover, setLeftover] = useState<{ month: string; amount: number } | null>(null);
+  const [leftGoal, setLeftGoal] = useState("");
 
   const load = useCallback(async () => {
     const { data, error: err } = await supabase.from("goals").select("id,name,icon,type,target_amount,current_amount,deadline,status").neq("status", "cancelled").order("created_at");
@@ -27,7 +31,25 @@ export default function MetasPage() {
     setGoals((data ?? []).map((g) => ({ ...g, target_amount: Number(g.target_amount), current_amount: Number(g.current_amount ?? 0) })) as Goal[]);
   }, [supabase]);
 
-  useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
+  // Sequência de aportes e sobra do mês passado (sugestão no começo do mês).
+  const loadSavings = useCallback(async () => {
+    const prev = shiftMonth(todayISO().slice(0, 7), -1);
+    const { start, end } = monthRange(prev);
+    const [c, t] = await Promise.all([
+      supabase.from("goal_contributions").select("created_at").order("created_at", { ascending: false }).limit(1000),
+      supabase.from("transactions").select("amount,type").gte("date", start).lt("date", end).limit(5000),
+    ]);
+    setDates(((c.data ?? []) as { created_at: string }[]).map((x) => x.created_at));
+    const rows = (t.data ?? []) as { amount: number | string; type: string }[];
+    const inc = rows.filter((x) => x.type === "income").reduce((s, x) => s + Number(x.amount), 0);
+    const exp = rows.filter((x) => x.type === "expense").reduce((s, x) => s + Number(x.amount), 0);
+    const amount = monthLeftover(inc, exp);
+    let dismissed = false;
+    try { dismissed = localStorage.getItem(`jakash.leftover.${prev}`) === "1"; } catch { /* sem armazenamento */ }
+    setLeftover(amount !== null && !dismissed ? { month: prev, amount } : null);
+  }, [supabase]);
+
+  useEffect(() => { if (ready && userId) { load(); loadSavings(); } }, [ready, userId, load, loadSavings]);
   useEffect(() => {
     const h = () => load();
     window.addEventListener("jakash:changed", h);
@@ -65,17 +87,58 @@ export default function MetasPage() {
     load();
   }
 
+  async function sendLeftover() {
+    const g = goals.find((x) => x.id === (leftGoal || openGoals[0]?.id));
+    if (!g || !leftover) return;
+    const newTotal = g.current_amount + leftover.amount;
+    const [c, u] = await Promise.all([
+      supabase.from("goal_contributions").insert({ goal_id: g.id, amount: leftover.amount }),
+      supabase.from("goals").update({ current_amount: newTotal, status: newTotal >= g.target_amount ? "completed" : "in_progress" }).eq("id", g.id),
+    ]);
+    if (c.error || u.error) { setError("Não foi possível guardar a sobra."); return; }
+    dismissLeftover();
+    load(); loadSavings();
+  }
+  function dismissLeftover() {
+    if (leftover) { try { localStorage.setItem(`jakash.leftover.${leftover.month}`, "1"); } catch { /* ignora */ } }
+    setLeftover(null);
+  }
+
   async function remove(id: string) {
     const { error: err } = await supabase.from("goals").delete().eq("id", id);
     if (err) setError("Não foi possível excluir."); else load();
   }
 
   const tips = GOAL_TYPES[form.type].tips;
+  const openGoals = goals.filter((g) => g.status !== "completed");
+  const streak = streakMonths(dates, todayISO());
+  const wins = milestones(goals);
 
   return (
     <div className="max-w-5xl mx-auto pb-20">
       <PageHeader title="Objetivos" subtitle="Viagem, bebê, reserva, carro... defina o valor, a data e veja quanto guardar por mês" />
       <SectionTabs group="guardar" />
+
+      {leftover && openGoals.length > 0 && (
+        <Card className="mb-6 !p-4">
+          <p className="font-extrabold">Sobrou {brl(leftover.amount)} em {monthLabel(leftover.month)}.</p>
+          <p className="text-sm text-gray-500 mt-0.5">Quer mandar para um objetivo? Só guardo se você tocar no botão.</p>
+          <div className="flex flex-wrap gap-2 mt-3 items-center">
+            <select aria-label="Objetivo" className={inputCls + " !w-auto"} value={leftGoal || openGoals[0].id} onChange={(e) => setLeftGoal(e.target.value)}>
+              {openGoals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+            <button onClick={sendLeftover} className={btnCls}>Guardar {brl(leftover.amount)}</button>
+            <button onClick={dismissLeftover} className={btnGhostCls}>Agora não</button>
+          </div>
+        </Card>
+      )}
+
+      {(streak > 0 || wins.length > 0) && (
+        <div className="mb-6 flex flex-wrap gap-2" aria-label="Conquistas">
+          {streak > 0 && <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 px-3 py-1.5 text-xs font-bold"><Flame size={14} /> {streak} {streak === 1 ? "mês" : "meses"} seguidos guardando</span>}
+          {wins.map((w) => <span key={w.key} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 text-xs font-bold"><Trophy size={14} /> {w.label}</span>)}
+        </div>
+      )}
 
       <Card className="mb-6">
         <div className="mb-4">
