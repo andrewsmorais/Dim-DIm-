@@ -4,6 +4,33 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 import crypto from 'crypto';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+// Status de entrega das respostas da Jaki. Nunca vira lançamento: só atualiza a linha da fila
+// cuja resposta tem esse wamid. Falha aqui não derruba o webhook (é informação de diagnóstico).
+type DeliveryStatus = { id?: string; status?: string; timestamp?: string; errors?: { code?: number; title?: string }[] };
+const STATUS_ORDER: Record<string, number> = { sent: 1, delivered: 2, read: 3 };
+
+async function applyDeliveryStatus(supabase: SupabaseClient, st: DeliveryStatus) {
+  if (!st.id || !st.status) return;
+
+  if (st.status === 'failed') {
+    // Ex.: 131047 = fora da janela de 24 h (precisa de modelo aprovado). Sem telefone nem texto no log.
+    const codes = (st.errors ?? []).map((e) => `${e.code ?? '?'}`).join(',');
+    console.warn(`[whatsapp] entrega falhou: wamid=${st.id} codes=${codes || '-'}`);
+  }
+
+  // Status pode chegar fora de ordem (read antes de delivered): nunca volta para um estágio anterior.
+  const rank = STATUS_ORDER[st.status];
+  const lowerStages = rank ? Object.entries(STATUS_ORDER).filter(([, r]) => r < rank).map(([s]) => s) : [];
+  let q = supabase
+    .from('whatsapp_inbox')
+    .update({ reply_status: st.status, reply_status_at: new Date(Number(st.timestamp) * 1000 || Date.now()).toISOString() })
+    .eq('reply_wamid', st.id);
+  if (rank) q = q.or(['reply_status.is.null', ...lowerStages.map((s) => `reply_status.eq.${s}`)].join(','));
+  const { error } = await q;
+  if (error) console.warn(`[whatsapp] status não gravado: ${error.message}`);
+}
 
 export async function GET(request: Request) {
   try {
@@ -105,6 +132,9 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: "Database error" }, { status: 500 });
               }
             }
+          }
+          for (const st of (value?.statuses ?? []) as DeliveryStatus[]) {
+            await applyDeliveryStatus(supabase, st);
           }
         }
       }

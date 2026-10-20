@@ -236,6 +236,13 @@ export async function POST(request: Request) {
          return await failTask(`WhatsApp API returned ${waRes.status}${waRes.errorCode ? ` (code ${waRes.errorCode})` : ''}`);
       }
 
+      // Guarda o wamid da resposta para casar com os status de entrega do webhook. É só diagnóstico:
+      // se a coluna ainda não existir (migration pendente), segue sem travar a resposta.
+      if (waRes.wamid) {
+        const { error: replyIdError } = await supabase.from('whatsapp_inbox').update({ reply_wamid: waRes.wamid }).eq('id', taskId);
+        if (replyIdError) console.warn(`[Worker ${workerId}] reply_wamid não gravado: ${replyIdError.message}`);
+      }
+
       // Mark as completed securely
       const { data: finished } = await supabase
         .from('whatsapp_inbox')
