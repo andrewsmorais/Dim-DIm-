@@ -300,13 +300,25 @@ Pix e pagamentos, crédito ou indicação de empréstimo, cobrança de terceiros
 | Fase | Estado | Data | Observações |
 |---|---|---|---|
 | 0 — Fundador | pendente | | |
-| 1 — WhatsApp ponta a ponta | pendente | | |
+| 1 — WhatsApp ponta a ponta | código pronto (1.1 a 1.6), falta validar com mensagem real | 20/10/2026 | `tsc` e `npm run build` sem erro. Webhook testado com assinatura: GET errado 403, GET certo devolve o challenge, POST sem/ com assinatura inválida 401, status de entrega 200 sem virar lançamento. **Não testado:** envio real à Meta e o worker contra o banco (dependem do item 0.2 e das migrations). Pendências abaixo. |
 | 2 — Conversa confiável | pendente | | |
 | 3 — App mais simples | pendente | | |
 | 4 — Comprar | pendente | | |
 | 5 — Sair do vermelho + guardar | pendente | | |
 | 6 — Foto e áudio | pendente | | |
 | 7 — Piloto e preço | pendente | | |
+
+### Pendências da Fase 1 (dependem do fundador)
+
+1. **Migrations aguardando aprovação** (nenhuma foi aplicada no banco de produção; o código funciona com ou sem elas):
+   - `20261020010000_whatsapp_reply_status.sql`: 3 colunas e 1 índice em `whatsapp_inbox` (aditiva, sem risco).
+   - `20261020020000_whatsapp_retention.sql`: função de limpeza + job diário às 03:17 (Brasília). **Atenção:** assim que rodar, o conteúdo bruto de mensagens com mais de 30 dias é apagado e não volta. Rodar `SELECT public.purge_whatsapp_inbox_payloads(30);` à mão só depois de conferir que nenhuma mensagem dessa idade ainda é necessária.
+2. **Texto da política de privacidade (item 1.5), a publicar junto com a migration acima.** Em `src/app/politica-de-privacidade/page.tsx`, na seção "5. Por quanto tempo guardamos", acrescentar:
+   > *Mensagens do WhatsApp:* o conteúdo bruto (texto e dados enviados pela Meta) fica na fila de processamento por até 30 dias. Depois disso, guardamos só um registro técnico, sem o texto, ligado ao seu número (tipo da mensagem, data e resultado), até você excluir a conta. Os lançamentos que você confirmou continuam na sua conta.
+
+   Não publicar esse parágrafo antes de a migration estar aplicada, porque ele descreveria algo que ainda não acontece.
+3. **Item 0.2** (mensagem real chegar): é o que falta para provar a Fase 1 de ponta a ponta.
+4. **Depois de 0.2**, rodar os testes de aceitação da seção 5 com o celular: mensagem real, resposta no WhatsApp, `reply_status` preenchido (após a primeira migration), foto recebendo a resposta honesta e `conectar CODIGO`.
 
 ---
 
