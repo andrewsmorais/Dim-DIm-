@@ -8,7 +8,7 @@ import { useCards } from "@/lib/useCards";
 import { useHideValues } from "@/lib/useHideValues";
 import { usePartnership } from "@/lib/usePartnership";
 import { brl, monthLabel, todayISO, formatDateBR } from "@/lib/format";
-import { activePlans, buildPlans, buildTimeline, monthlyCommitted, nextRelief, totalRemaining, type InstallmentRow } from "@/lib/installments";
+import { activePlans, buildPlans, buildTimeline, missingInstallmentRows, monthlyCommitted, nextRelief, totalRemaining, type InstallmentRow } from "@/lib/installments";
 import { WhoBadge } from "@/components/WhoBadge";
 import { BackTitle, Card, Empty, ErrorNote, Progress, btnCls } from "@/components/ui/page";
 
@@ -24,11 +24,13 @@ export default function ParcelamentosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showDone, setShowDone] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data, error: err } = await supabase
       .from("transactions")
-      .select("id,user_id,card_id,description,amount,date,invoice_month,installment_group,installment_number,installment_total")
+      .select("id,user_id,card_id,description,amount,date,invoice_month,installment_group,installment_number,installment_total,category_id,is_business")
       .not("installment_group", "is", null)
       .order("invoice_month")
       .limit(5000);
@@ -43,6 +45,19 @@ export default function ParcelamentosPage() {
     window.addEventListener("jakash:changed", h);
     return () => window.removeEventListener("jakash:changed", h);
   }, [load]);
+
+  async function addMissing(group: string, total: number) {
+    const list = rows.filter((r) => r.installment_group === group).sort((a, b) => (a.installment_number ?? 0) - (b.installment_number ?? 0));
+    const last = list[list.length - 1];
+    if (!last || last.user_id !== userId) return;
+    setAdding(group);
+    setAddError(null);
+    const payload = missingInstallmentRows(last, group, total);
+    const { error: err } = await supabase.from("transactions").upsert(payload, { onConflict: "user_id,import_key", ignoreDuplicates: true });
+    setAdding(null);
+    if (err) { setAddError("Não foi possível lançar as parcelas que faltam. Tente de novo."); return; }
+    window.dispatchEvent(new Event("jakash:changed"));
+  }
 
   const today = todayISO();
   const model = useMemo(() => {
@@ -60,6 +75,7 @@ export default function ParcelamentosPage() {
       <BackTitle title="Parcelamentos" subtitle="O que você ainda está pagando, até quando, e quanto sobra quando acaba." href="/cartoes" />
 
       {error && <ErrorNote message="Não foi possível carregar os parcelamentos." />}
+      <ErrorNote message={addError} />
 
       {loading || loadingCards ? (
         <Card><Empty>Carregando...</Empty></Card>
@@ -126,7 +142,14 @@ export default function ParcelamentosPage() {
                     Última parcela {p.lastDueDate ? <>vence em <strong>{formatDateBR(p.lastDueDate)}</strong></> : <>na fatura de <strong>{monthLabel(p.lastInvoiceMonth.slice(0, 7))}</strong></>}. Depois dela você libera <strong>{money(brl(p.perInstallment))}</strong> por mês.
                   </p>
                   {p.missingRows > 0 && (
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5">Faltam {p.missingRows} parcelas lançadas desta compra; os valores acima consideram só as já lançadas.</p>
+                    <div className="mt-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 py-2">
+                      <p className="text-[11px] text-amber-700 dark:text-amber-300">Esta compra tem {p.total} parcelas, mas só {p.total - p.missingRows} estão lançadas. Os valores acima consideram só as lançadas.</p>
+                      {p.userId === userId && (
+                        <button onClick={() => addMissing(p.group, p.total)} disabled={adding === p.group} className="mt-1.5 text-xs font-bold text-brand-dark dark:text-brand-soft disabled:opacity-50">
+                          {adding === p.group ? "Lançando..." : `Lançar as ${p.missingRows} que faltam, nas próximas faturas`}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </Card>
               );

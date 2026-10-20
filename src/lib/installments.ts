@@ -1,6 +1,6 @@
 // Parcelamentos no cartão (regras puras, sem acesso ao banco).
 // Cada parcela é uma linha de `transactions` (installment_group/number/total + invoice_month); aqui só agrupamos e projetamos.
-import { dueDateFor, shiftInvoiceMonth, type CardCfg } from "@/lib/cards";
+import { addMonthsClamped, dueDateFor, shiftInvoiceMonth, type CardCfg } from "@/lib/cards";
 
 export type InstallmentRow = {
   id: string;
@@ -13,6 +13,8 @@ export type InstallmentRow = {
   installment_group: string | null;
   installment_number: number | null;
   installment_total: number | null;
+  category_id?: string | null;
+  is_business?: boolean | null;
 };
 
 export type PlanItem = {
@@ -157,4 +159,34 @@ export function nextRelief(timeline: TimelineMonth[]): { month: string; amount: 
     }
   }
   return null;
+}
+
+/**
+ * Linhas das parcelas que faltam de uma compra (a partir da última lançada). A chave `inst:grupo:n` é a mesma
+ * da importação, então lançar de novo ou importar a fatura do mês seguinte não duplica.
+ */
+export function missingInstallmentRows(last: InstallmentRow, group: string, total: number) {
+  const from = last.installment_number ?? 0;
+  const name = baseName(last.description);
+  const out = [];
+  for (let k = from + 1; k <= total && out.length < 48; k++) {
+    const delta = k - from;
+    out.push({
+      user_id: last.user_id,
+      card_id: last.card_id,
+      description: `${name} (${k}/${total})`,
+      amount: Number(last.amount),
+      type: "expense" as const,
+      date: addMonthsClamped(last.date, delta),
+      category_id: last.category_id ?? null,
+      is_business: last.is_business ?? false,
+      invoice_month: shiftInvoiceMonth(last.invoice_month!, delta),
+      installment_group: group,
+      installment_number: k,
+      installment_total: total,
+      origin: "manual" as const,
+      import_key: `inst:${group}:${k}`,
+    });
+  }
+  return out;
 }

@@ -376,7 +376,7 @@ Pix e pagamentos, crédito ou indicação de empréstimo, cobrança de terceiros
 | 4 — Comprar | pendente | | |
 | 5 — Sair do vermelho + guardar | pendente | | |
 | 6 — Foto, áudio e boleto (executa na 3ª posição) | pendente | | |
-| 7 — Parcelas e cartões | pendente | | |
+| 7 — Parcelas e cartões | código pronto (7.0 a 7.4), falta ver com dados reais; 7.5 (Jaki responder sobre parcelas) fica para depois da Fase 2 | 20/10/2026 | `tsc` e `npm run build` sem erro. Motor `src/lib/installments.ts` testado (agrupa, projeta 12 meses, calcula alívio, gera parcelas faltantes). Tela `/parcelamentos` (atalho em Cartões, menu e barra lateral). Aviso de última parcela entra no lembrete diário existente (sem migration e sem tabela nova). Importação de fatura já detecta "3/10" e agora a tela oferece "lançar as que faltam" (mesma chave `inst:grupo:n`, não duplica). |
 | 8 — Simulador de viagem | pendente | | |
 | 9 — Contas e ícones (Open Finance fica para o futuro, sem custo agora) | pendente | | |
 | 10 — Piloto, métricas e preço | pendente | | |
