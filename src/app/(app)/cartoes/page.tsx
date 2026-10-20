@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Archive, ArchiveRestore, ChevronRight, CreditCard, Landmark, Pencil, Plus } from "lucide-react";
+import { Archive, ArchiveRestore, ChevronRight, CreditCard, Landmark, Layers, Pencil, Plus } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useCards, type Card as CardRow } from "@/lib/useCards";
 import { useHideValues } from "@/lib/useHideValues";
@@ -109,7 +109,11 @@ export default function CartoesPage() {
     <div className="max-w-3xl mx-auto pb-20">
       <BackTitle title="Cartões" subtitle="Crédito com faturas e limites. Débito saindo direto da conta." />
 
-      <button onClick={openNew} className={btnCls + " w-full mb-5"}><Plus size={18} /> Adicionar cartão</button>
+      <button onClick={openNew} className={btnCls + " w-full mb-3"}><Plus size={18} /> Adicionar cartão</button>
+      <Link href="/parcelamentos" className="mb-5 flex items-center justify-between rounded-2xl bg-white/60 dark:bg-[#1E1E1E] border border-white/70 dark:border-white/5 px-4 py-3">
+        <span className="flex items-center gap-2 text-sm font-bold"><Layers size={18} className="text-brand-dark dark:text-brand-soft" /> Ver parcelamentos e quando acabam</span>
+        <ChevronRight size={18} className="text-gray-300" />
+      </Link>
 
       <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-5">
         {([["active", "Ativos"], ["archived", "Arquivados"]] as const).map(([k, l]) => (

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   Settings, Landmark, FileText, Tag, Target, Gauge, CalendarClock, ShieldCheck, Calculator, CalendarRange, Briefcase, TrendingDown, Home, Sparkles,
-  CreditCard, TrendingUp, MessageSquare, Users, BarChart3, type LucideIcon,
+  CreditCard, TrendingUp, MessageSquare, Users, BarChart3, Layers, type LucideIcon,
 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useIsAdmin } from "@/lib/useIsAdmin";
@@ -15,6 +15,7 @@ const TILES: { icon: LucideIcon; label: string; href: string }[] = [
   { icon: MessageSquare, label: "Chat IA", href: "/chat" },
   { icon: Landmark, label: "Contas bancárias", href: "/contas-bancarias" },
   { icon: CreditCard, label: "Cartões", href: "/cartoes" },
+  { icon: Layers, label: "Parcelamentos", href: "/parcelamentos" },
   { icon: CalendarClock, label: "Contas a pagar", href: "/contas" },
   { icon: Gauge, label: "Limites de gastos", href: "/limites" },
   { icon: Target, label: "Objetivos", href: "/metas" },

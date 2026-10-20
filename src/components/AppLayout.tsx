@@ -9,7 +9,7 @@ import { ReferralSync } from "@/components/Referral";
 import { useUsageType } from "@/lib/useUsageType";
 import {
   Home, Send, FileText, Gauge, CalendarClock, Landmark, Target, ShieldCheck,
-  Calculator, Briefcase, CalendarRange, Settings, Landmark as Bank, Plus, Menu as MenuIcon, CreditCard, TrendingUp, Sparkles, type LucideIcon,
+  Calculator, Briefcase, CalendarRange, Settings, Landmark as Bank, Plus, Menu as MenuIcon, CreditCard, TrendingUp, Sparkles, Layers, type LucideIcon,
 } from "lucide-react";
 
 type Item = { icon: LucideIcon; label: string; href: string };
@@ -23,6 +23,7 @@ const SECTIONS: Section[] = [
       { icon: Send, label: "Transações", href: "/transacoes" },
       { icon: Bank, label: "Contas bancárias", href: "/contas-bancarias" },
       { icon: CreditCard, label: "Cartões", href: "/cartoes" },
+      { icon: Layers, label: "Parcelamentos", href: "/parcelamentos" },
       { icon: FileText, label: "Relatórios", href: "/relatorios" },
     ],
   },
