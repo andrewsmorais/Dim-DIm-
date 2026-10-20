@@ -108,7 +108,7 @@ export default function DividasPage() {
     const amount = parseMoney(agree.amount);
     if (!Number.isInteger(n) || n < 1 || n > 60 || !(amount > 0) || !agree.first) { setError("Informe o número de parcelas (1 a 60), o valor e a data da primeira."); return; }
     const { error: err } = await supabase.rpc("register_debt_agreement", { p_debt_id: agreeFor, p_installments: n, p_amount: amount, p_first_due: agree.first });
-    if (err) { setError("Não foi possível registrar o acordo."); return; }
+    if (err) { setError(/já tem parcelas/i.test(err.message) ? "Esta dívida já tem parcelas de acordo a pagar. Dê baixa ou exclua essas parcelas em Contas a pagar antes de registrar outro acordo." : "Não foi possível registrar o acordo."); return; }
     setAgreeFor(null);
     setAgree({ n: "", amount: "", first: "" });
     setNotice(`Acordo registrado: ${n} parcelas de ${brl(amount)}. Elas já aparecem em Contas a pagar, com lembrete antes de vencer.`);
@@ -231,7 +231,7 @@ export default function DividasPage() {
                     <div><Label>Valor de cada</Label><input className={inputCls} inputMode="decimal" value={agree.amount} onChange={(e) => setAgree({ ...agree, amount: e.target.value })} placeholder="0,00" /></div>
                     <div><Label>1ª parcela vence em</Label><input type="date" className={inputCls} value={agree.first} onChange={(e) => setAgree({ ...agree, first: e.target.value })} /></div>
                     <button className={btnCls} type="submit">Criar parcelas</button>
-                    <p className="sm:col-span-4 text-[11px] text-gray-500">Cada parcela vira uma conta a pagar com lembrete. Registrar de novo troca as parcelas que ainda não foram pagas.</p>
+                    <p className="sm:col-span-4 text-[11px] text-gray-500">Cada parcela vira uma conta a pagar com lembrete. Para refazer um acordo, antes dê baixa ou exclua as parcelas pendentes em Contas a pagar.</p>
                   </form>
                 )}
               </li>

@@ -34,12 +34,14 @@ BEGIN
     SELECT * INTO d FROM public.debts WHERE id = p_debt_id AND user_id IN (SELECT public.household_user_ids()) FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'Dívida não encontrada'; END IF;
 
+    -- Nao apaga nada: se ja ha parcelas de acordo a pagar, pede para resolver antes (dar baixa ou excluir em Contas a pagar).
+    IF EXISTS (SELECT 1 FROM public.bills WHERE debt_id = d.id AND status = 'pending') THEN
+        RAISE EXCEPTION 'Esta dívida já tem parcelas de acordo a pagar';
+    END IF;
+
     UPDATE public.debts
        SET status = 'negociada', agreement_installments = p_installments, agreement_amount = p_amount, agreement_first_due = p_first_due
      WHERE id = d.id;
-
-    -- Registrar de novo troca as parcelas ainda nao pagas (as pagas ficam no historico).
-    DELETE FROM public.bills WHERE debt_id = d.id AND status = 'pending';
 
     INSERT INTO public.bills (user_id, description, amount, due_date, type, recurrence, debt_id)
     SELECT d.user_id, 'Acordo: ' || left(d.name, 60) || ' (' || i || '/' || p_installments || ')', p_amount,
