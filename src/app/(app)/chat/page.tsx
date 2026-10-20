@@ -151,7 +151,7 @@ export default function ChatPage() {
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.length === 0 && (
             <div className="text-center text-sm text-gray-500 pt-6">
-              <p className="font-extrabold text-base text-gray-800 dark:text-gray-100 mb-1">Oi! Eu sou o Jakash 👋</p>
+              <p className="font-extrabold text-base text-gray-800 dark:text-gray-100 mb-1">Oi! Eu sou a Jaki 👋</p>
               <p>Eu olho os seus números e respondo. Também posso lançar gastos, criar contas e objetivos e abrir telas: é só pedir.</p>
             </div>
           )}
