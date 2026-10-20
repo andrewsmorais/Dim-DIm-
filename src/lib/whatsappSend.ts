@@ -6,6 +6,8 @@
 //  - sem ele, tenta texto livre (só chega para quem falou com o Jakash nas últimas 24h).
 // Mensagens de modelo iniciadas pela empresa são cobradas pela Meta.
 
+import { sendMessage } from '@/lib/whatsappApi';
+
 export function whatsappConfigured(): boolean {
   return Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
 }
@@ -34,19 +36,12 @@ export async function sendWhatsAppResult(toPhone: string, input: { name: string;
       }
     : { messaging_product: 'whatsapp', to, type: 'text', text: { body: input.text } };
 
-  try {
-    const version = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
-    const res = await fetch(`https://graph.facebook.com/${version}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) console.error('[whatsapp] lembrete recusado', res.status, template ? '(modelo)' : '(texto livre)');
-    return res.ok ? { ok: true, status: res.status, template } : { ok: false, reason: 'rejected', status: res.status, template };
-  } catch (err) {
-    console.error('[whatsapp] falha no envio', (err as Error).message);
-    return { ok: false, reason: 'network', template };
-  }
+  // Versão da Graph API, token e tratamento de erro ficam em whatsappApi.ts.
+  const res = await sendMessage(payload);
+  if (res.ok) return { ok: true, status: res.status, template };
+  if (res.status === 0) return { ok: false, reason: 'network', template };
+  console.error('[whatsapp] lembrete recusado', res.status, template ? '(modelo)' : '(texto livre)');
+  return { ok: false, reason: 'rejected', status: res.status, template };
 }
 
 export async function sendWhatsAppReminder(toPhone: string, input: { name: string; summary: string; text: string }): Promise<boolean> {

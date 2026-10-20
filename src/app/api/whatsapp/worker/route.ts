@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { whatsappGate } from '@/lib/whatsappGate';
+import { sendText } from '@/lib/whatsappApi';
 
 export async function POST(request: Request) {
   try {
@@ -229,22 +230,10 @@ export async function POST(request: Request) {
       // RISK: Meta API is not transactional with our PostgreSQL. 
       // If Meta receives the request but times out responding, the worker will retry 
       // and send a duplicate WhatsApp message to the user.
-      const waRes = await fetch(`https://graph.facebook.com/v17.0/${WA_PHONE_ID}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${WA_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to: phone_number,
-          type: "text",
-          text: { body: ai_response.reply || "Desculpe, não entendi." }
-        })
-      });
+      const waRes = await sendText(phone_number, ai_response.reply || "Desculpe, não entendi.");
 
       if (!waRes.ok) {
-         return await failTask(`WhatsApp API returned ${waRes.status}`);
+         return await failTask(`WhatsApp API returned ${waRes.status}${waRes.errorCode ? ` (code ${waRes.errorCode})` : ''}`);
       }
 
       // Mark as completed securely
