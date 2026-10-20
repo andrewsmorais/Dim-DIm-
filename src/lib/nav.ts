@@ -22,6 +22,7 @@ export const TAB_GROUPS = {
     { label: "Reserva", href: "/reserva" },
     { label: "Investimentos", href: "/investimentos" },
     { label: "Simulador", href: "/simulador" },
+    { label: "Viagem", href: "/viagem" },
   ],
   contas: [
     { label: "Contas bancárias", href: "/contas-bancarias" },

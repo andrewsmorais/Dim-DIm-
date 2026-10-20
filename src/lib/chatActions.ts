@@ -18,6 +18,7 @@ export const CHAT_PAGES = {
   reserva: { path: '/reserva', label: 'Reserva' },
   investimentos: { path: '/investimentos', label: 'Investimentos' },
   simulador: { path: '/simulador', label: 'Simulador' },
+  viagem: { path: '/viagem', label: 'Simulador de viagem' },
   importar: { path: '/importar', label: 'Importar extrato' },
   configuracoes: { path: '/configuracoes', label: 'Configurações' },
   mei: { path: '/mei', label: 'Pacote MEI' },

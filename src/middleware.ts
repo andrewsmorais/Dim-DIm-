@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 // Renova a sessão do Supabase a cada acesso e manda para o login quem não está logado nas telas do app.
 // As rotas /api cuidam da própria autenticação; páginas públicas (landing, login, cadastro, contador, etc.) ficam livres.
-const PROTECTED = ['/dashboard', '/transacoes', '/contas-bancarias', '/cartoes', '/parcelamentos', '/comprar', '/relatorios', '/planejamento', '/limites', '/contas', '/dividas', '/metas', '/reserva', '/investimentos', '/chat', '/importar', '/mei', '/menu', '/categorias', '/configuracoes', '/bem-vindo', '/simulador'];
+const PROTECTED = ['/dashboard', '/transacoes', '/contas-bancarias', '/cartoes', '/parcelamentos', '/comprar', '/viagem', '/relatorios', '/planejamento', '/limites', '/contas', '/dividas', '/metas', '/reserva', '/investimentos', '/chat', '/importar', '/mei', '/menu', '/categorias', '/configuracoes', '/bem-vindo', '/simulador'];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
