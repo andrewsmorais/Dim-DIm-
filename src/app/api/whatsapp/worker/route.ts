@@ -4,6 +4,9 @@ import crypto from 'crypto';
 import { whatsappGate } from '@/lib/whatsappGate';
 import { sendText } from '@/lib/whatsappApi';
 
+const MEDIA_NOT_SUPPORTED_REPLY =
+  "Por enquanto eu só entendo texto 🙂 Me manda assim: \"gastei 35 no almoço\". Foto e áudio estão chegando!";
+
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -59,28 +62,22 @@ export async function POST(request: Request) {
     // --- CHECKPOINT 1: AI Processing ---
     if (!ai_response) {
       const message = raw_payload.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-      
-      let userMessage = "";
-      if (message?.type === "text") {
-        userMessage = message.text.body;
-      } else if (message?.type === "image") {
-        userMessage = "[FOTO RECEBIDA] Leia este recibo.";
-      } else if (message?.type === "audio") {
-        userMessage = "[ÁUDIO RECEBIDO] O usuário enviou um áudio.";
-      } else {
-         await failTask('Unsupported message type', true);
+      if (!message) {
+         await failTask('Malformed payload: no message', true);
          return NextResponse.json({ success: true });
       }
 
+      const isText = message.type === "text" && typeof message.text?.body === "string";
+
       // Vinculação do número: "conectar ABC123" (código gerado no painel). Não usa IA.
-      const linkMatch = message?.type === "text"
+      const linkMatch = isText
         ? String(message.text.body).trim().match(/^(?:conectar|vincular)\s+([A-Za-z0-9]{6})$/i)
         : null;
 
-      // Antes de gastar IA: número desconhecido, assinatura inativa ou limite diário estourado.
-      const gate = linkMatch ? null : await whatsappGate(supabase, phone_number);
-
-      if (linkMatch) {
+      if (message.type === "reaction") {
+        // Reação (👍 numa resposta da Jaki) não é um pedido: conclui sem IA e sem responder.
+        ai_response = { success: false, skipDb: true, silent: true, reply: "" };
+      } else if (linkMatch) {
         const { data: linkResult, error: linkError } = await supabase.rpc('link_whatsapp_number', {
           p_code: linkMatch[1],
           p_phone: phone_number
@@ -93,24 +90,33 @@ export async function POST(request: Request) {
           invalid: "Esse código é inválido ou expirou. Gere um novo no painel e me mande de novo."
         };
         ai_response = { success: false, link: true, reply: linkReplies[String(linkResult)] ?? linkReplies.invalid };
-      } else if (gate) {
-        ai_response = gate;
       } else {
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-        const aiFetchRes = await fetch(`${baseUrl}/api/ai/process-message`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.WORKER_SECRET}`
-          },
-          body: JSON.stringify({ message: userMessage, imageUrl: undefined })
-        });
+        // Antes de gastar IA: número desconhecido, assinatura inativa ou limite diário estourado.
+        const gate = await whatsappGate(supabase, phone_number);
 
-        if (!aiFetchRes.ok) {
-           return await failTask(`AI Service returned ${aiFetchRes.status}`);
+        if (gate) {
+          ai_response = gate;
+        } else if (!isText) {
+          // Foto, áudio, vídeo, documento, figurinha, localização... O app ainda não baixa a mídia da Meta,
+          // então a IA nunca veria o conteúdo. Melhor dizer a verdade do que deixar a IA chutar.
+          ai_response = { success: false, skipDb: true, reply: MEDIA_NOT_SUPPORTED_REPLY };
+        } else {
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+          const aiFetchRes = await fetch(`${baseUrl}/api/ai/process-message`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.WORKER_SECRET}`
+            },
+            body: JSON.stringify({ message: message.text.body, imageUrl: undefined })
+          });
+
+          if (!aiFetchRes.ok) {
+             return await failTask(`AI Service returned ${aiFetchRes.status}`);
+          }
+
+          ai_response = await aiFetchRes.json();
         }
-
-        ai_response = await aiFetchRes.json();
       }
 
       // Persist AI Response using fencing token and strict lease validation
