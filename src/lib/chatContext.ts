@@ -21,21 +21,37 @@ function bounds(today: string) {
 type Cat = { id: string; name: string; type: 'income' | 'expense'; parent_id: string | null };
 type Tx = { description: string; amount: number | string; type: 'income' | 'expense'; date: string; category_id: string | null };
 
+/**
+ * Escopo para quem NÃO tem sessão de usuário (o worker do WhatsApp usa a chave de serviço, que ignora o RLS).
+ * Sem escopo = comportamento do app: roda com a sessão da pessoa e o RLS decide o que ela vê.
+ * Com escopo: toda consulta é filtrada à casa da pessoa e as funções de saldo/fatura/MEI rodam "como" ela.
+ * O `userId` vem do número de WhatsApp vinculado (nunca do texto da mensagem).
+ */
+export type ChatScope = { userId: string; householdIds: string[] };
+
 // Resumo compacto das finanças do usuário (com a sessão dele, então respeita o RLS e a gestão compartilhada).
-export async function buildChatContext(db: SupabaseClient, today: string) {
+export async function buildChatContext(db: SupabaseClient, today: string, scope?: ChatScope) {
   const { start, end, prevStart, in30 } = bounds(today);
+  // Toda tabela com user_id passa por aqui: com escopo, só as linhas da casa.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mine = <Q,>(q: Q): Q => (scope ? (q as any).in('user_id', scope.householdIds) : q);
+  const rpcBalances = () => (scope ? db.rpc('whatsapp_account_balances', { p_user: scope.userId }) : db.rpc('account_balances'));
+  const rpcInvoices = () => (scope ? db.rpc('whatsapp_card_invoice_summary', { p_user: scope.userId }) : db.rpc('card_invoice_summary'));
+  const catQuery = db.from('categories').select('id,name,type,parent_id');
+  const profileQuery = db.from('profiles').select('usage_type,mei_activity,mei_opened_on,mei_annual_limit');
+
   const [c, t, a, b, bd, g, d, k, s, iv, pf] = await Promise.all([
-    db.from('categories').select('id,name,type,parent_id'),
-    db.from('transactions').select('description,amount,type,date,category_id').gte('date', prevStart).lt('date', end).order('date', { ascending: false }).limit(1500),
-    db.rpc('account_balances'),
-    db.from('bills').select('description,amount,due_date,type').eq('status', 'pending').lte('due_date', in30).order('due_date').limit(15),
-    db.from('budgets').select('category_id,amount_limit'),
-    db.from('goals').select('name,target_amount,current_amount').eq('status', 'in_progress').limit(10),
-    db.from('debts').select('name,balance,monthly_rate').eq('archived', false).limit(10),
-    db.from('credit_cards').select('id,name,credit_limit,closing_day,due_day').eq('archived', false).eq('kind', 'credito'),
-    db.rpc('card_invoice_summary'),
-    db.from('investments').select('name,kind,invested,current_value').eq('archived', false).limit(15),
-    db.from('profiles').select('usage_type,mei_activity,mei_opened_on,mei_annual_limit').maybeSingle(),
+    scope ? catQuery.or(`is_default.eq.true,user_id.in.(${scope.householdIds.join(',')})`) : catQuery,
+    mine(db.from('transactions').select('description,amount,type,date,category_id').gte('date', prevStart).lt('date', end).order('date', { ascending: false }).limit(1500)),
+    rpcBalances(),
+    mine(db.from('bills').select('description,amount,due_date,type').eq('status', 'pending').lte('due_date', in30).order('due_date').limit(15)),
+    mine(db.from('budgets').select('category_id,amount_limit')),
+    mine(db.from('goals').select('name,target_amount,current_amount').eq('status', 'in_progress').limit(10)),
+    mine(db.from('debts').select('name,balance,monthly_rate').eq('archived', false).limit(10)),
+    mine(db.from('credit_cards').select('id,name,credit_limit,closing_day,due_day').eq('archived', false).eq('kind', 'credito')),
+    rpcInvoices(),
+    mine(db.from('investments').select('name,kind,invested,current_value').eq('archived', false).limit(15)),
+    (scope ? profileQuery.eq('id', scope.userId) : profileQuery).maybeSingle(),
   ]);
 
   const cats = (c.data ?? []) as Cat[];
@@ -92,7 +108,7 @@ export async function buildChatContext(db: SupabaseClient, today: string) {
 
   const prof = pf.data as { usage_type: string; mei_activity: string; mei_opened_on: string | null; mei_annual_limit: number | string } | null;
   const isMei = prof?.usage_type === 'empresarial' || prof?.usage_type === 'ambos';
-  const mei = isMei && prof ? await meiContext(db, today, prof) : null;
+  const mei = isMei && prof ? await meiContext(db, today, prof, scope) : null;
 
   return {
     hoje: today,
@@ -116,9 +132,9 @@ export async function buildChatContext(db: SupabaseClient, today: string) {
 }
 
 // Números do Pacote MEI (só para quem usa o app para a empresa). Usa as mesmas regras da tela /mei.
-async function meiContext(db: SupabaseClient, today: string, prof: { mei_activity: string; mei_opened_on: string | null; mei_annual_limit: number | string }) {
+async function meiContext(db: SupabaseClient, today: string, prof: { mei_activity: string; mei_opened_on: string | null; mei_annual_limit: number | string }, scope?: ChatScope) {
   const year = Number(today.slice(0, 4));
-  const { data } = await db.rpc('mei_year_summary', { p_year: year });
+  const { data } = scope ? await db.rpc('whatsapp_mei_year_summary', { p_user: scope.userId, p_year: year }) : await db.rpc('mei_year_summary', { p_year: year });
   const sum = toSummary(((data ?? []) as Parameters<typeof toSummary>[0][])[0]);
   const limit = limitForYear(year, Number(prof.mei_annual_limit ?? 81000), prof.mei_opened_on ?? null);
   const p = profitSummary(sum);

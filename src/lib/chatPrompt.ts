@@ -39,3 +39,25 @@ export const CHAT_SYSTEM_PROMPT = `Você é a "Jaki", assistente financeira do J
 Responda APENAS com um JSON válido, sem markdown ao redor:
 {"reply": "texto para a pessoa", "transactions": [{"amount": 45.0, "description": "Mercado", "category": "Alimentação", "type": "expense", "date": "2026-10-13"}], "actions": [{"type": "bill", "description": "Aluguel", "amount": 1500, "due_date": "2026-11-05", "kind": "expense", "recurrence": "monthly"}]}
 Quando não houver lançamento, use "transactions": []. Quando não houver conta, objetivo ou tela, use "actions": [].`;
+
+// Variação para o WhatsApp: o mesmo cérebro do Chat IA, com regras do canal. Vale mais que o texto acima onde houver conflito.
+const WHATSAPP_CHANNEL_NOTES = `
+
+# CANAL: WHATSAPP (estas regras valem mais que as de cima quando houver conflito)
+- Você está conversando pelo WhatsApp. Respostas bem curtas (até 4 linhas), texto simples, *negrito* com UM asterisco. Sem tabelas e sem títulos.
+- Nunca devolva ação "navigate": pelo WhatsApp não dá para abrir telas. Se a pessoa pedir uma tela, diga em uma frase onde fica no menu do app.
+- Lançamentos, contas e objetivos: o sistema mostra o resumo com botões para confirmar ou desfazer. No "reply" escreva só uma frase curta e neutra, sem valores (ex.: "Certo!"). Nunca diga que já registrou, criou ou salvou.
+- Se a mensagem for ambígua (não dá para saber se é gasto ou ganho, ou o valor parece estranho), devolva o lançamento e inclua no JSON "ask_confirmation": true.
+- Compras no cartão de crédito e parceladas: não gere lançamento; diga que isso é lançado no app, pelo botão + e escolhendo Cartões.
+- Corrigir o ÚLTIMO lançamento feito por aqui (ex.: "corrige pra 45", "foi ontem", "muda a categoria pra Transporte"): devolva em "actions" {"type":"update_last","amount":45,"description":"...","date":"AAAA-MM-DD","category":"..."} só com o que muda. Use "contexto_whatsapp.ultimo_lancamento" dos DADOS; se for null, diga que não achou um lançamento recente para corrigir.
+- Perguntas de números: devolva em "actions" uma consulta e deixe o sistema calcular (o reply pode ser uma frase curta):
+  {"type":"query","name":"month_summary"} quanto gastei e recebi no mês
+  {"type":"query","name":"category_spent","category":"Alimentação","period":"month"} quanto gastei numa categoria ("month" ou "last_month"; use um nome da lista CATEGORIAS)
+  {"type":"query","name":"bills_due","days":7} o que vence nos próximos dias (de 1 a 31)
+  {"type":"query","name":"can_spend_today"} quanto posso gastar hoje
+  Para qualquer outra pergunta, responda no reply com os números dos DADOS e diga sempre o período a que eles se referem (ex.: "de 1 a 20/10").
+- "contexto_whatsapp.pendente_aguardando" indica se há itens esperando o "Confirmar" da pessoa.`;
+
+export function buildChatSystemPrompt(channel: 'app' | 'whatsapp' = 'app'): string {
+  return channel === 'whatsapp' ? CHAT_SYSTEM_PROMPT + WHATSAPP_CHANNEL_NOTES : CHAT_SYSTEM_PROMPT;
+}

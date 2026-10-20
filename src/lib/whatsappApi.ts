@@ -66,3 +66,69 @@ export function sendText(to: string, body: string): Promise<SendResult> {
     text: { body },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Mensagens interativas (botões e lista). Limites da Cloud API: até 3 botões (título até 20 caracteres),
+// lista com até 10 linhas (título até 24, descrição até 72), corpo até 1024.
+// ---------------------------------------------------------------------------
+
+export type OutButton = { id: string; title: string };
+export type OutRow = { id: string; title: string; description?: string };
+export type Outgoing =
+  | { kind: 'text'; text: string }
+  | { kind: 'buttons'; text: string; buttons: OutButton[] }
+  | { kind: 'list'; text: string; button: string; rows: OutRow[] };
+
+const clip = (s: string, n: number) => (s.length <= n ? s : `${s.slice(0, n - 1).trimEnd()}…`);
+
+export function buttonsPayload(to: string, body: string, buttons: OutButton[]): Record<string, unknown> {
+  return {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: clip(body, 1024) },
+      action: { buttons: buttons.slice(0, 3).map((b) => ({ type: 'reply', reply: { id: b.id.slice(0, 256), title: clip(b.title, 20) } })) },
+    },
+  };
+}
+
+export function listPayload(to: string, body: string, button: string, rows: OutRow[]): Record<string, unknown> {
+  return {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: clip(body, 1024) },
+      action: {
+        button: clip(button, 20),
+        sections: [{
+          title: 'Escolha uma',
+          rows: rows.slice(0, 10).map((r) => ({
+            id: r.id.slice(0, 200),
+            title: clip(r.title, 24),
+            ...(r.description ? { description: clip(r.description, 72) } : {}),
+          })),
+        }],
+      },
+    },
+  };
+}
+
+export const sendButtons = (to: string, body: string, buttons: OutButton[]) => sendMessage(buttonsPayload(to, body, buttons));
+export const sendList = (to: string, body: string, button: string, rows: OutRow[]) => sendMessage(listPayload(to, body, button, rows));
+
+/**
+ * Envia a resposta no formato certo. Se a Meta recusar a mensagem interativa (erro 4xx), manda o mesmo texto
+ * sem os botões, para a pessoa nunca ficar sem resposta (o texto já diz como responder sem os botões).
+ */
+export async function deliver(to: string, out: Outgoing): Promise<SendResult> {
+  if (out.kind === 'text') return sendText(to, out.text);
+  const res = out.kind === 'buttons' ? await sendButtons(to, out.text, out.buttons) : await sendList(to, out.text, out.button, out.rows);
+  if (!res.ok && res.status >= 400 && res.status < 500) return sendText(to, out.text);
+  return res;
+}

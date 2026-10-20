@@ -29,9 +29,9 @@ export type ChatPageKey = keyof typeof CHAT_PAGES;
 const pageKeys = Object.keys(CHAT_PAGES) as [ChatPageKey, ...ChatPageKey[]];
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
-const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => !Number.isNaN(Date.parse(d)), 'data inválida');
+export const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => !Number.isNaN(Date.parse(d)), 'data inválida');
 // Aceita "45,5" (vírgula decimal) além de 45.5.
-const money = (max: number) =>
+export const money = (max: number) =>
   z.preprocess((v) => (typeof v === 'string' ? v.trim().replace(',', '.') : v), z.coerce.number().positive().max(max)).transform(r2);
 
 export const txSchema = z.object({
@@ -41,7 +41,7 @@ export const txSchema = z.object({
   type: z.enum(['income', 'expense']),
   date,
 });
-const billSchema = z.object({
+export const billSchema = z.object({
   type: z.literal('bill'),
   description: z.string().trim().min(1).max(120),
   amount: money(10_000_000),
@@ -49,7 +49,7 @@ const billSchema = z.object({
   kind: z.enum(['expense', 'income']).default('expense'),
   recurrence: z.enum(['none', 'monthly']).default('none'),
 });
-const goalSchema = z.object({
+export const goalSchema = z.object({
   type: z.literal('goal'),
   name: z.string().trim().min(1).max(80),
   target_amount: money(100_000_000),

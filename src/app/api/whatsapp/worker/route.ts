@@ -2,7 +2,16 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { whatsappGate } from '@/lib/whatsappGate';
-import { sendText } from '@/lib/whatsappApi';
+import { deliver } from '@/lib/whatsappApi';
+import { decide, type InboundMessage } from '@/lib/whatsappBrain';
+import { composeOutgoing, type StoredResponse } from '@/lib/whatsappReply';
+
+// Busca de contexto + IA podem levar alguns segundos; a fila dá 45 s de prazo por tentativa.
+export const maxDuration = 60;
+
+function todayInSaoPaulo(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+}
 
 const MEDIA_NOT_SUPPORTED_REPLY =
   "Por enquanto eu só entendo texto 🙂 Me manda assim: \"gastei 35 no almoço\". Foto e áudio estão chegando!";
@@ -96,26 +105,20 @@ export async function POST(request: Request) {
 
         if (gate) {
           ai_response = gate;
-        } else if (!isText) {
+        } else if (message.type !== 'text' && message.type !== 'interactive') {
           // Foto, áudio, vídeo, documento, figurinha, localização... O app ainda não baixa a mídia da Meta,
           // então a IA nunca veria o conteúdo. Melhor dizer a verdade do que deixar a IA chutar.
           ai_response = { success: false, skipDb: true, reply: MEDIA_NOT_SUPPORTED_REPLY };
         } else {
-          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-          const aiFetchRes = await fetch(`${baseUrl}/api/ai/process-message`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.WORKER_SECRET}`
-            },
-            body: JSON.stringify({ message: message.text.body, imageUrl: undefined })
-          });
-
-          if (!aiFetchRes.ok) {
-             return await failTask(`AI Service returned ${aiFetchRes.status}`);
+          // Quem é a pessoa vem do número vinculado (o gate acabou de confirmar que existe), nunca do texto.
+          const { data: owner } = await supabase.from('profiles').select('id').eq('whatsapp_number', phone_number).maybeSingle();
+          if (!owner) return await failTask('Profile vanished after gate', true);
+          try {
+            ai_response = await decide({ admin: supabase, userId: owner.id, message: message as InboundMessage, today: todayInSaoPaulo() });
+          } catch (err) {
+            // Sem texto da mensagem nem dados da pessoa no log; a fila tenta de novo com espera crescente.
+            return await failTask(`Brain failed: ${err instanceof Error ? err.name : 'error'}`);
           }
-
-          ai_response = await aiFetchRes.json();
         }
       }
 
@@ -149,7 +152,28 @@ export async function POST(request: Request) {
       db_synced = true;
     }
 
-    if (!db_synced) {
+    // Resposta do "cérebro" novo: uma única chamada ao banco grava (ou confirma, cancela, desfaz, corrige) de forma
+    // idempotente e já guarda o resultado em ai_response.result, que é a base da resposta ao usuário.
+    if (!db_synced && ai_response?.v === 2) {
+      const { data: owner } = await supabase.from('profiles').select('id').eq('whatsapp_number', phone_number).maybeSingle();
+      if (!owner) {
+        ai_response = { success: false, skipDb: true, reply: "Seu número não está cadastrado. Acesse o painel do Jakash e ative seu WhatsApp! 📱" };
+      } else {
+        const { data: result, error: opError } = await supabase.rpc('whatsapp_run_op', {
+          p_task_id: taskId,
+          p_worker_id: workerId,
+          p_user_id: owner.id,
+          p_op: ai_response.op,
+          p_user_message: ai_response.userText ?? '',
+          p_reply_text: ai_response.historyText ?? ''
+        });
+        if (opError) return await failTask(`Operation failed: ${opError.message}`);
+        ai_response = { ...ai_response, result };
+        db_synced = true;
+      }
+    }
+
+    if (!db_synced && ai_response?.v !== 2) {
       // Get user profile
       const { data: profile } = await supabase
         .from('profiles')
@@ -236,7 +260,7 @@ export async function POST(request: Request) {
       // RISK: Meta API is not transactional with our PostgreSQL. 
       // If Meta receives the request but times out responding, the worker will retry 
       // and send a duplicate WhatsApp message to the user.
-      const waRes = await sendText(phone_number, ai_response.reply || "Desculpe, não entendi.");
+      const waRes = await deliver(phone_number, composeOutgoing(ai_response as StoredResponse));
 
       if (!waRes.ok) {
          return await failTask(`WhatsApp API returned ${waRes.status}${waRes.errorCode ? ` (code ${waRes.errorCode})` : ''}`);
