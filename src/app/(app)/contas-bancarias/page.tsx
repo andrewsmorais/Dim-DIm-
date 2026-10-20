@@ -9,8 +9,9 @@ import { WhoBadge } from "@/components/WhoBadge";
 import { brl, parseMoney } from "@/lib/format";
 import { BackTitle, Card, Label, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 import { SectionTabs } from "@/components/SectionTabs";
+import { InstitutionBadge, InstitutionSelect } from "@/components/InstitutionBadge";
 
-type Row = { id: string; user_id: string; name: string; kind: string; initial_balance: number; archived: boolean };
+type Row = { id: string; user_id: string; name: string; kind: string; initial_balance: number; archived: boolean; institution: string | null };
 type Bal = { id: string; balance: number };
 
 const KINDS: Record<string, { label: string; icon: typeof Landmark }> = {
@@ -29,11 +30,11 @@ export default function ContasBancariasPage() {
   const [bal, setBal] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | "new" | null>(null);
-  const [form, setForm] = useState({ name: "", kind: "corrente", balance: "" });
+  const [form, setForm] = useState({ name: "", kind: "corrente", balance: "", institution: "" });
 
   const load = useCallback(async () => {
     const [a, b] = await Promise.all([
-      supabase.from("accounts").select("id,user_id,name,kind,initial_balance,archived").order("created_at"),
+      supabase.from("accounts").select("id,user_id,name,kind,initial_balance,archived,institution").order("created_at"),
       supabase.rpc("account_balances"),
     ]);
     if (a.error || b.error) { setError("Não foi possível carregar as contas."); return; }
@@ -53,22 +54,22 @@ export default function ContasBancariasPage() {
   const total = rows.filter((r) => !r.archived).reduce((s, r) => s + (bal[r.id] ?? 0), 0);
   const activeCount = rows.filter((r) => !r.archived).length;
 
-  function openNew() { setForm({ name: "", kind: "corrente", balance: "" }); setEditing("new"); setError(null); }
-  function openEdit(r: Row) { setForm({ name: r.name, kind: r.kind, balance: String(bal[r.id] ?? 0).replace(".", ",") }); setEditing(r.id); setError(null); }
+  function openNew() { setForm({ name: "", kind: "corrente", balance: "", institution: "" }); setEditing("new"); setError(null); }
+  function openEdit(r: Row) { setForm({ name: r.name, kind: r.kind, balance: String(bal[r.id] ?? 0).replace(".", ","), institution: r.institution ?? "" }); setEditing(r.id); setError(null); }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     const typed = form.balance.trim() === "" ? 0 : parseMoney(form.balance);
     if (!form.name.trim() || Number.isNaN(typed)) { setError("Informe um nome e um saldo válidos."); return; }
     if (editing === "new") {
-      const { error: err } = await supabase.from("accounts").insert({ user_id: userId, name: form.name.trim(), kind: form.kind, initial_balance: typed });
+      const { error: err } = await supabase.from("accounts").insert({ user_id: userId, name: form.name.trim(), kind: form.kind, initial_balance: typed, institution: form.institution || null });
       if (err) { setError("Não foi possível salvar."); return; }
     } else if (editing) {
       const cur = rows.find((r) => r.id === editing);
       if (!cur) return;
       // Ajusta o saldo inicial para que o saldo atual fique igual ao valor informado.
       const initial = Math.round((cur.initial_balance + (typed - (bal[cur.id] ?? 0))) * 100) / 100;
-      const { error: err } = await supabase.from("accounts").update({ name: form.name.trim(), kind: form.kind, initial_balance: initial }).eq("id", editing);
+      const { error: err } = await supabase.from("accounts").update({ name: form.name.trim(), kind: form.kind, initial_balance: initial, institution: form.institution || null }).eq("id", editing);
       if (err) { setError("Não foi possível salvar."); return; }
     }
     setEditing(null);
@@ -110,7 +111,7 @@ export default function ContasBancariasPage() {
           return (
             <Card key={r.id} className="!p-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-brand-dark/10 dark:bg-[#262626] text-brand-dark dark:text-brand-soft flex items-center justify-center shrink-0"><K.icon size={22} /></div>
+                <InstitutionBadge institution={r.institution} name={r.name} size={48} />
                 <div className="min-w-0 flex-1">
                   <p className="font-extrabold truncate">{r.name}</p>
                   <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{K.label}<WhoBadge name={nameOf(r.user_id)} /></p>
@@ -139,6 +140,7 @@ export default function ContasBancariasPage() {
               <select className={inputCls} value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
                 {Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
               </select></div>
+            <InstitutionSelect value={form.institution} onChange={(v) => setForm({ ...form, institution: v })} name={form.name} />
             <div><Label>{editing === "new" ? "Saldo atual" : "Saldo atual (ajusta o valor da conta)"}</Label><input className={inputCls} inputMode="decimal" value={form.balance} onChange={(e) => setForm({ ...form, balance: e.target.value })} placeholder="0,00" /></div>
             <ErrorNote message={error} />
             <div className="flex gap-2"><button type="button" onClick={() => setEditing(null)} className={btnGhostCls + " flex-1 !py-3"}>Cancelar</button><button className={btnCls + " flex-1"} type="submit">Salvar</button></div>

@@ -2,20 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Archive, ArchiveRestore, ChevronRight, CreditCard, Landmark, Layers, Pencil, Plus } from "lucide-react";
+import { Archive, ArchiveRestore, ChevronRight, Layers, Pencil, Plus } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useCards, type Card as CardRow } from "@/lib/useCards";
 import { useHideValues } from "@/lib/useHideValues";
 import { brl, parseMoney, todayISO, formatDateBR } from "@/lib/format";
 import { BRANDS, cardUsed, dueDateFor, invoiceMonthFor, invoiceStatus, shiftInvoiceMonth } from "@/lib/cards";
 import { InvoiceChip } from "@/components/CardBits";
+import { InstitutionBadge, InstitutionSelect } from "@/components/InstitutionBadge";
 import { WhoBadge } from "@/components/WhoBadge";
 import { usePartnership } from "@/lib/usePartnership";
 import { BackTitle, Card, Label, Empty, ErrorNote, Progress, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 import { SectionTabs } from "@/components/SectionTabs";
 
 type Acc = { id: string; name: string };
-const EMPTY_FORM = { kind: "credito" as "credito" | "debito", name: "", brand: "outro", limit: "", closing: "", due: "", pay_account_id: "" };
+const EMPTY_FORM = { kind: "credito" as "credito" | "debito", name: "", brand: "outro", limit: "", closing: "", due: "", pay_account_id: "", institution: "" };
 
 export default function CartoesPage() {
   const { supabase, userId, ready } = useSupabase();
@@ -62,7 +63,7 @@ export default function CartoesPage() {
 
   function openNew() { setForm(EMPTY_FORM); setEditing("new"); setError(null); setConfirmDelete(false); }
   function openEdit(c: CardRow) {
-    setForm({ kind: c.kind, name: c.name, brand: c.brand, limit: String(c.credit_limit).replace(".", ","), closing: String(c.closing_day), due: String(c.due_day), pay_account_id: c.pay_account_id ?? "" });
+    setForm({ kind: c.kind, name: c.name, brand: c.brand, limit: String(c.credit_limit).replace(".", ","), closing: String(c.closing_day), due: String(c.due_day), pay_account_id: c.pay_account_id ?? "", institution: c.institution ?? "" });
     setEditing(c.id); setError(null); setConfirmDelete(false);
   }
 
@@ -74,7 +75,7 @@ export default function CartoesPage() {
       // Débito não tem limite nem fatura: só precisa da conta de onde o dinheiro sai (1 e 10 são valores de enchimento, ignorados).
       if (!form.name.trim()) { setError("Informe o nome do cartão."); return; }
       if (!form.pay_account_id) { setError("Escolha a conta de onde o débito sai."); return; }
-      payload = { kind: "debito", name: form.name.trim(), brand: form.brand, credit_limit: 0, closing_day: 1, due_day: 10, pay_account_id: form.pay_account_id };
+      payload = { kind: "debito", name: form.name.trim(), brand: form.brand, credit_limit: 0, closing_day: 1, due_day: 10, pay_account_id: form.pay_account_id, institution: form.institution || null };
     } else {
       const limit = form.limit.trim() === "" ? 0 : parseMoney(form.limit);
       const closing = Number(form.closing);
@@ -83,7 +84,7 @@ export default function CartoesPage() {
       if (!Number.isInteger(closing) || closing < 1 || closing > 31 || !Number.isInteger(due) || due < 1 || due > 31) {
         setError("Fechamento e vencimento devem ser dias entre 1 e 31."); return;
       }
-      payload = { kind: "credito", name: form.name.trim(), brand: form.brand, credit_limit: limit, closing_day: closing, due_day: due, pay_account_id: form.pay_account_id || null };
+      payload = { kind: "credito", name: form.name.trim(), brand: form.brand, credit_limit: limit, closing_day: closing, due_day: due, pay_account_id: form.pay_account_id || null, institution: form.institution || null };
     }
     const res = editing === "new"
       ? await supabase.from("credit_cards").insert({ ...payload, user_id: userId })
@@ -141,7 +142,7 @@ export default function CartoesPage() {
             return (
               <Card key={c.id} className="!p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0"><Landmark size={22} /></div>
+                  <InstitutionBadge institution={c.institution} name={c.name} size={48} />
                   <div className="min-w-0 flex-1">
                     <p className="font-extrabold truncate flex items-center gap-2">{c.name}<span className="rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-bold">Débito</span></p>
                     <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{BRANDS[c.brand] ?? "Outro"} · sai da conta {accName ?? "vinculada"}<WhoBadge name={nameOf(c.user_id)} /></p>
@@ -174,7 +175,7 @@ export default function CartoesPage() {
           return (
             <Card key={c.id} className="!p-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-brand-dark/10 dark:bg-[#262626] text-brand-dark dark:text-brand-soft flex items-center justify-center shrink-0"><CreditCard size={22} /></div>
+                <InstitutionBadge institution={c.institution} name={c.name} size={48} />
                 <div className="min-w-0 flex-1">
                   <p className="font-extrabold truncate">{c.name}</p>
                   <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{BRANDS[c.brand] ?? "Outro"} · fecha dia {c.closing_day} · vence dia {c.due_day}<WhoBadge name={nameOf(c.user_id)} /></p>
@@ -242,6 +243,7 @@ export default function CartoesPage() {
               <p className="text-xs font-bold text-gray-500">Cartão de {form.kind === "debito" ? "débito" : "crédito"}</p>
             )}
             <div><Label>Nome do cartão</Label><input autoFocus className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Nubank" /></div>
+            <InstitutionSelect value={form.institution} onChange={(v) => setForm({ ...form, institution: v })} name={form.name} />
             {form.kind === "credito" ? (
               <>
                 <div className="grid grid-cols-2 gap-3">

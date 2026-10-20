@@ -14,13 +14,14 @@ import { brl, currentMonth, monthRange, formatDateBR, daysUntil, todayISO } from
 import { Card, Progress, Empty, MonthNav } from "@/components/ui/page";
 import { FirstWeek } from "@/components/growth/FirstWeek";
 import { HomeShortcuts } from "@/components/HomeShortcuts";
+import { InstitutionBadge } from "@/components/InstitutionBadge";
 import { MonthlyInsight } from "@/components/growth/MonthlyInsight";
 
 type Tx = { id: string; description: string; amount: number; type: "income" | "expense"; date: string; category_id: string | null };
 type Bill = { id: string; description: string; amount: number; due_date: string; type: "income" | "expense" };
 type Goal = { id: string; name: string; icon: string | null; target_amount: number; current_amount: number };
 type Budget = { id: string; category_id: string | null; amount_limit: number };
-type Account = { id: string; name: string; kind: string; balance: number };
+type Account = { id: string; name: string; kind: string; balance: number; institution?: string | null };
 
 const COLORS = ["#5B5BF0", "#8B5CF6", "#38BDF8", "#F59E0B", "#10B981", "#EC4899", "#94A3B8"];
 type Tab = "expense" | "income" | "pending";
@@ -66,7 +67,7 @@ export default function DashboardPage() {
     const isCurrent = month === currentMonth() && !day;
     let billsQ = supabase.from("bills").select("id,description,amount,due_date,type").eq("status", "pending").lt("due_date", end).order("due_date");
     if (!isCurrent) billsQ = billsQ.gte("due_date", start);
-    const [p, t, c, b, g, bd, a, iv] = await Promise.all([
+    const [p, t, c, b, g, bd, a, iv, ai] = await Promise.all([
       supabase.from("profiles").select("full_name,onboarding_completed").maybeSingle(),
       supabase.from("transactions").select("id,description,amount,type,date,category_id").gte("date", start).lt("date", end).order("date", { ascending: false }).limit(1000),
       supabase.from("categories").select("id,name,parent_id"),
@@ -75,6 +76,7 @@ export default function DashboardPage() {
       supabase.from("budgets").select("id,category_id,amount_limit"),
       supabase.rpc("account_balances"),
       supabase.from("investments").select("invested,current_value").eq("archived", false),
+      supabase.from("accounts").select("id,institution"),
     ]);
     setError(Boolean(t.error || c.error || b.error));
     setName((p.data?.full_name ?? "").split(" ")[0]);
@@ -84,7 +86,8 @@ export default function DashboardPage() {
     setBills(((b.data ?? []) as Bill[]).map((x) => ({ ...x, amount: Number(x.amount) })));
     setGoals(((g.data ?? []) as Goal[]).map((x) => ({ ...x, target_amount: Number(x.target_amount), current_amount: Number(x.current_amount ?? 0) })));
     setBudgets(((bd.data ?? []) as Budget[]).map((x) => ({ ...x, amount_limit: Number(x.amount_limit) })));
-    setAccounts(((a.data ?? []) as Account[]).map((x) => ({ ...x, balance: Number(x.balance) })));
+    const instById = new Map(((ai.data ?? []) as { id: string; institution: string | null }[]).map((x) => [x.id, x.institution]));
+    setAccounts(((a.data ?? []) as Account[]).map((x) => ({ ...x, balance: Number(x.balance), institution: instById.get(x.id) ?? null })));
     const ivRows = (iv.data ?? []) as { invested: number; current_value: number }[];
     setInv({ value: ivRows.reduce((s, r) => s + Number(r.current_value), 0), invested: ivRows.reduce((s, r) => s + Number(r.invested), 0), count: ivRows.length });
   }, [supabase, month, day, router]);
@@ -177,7 +180,7 @@ export default function DashboardPage() {
             <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
               {accounts.map((a) => (
                 <li key={a.id} className="flex items-center justify-between py-3">
-                  <span className="font-bold">{a.name}</span>
+                  <span className="font-bold flex items-center gap-3 min-w-0"><InstitutionBadge institution={a.institution} name={a.name} size={36} /><span className="truncate">{a.name}</span></span>
                   <span className="text-right"><span className="block text-[10px] text-gray-400">Saldo atual</span><span className="font-extrabold">{money(brl(a.balance))}</span></span>
                 </li>
               ))}
@@ -204,7 +207,7 @@ export default function DashboardPage() {
                 return (
                   <li key={c.id}>
                     <Link href={`/cartoes/${c.id}?m=${im.slice(0, 7)}`} className="flex items-center justify-between py-3 gap-3">
-                      <span className="min-w-0"><span className="block font-bold truncate">{c.name}</span><span className="block text-xs text-gray-500">Vence {formatDateBR(dueDateFor(c, im))}</span></span>
+                      <span className="min-w-0 flex items-center gap-3"><InstitutionBadge institution={c.institution} name={c.name} size={36} /><span className="min-w-0"><span className="block font-bold truncate">{c.name}</span><span className="block text-xs text-gray-500">Vence {formatDateBR(dueDateFor(c, im))}</span></span></span>
                       <span className="text-right shrink-0"><span className="block font-extrabold">{money(brl(toPay))}</span><InvoiceChip status={invoiceStatus(c, im, total, row?.paid ?? 0, today)} /></span>
                     </Link>
                   </li>

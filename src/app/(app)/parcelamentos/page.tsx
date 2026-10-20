@@ -10,6 +10,7 @@ import { usePartnership } from "@/lib/usePartnership";
 import { brl, monthLabel, todayISO, formatDateBR } from "@/lib/format";
 import { activePlans, buildPlans, buildTimeline, missingInstallmentRows, monthlyCommitted, nextRelief, totalRemaining, type InstallmentRow } from "@/lib/installments";
 import { WhoBadge } from "@/components/WhoBadge";
+import { InstitutionBadge } from "@/components/InstitutionBadge";
 import { BackTitle, Card, Empty, ErrorNote, Progress, btnCls } from "@/components/ui/page";
 import { SectionTabs } from "@/components/SectionTabs";
 
@@ -129,9 +130,12 @@ export default function ParcelamentosPage() {
               return (
                 <Card key={p.group} className="!p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-extrabold truncate">{p.name}</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{cardName(p.cardId)}<WhoBadge name={nameOf(p.userId)} /></p>
+                    <div className="min-w-0 flex items-center gap-3">
+                      <InstitutionBadge institution={cards.find((c) => c.id === p.cardId)?.institution} name={cardName(p.cardId)} size={40} />
+                      <div className="min-w-0">
+                        <p className="font-extrabold truncate">{p.name}</p>
+                        <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{cardName(p.cardId)}<WhoBadge name={nameOf(p.userId)} /></p>
+                      </div>
                     </div>
                     <p className="font-extrabold shrink-0">{money(brl(p.perInstallment))}<span className="text-xs font-bold text-gray-400">/mês</span></p>
                   </div>
