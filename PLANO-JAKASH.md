@@ -8,7 +8,7 @@
 
 ## 0. Regras para o agente que vai executar
 
-1. Trabalhe **na ordem das fases**. Não comece uma fase sem a anterior cumprir o critério de pronto, exceto onde a fase disser que pode correr em paralelo.
+1. Trabalhe **na ordem de execução da seção 0.1** (que não é a ordem dos números das fases). Não comece uma fase sem a anterior cumprir o critério de pronto, exceto onde a fase disser que pode correr em paralelo.
 2. **Um commit por item numerado** (ex.: `1.2`), com mensagem dizendo o item. Ao fim de cada fase: `npm run build` e `npx tsc --noEmit` sem erro.
 3. **Migrations:** sempre em `supabase/migrations/AAAAMMDDHHMMSS_nome.sql` com o arquivo `_down.sql` correspondente (padrão já usado no repo). Toda tabela nova tem RLS do dono **e** a política da casa usando `public.household_user_ids()` (modelo: `20261015020000_shared_policies_balances.sql`). **Não aplique migration no banco de produção** (projeto Supabase `sogeaffujqmrrzuhrtao`) sem mostrar o SQL ao fundador e ele aprovar.
 4. **Não mexa no painel da Meta**, nem em variáveis da Vercel. Quando precisar, escreva o passo para o fundador fazer.
@@ -16,7 +16,23 @@
 6. **Reaproveite os nomes de variável que já existem** (não crie os nomes sugeridos pela Manus): `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `META_APP_SECRET`, `WHATSAPP_GRAPH_VERSION`, `WHATSAPP_BOT_NUMBER`, `WHATSAPP_REMINDER_TEMPLATE`, `WHATSAPP_REMINDER_LANG`, `WORKER_SECRET`, `NEXT_PUBLIC_SITE_URL`.
 7. **Não apague rotas/telas.** Simplificar = mudar menu, nomes e agrupar em abas. Rota antiga continua abrindo.
 8. Textos de tela em português do Brasil, frases curtas. Nunca prometer "limpar o nome", rendimento ou aprovação de crédito.
-9. Ao terminar cada fase, atualize a seção **13. Status** no fim deste arquivo.
+9. Ao terminar cada fase, atualize a seção **16. Status** no fim deste arquivo.
+10. **Regra de custo (decisão do fundador):** não contratar nem adicionar serviço, SDK ou plano **pago** novo sem aprovação por escrito. O custo variável que já existe (OpenAI, mensagens da Meta, Vercel, Supabase) continua, mas toda funcionalidade que o aumente precisa **declarar o custo** e ter teto: usar `gpt-4o-mini` (e o modelo de transcrição mais barato disponível) por padrão, contar foto e áudio no limite diário por plano, e preferir conta feita em código a chamar a IA.
+
+### 0.1 Ordem de execução
+
+| Ordem | Fase | Por que nessa posição |
+|---|---|---|
+| 1 | Fase 1 — WhatsApp ponta a ponta | feita no código; falta validar com mensagem real |
+| 2 | Fase 2 — Conversa confiável | cria o motor único e o mecanismo de confirmação que as próximas usam |
+| 3 | Fase 6 — Foto, áudio e boleto | usa a confirmação da Fase 2; é o pedido de maior valor do fundador |
+| 4 | Fase 3 — App mais simples | arruma o menu antes de colocar telas novas |
+| 5 | Fase 4 — Comprar | |
+| 6 | Fase 5 — Sair do vermelho + guardar | |
+| 7 | Fase 7 — Parcelas e cartões | |
+| 8 | Fase 8 — Simulador de viagem | usa as parcelas da Fase 7 para mostrar o efeito no orçamento |
+| 9 | Fase 9 — Contas, ícones e conexão bancária | |
+| 10 | Fase 10 — Piloto, métricas e preço | |
 
 ---
 
@@ -61,10 +77,12 @@ A Manus marcou vários itens como "não comprovados" porque não teve acesso ao 
 **Posicionamento proposto (junta Manus + fundador):**
 > "A Jaki cuida do seu dinheiro pelo WhatsApp: anota o gasto, avisa a conta, monta sua lista de mercado e te ajuda a sair das dívidas. E, se você é MEI, separa o dinheiro da empresa do seu."
 
+**Visão do fundador (vale mais que a Manus):** a ideia desde o começo é um **app completo**, que dê valor além de anotar gasto: ler boleto, cupom e comprovante por foto; entender áudio; mostrar quando cada parcelamento acaba e quanto o orçamento libera; simular uma viagem; avisar a data do cartão e das contas; mostrar cada conta e cartão com o ícone do banco. O relatório da Manus é uma **fonte de ideias e de riscos**, não um roteiro a cumprir 100%. Onde ele manda "não acrescente funções" (por exemplo, para adiar Open Finance e OCR), vale a decisão do fundador, com os cuidados descritos em cada fase.
+
 **Onde a Manus e o fundador discordam, e a decisão:**
 - A Manus pede um único público. O fundador quer cidadão comum **e** empreendedor. **Decisão:** um app só, com dois modos que já existem no código (`usage_type`: pessoal / empresarial / ambos). Cada modo tem um início e um menu próprios. Campanhas e métricas medem cada público **separado**, como pede a Manus.
 - A Manus diz "não acrescente funções grandes agora". O fundador quer **Comprar** e **Sair do vermelho**. **Decisão:** as duas entram, mas **depois** das Fases 1 e 2 (WhatsApp funcionando e confiável). São médias e reaproveitam tabelas existentes.
-- A Manus deixa para depois Pix, pagamentos, crédito, Open Finance e nota fiscal. **Concordo, e fica fora deste plano.** "Sair do vermelho" é organizar as próprias dívidas, não oferecer crédito nem cobrar ninguém.
+- A Manus deixa para depois Pix, pagamentos, crédito, Open Finance e nota fiscal. **Concordo para Pix, pagamentos, crédito e nota fiscal: ficam fora deste plano.** O Open Finance **vai entrar no futuro**, mas sem gastar nada agora (Fase 9, item 9.4). "Sair do vermelho" é organizar as próprias dívidas, não oferecer crédito nem cobrar ninguém.
 
 ---
 
@@ -273,29 +291,81 @@ Modelo/esforço: **Sonnet 5.5, alto.**
 6.4 **Privacidade e custo:** não guardar a mídia (só o texto extraído); contar foto e áudio no limite diário de mensagens; colocar um teto por plano.
 6.5 Tirar o "Em breve" de `src/app/bem-vindo/page.tsx` e atualizar a página de vendas.
 
-**Pronto quando:** a foto de um cupom e um áudio de 10 s geram o lançamento certo com confirmação, e nada da mídia fica salvo.
+6.6 **Boleto (foto ou PDF) vira conta a pagar, não gasto.** Extrair beneficiário, valor, vencimento e a linha digitável (47 ou 48 dígitos). **Validar os dígitos verificadores da linha digitável em código** e comparar o valor dela com o valor lido da imagem: se divergirem, mostrar os dois e pedir para a pessoa escolher. Criar em `bills` com o vencimento, para entrar no alerta que já existe. Se faltar o vencimento na foto, perguntar.
+6.7 **Cupom ou nota fiscal** vira despesa: total, estabelecimento, data e categoria sugerida entre as categorias reais da pessoa.
+6.8 **Comprovante de pagamento ou de Pix:** procurar uma conta a pagar pendente com o mesmo valor e vencimento próximo e oferecer **dar baixa** nela (`mark_bill_paid`); se não houver, lançar como despesa.
+6.9 **Sempre confirmar antes de gravar** foto e áudio (botões "Confirmar" e "Corrigir"), mostrando o que a IA leu. Reaproveitar o motor de leitura de `src/app/api/import/extract/route.ts` e `src/lib/importer.ts`; não escrever um segundo leitor.
+
+**Pronto quando:** a foto de um boleto vira uma conta a pagar com o vencimento certo, a de um cupom vira uma despesa e um áudio de 10 s vira o lançamento certo, tudo com confirmação, sem guardar a mídia.
 
 ---
 
-## 11. Fase 7 — Piloto, métricas e preço
+## 11. Fase 7 — Parcelas e cartões
+
+Modelo/esforço: **Sonnet 5.5, alto** (datas e valores).
+
+**O que a pessoa vê:** cada compra parcelada com o **produto**, o cartão, a parcela atual ("4 de 12"), o valor da parcela, quanto ainda falta pagar e **quando termina** ("última parcela em 20/12/2026"), e quanto o orçamento **libera por mês** depois disso.
+
+**Dados:** já existem. Cada parcela é uma linha de `transactions` com `installment_group`, `installment_number` e `installment_total` (`buildCardPurchase` em `src/lib/cards.ts`), e o produto é o `description`. Não precisa de tabela nova. Se ficar lento, criar uma função SQL `installment_plans()` (aditiva, com o mesmo RLS e a política da casa).
+
+7.1 **Tela "Parcelamentos"** (aba dentro de "Contas e cartões"): lista agrupada por `installment_group`, ordenada por quem termina primeiro. Mostra produto, cartão, "x de y", valor da parcela, total que falta e a data da última parcela.
+7.2 **Linha do tempo** dos próximos 12 meses: quanto de parcela cai em cada mês e onde o valor **diminui** ("em mar/2027 caem R$ 480 por mês"). Só conta em código, sem IA.
+7.3 **Alertas** (no cron de lembretes que já existe, sem repetir aviso, usando `notification_log`): "faltam 3 parcelas de [produto]"; "a última parcela de [produto] vence dia 20/12 e, a partir de janeiro, você libera R$ 150 por mês". A fatura do cartão a vencer já tem aviso; conferir que o texto diz o número de dias.
+7.4 **Compras importadas** entram como um lançamento só (o importador não separa parcelas). Permitir a pessoa informar "parcelas restantes" para elas aparecerem aqui.
+7.5 **Jaki:** "quais são minhas parcelas?", "quando acaba o parcelamento do celular?", "quanto vou liberar em janeiro?".
+
+**Pronto quando:** uma compra de R$ 1.200 em 12x aparece com o produto, "5 de 12", a data da última parcela e o valor que libera depois, e o aviso chega antes da última parcela.
+
+---
+
+## 12. Fase 8 — Simulador de viagem
+
+Modelo/esforço: **Sonnet 5.5, médio**.
+
+Reaproveita `GOAL_TYPES.viagem` (`src/lib/planner.ts`), `requiredMonthly` e `allowance` (`src/lib/planning.ts`).
+
+8.1 **Formulário:** destino, datas, número de pessoas e custos por categoria (transporte, hospedagem, alimentação, passeios, seguro, outros), com **folga de 10 a 15% editável** para imprevistos.
+8.2 **Resultado (em código):** custo total, **quanto guardar por mês** até a data e se isso cabe na sobra real do mês (`allowance` e compromissos já cadastrados). Mostrar 2 ou 3 cenários lado a lado (outra data, menos dias, outra faixa de custo).
+8.3 **Parcelar no cartão:** mostrar como a viagem parcelada ocupa os meses seguintes, junto com as parcelas da Fase 7.
+8.4 **Botão "Criar objetivo da viagem":** cria o objetivo (`goals`, tipo viagem) com a data e o aporte mensal sugerido, ligado às marcas e à sequência da Fase 5.
+8.5 **Jaki:** "quero ir pra Salvador em julho, 4 pessoas". A IA monta um **rascunho** com faixas de custo que a pessoa edita. Rotular como **estimativa**, nunca como preço de passagem ou hotel (o app não consulta preço real nem vende viagem). As contas continuam em código.
+
+**Pronto quando:** a pessoa simula uma viagem, vê quanto guardar por mês e se cabe, e cria o objetivo em um toque.
+
+---
+
+## 13. Fase 9 — Contas, ícones e conexão bancária
+
+Modelo/esforço: ícones **Sonnet 5.5, médio**; a escolha do provedor de conexão bancária **Opus 5.5, alto**.
+
+9.1 **Ícone de banco e de cartão.** Hoje não existe nenhum (`BRANDS` em `src/lib/cards.ts` só guarda nomes e `public/` só tem o logo do Jakash). Criar `src/lib/institutions.ts` (chave, nome, cor, iniciais) e uma coluna aditiva `institution` (texto, opcional) em `accounts` e `credit_cards`. O seletor aparece ao criar a conta ou o cartão.
+9.2 **Visual "realista" sem violar marca:** o padrão é um selo limpo com a **cor e as iniciais** da instituição. Logos oficiais só quando a origem for **autorizada** (arquivos fornecidos por um provedor de conexão bancária ao conectar, ou liberação/guia de marca do próprio banco ou bandeira). **Não gerar imitações de logos de banco com IA**: ficam imprecisas e podem ser usadas como marca de terceiros. Conferir as regras de uso de marca de cada bandeira (Visa, Mastercard, Elo) antes de publicar.
+9.3 Mostrar o ícone em Contas, Cartões, Lançamentos, Parcelamentos e no Início.
+9.4 **Conexão bancária (Open Finance): FUTURO, fora da execução atual.** Decisão do fundador em 20/10/2026: vai entrar no app mais tarde, mas **não se investe agora em nada que aumente o custo do app**. Portanto: nenhum provedor, contrato, SDK ou assinatura paga entra neste ciclo, e o agente **não deve começar a implementar**. O que fica pronto desde já, sem custo: o campo `institution` e o seletor da 9.1, que serão a base quando a conexão chegar. Quando o fundador decidir retomar, abrir uma fase própria que comece por pesquisa (preço por conexão, bancos cobertos, termos de uso dos dados, logos fornecidos) e só depois código, **somente leitura**, com conciliação para não duplicar lançamentos e saída manual se a conexão cair.
+
+**Pronto quando:** cada conta e cartão aparece com o selo da instituição em todas as telas, sem nenhum serviço pago novo.
+
+---
+
+## 14. Fase 10 — Piloto, métricas e preço
 
 - Métricas: **Sonnet 5.5, médio**.
 - Análise de preço: **Opus 5.5, alto**.
 
-7.1 **Funil no painel do dono (`/admin`):** criou conta, vinculou o WhatsApp, primeiro lançamento, ativo 7 e 30 dias depois, mensagens recebidas × gravadas, taxa de "desfazer" e correção, custo de IA e de mensagens da Meta por conta ativa, cancelamentos e motivo. Tudo separado por modo (pessoal / MEI / ambos).
-7.2 **Piloto:** 20 a 30 pessoas de cada público, com entrevista curta antes e depois (roteiro na seção "Fase 4" do relatório da Manus).
-7.3 **Matriz de planos:** pessoas, WhatsApp, limites diários, Dívidas, Comprar, MEI, relatórios e suporte. Estimar o custo variável por conta: OpenAI, modelos de mensagem da Meta (conferir a tabela de preços do Brasil no painel), Vercel, Supabase e Asaas.
-7.4 Decidir o preço com dados do piloto, e não antes.
+10.1 **Funil no painel do dono (`/admin`):** criou conta, vinculou o WhatsApp, primeiro lançamento, ativo 7 e 30 dias depois, mensagens recebidas × gravadas, taxa de "desfazer" e correção, custo de IA e de mensagens da Meta por conta ativa, cancelamentos e motivo. Tudo separado por modo (pessoal / MEI / ambos).
+10.2 **Piloto:** 20 a 30 pessoas de cada público, com entrevista curta antes e depois (roteiro na seção "Fase 4" do relatório da Manus).
+10.3 **Matriz de planos:** pessoas, WhatsApp, limites diários, Dívidas, Comprar, MEI, relatórios e suporte. Estimar o custo variável por conta: OpenAI, modelos de mensagem da Meta (conferir a tabela de preços do Brasil no painel), Vercel, Supabase e Asaas.
+10.4 Decidir o preço com dados do piloto, e não antes.
 
 ---
 
-## 12. Fora deste plano (de propósito)
+## 15. Fora deste plano (de propósito)
 
-Pix e pagamentos, crédito ou indicação de empréstimo, cobrança de terceiros, Open Finance, emissão de nota fiscal, recomendação de investimento e Embedded Signup (cada cliente conectar o próprio número). Cada um muda risco e custo, e precisa de avaliação jurídica antes.
+Pix e pagamentos, crédito ou indicação de empréstimo, cobrança de terceiros, emissão de nota fiscal, recomendação de investimento e Embedded Signup (cada cliente conectar o próprio número). Cada um muda risco e custo, e precisa de avaliação jurídica antes.
 
 ---
 
-## 13. Status (o agente atualiza ao fim de cada fase)
+## 16. Status (o agente atualiza ao fim de cada fase)
 
 | Fase | Estado | Data | Observações |
 |---|---|---|---|
@@ -305,14 +375,17 @@ Pix e pagamentos, crédito ou indicação de empréstimo, cobrança de terceiros
 | 3 — App mais simples | pendente | | |
 | 4 — Comprar | pendente | | |
 | 5 — Sair do vermelho + guardar | pendente | | |
-| 6 — Foto e áudio | pendente | | |
-| 7 — Piloto e preço | pendente | | |
+| 6 — Foto, áudio e boleto (executa na 3ª posição) | pendente | | |
+| 7 — Parcelas e cartões | pendente | | |
+| 8 — Simulador de viagem | pendente | | |
+| 9 — Contas e ícones (Open Finance fica para o futuro, sem custo agora) | pendente | | |
+| 10 — Piloto, métricas e preço | pendente | | |
 
 ### Pendências da Fase 1 (dependem do fundador)
 
-1. **Migrations aguardando aprovação** (nenhuma foi aplicada no banco de produção; o código funciona com ou sem elas):
-   - `20261020010000_whatsapp_reply_status.sql`: 3 colunas e 1 índice em `whatsapp_inbox` (aditiva, sem risco).
-   - `20261020020000_whatsapp_retention.sql`: função de limpeza + job diário às 03:17 (Brasília). **Atenção:** assim que rodar, o conteúdo bruto de mensagens com mais de 30 dias é apagado e não volta. Rodar `SELECT public.purge_whatsapp_inbox_payloads(30);` à mão só depois de conferir que nenhuma mensagem dessa idade ainda é necessária.
+1. **Migrations** (o código funciona com ou sem elas):
+   - `20261020010000_whatsapp_reply_status.sql`: **aplicada em produção em 20/10/2026** (3 colunas e 1 índice em `whatsapp_inbox`).
+   - `20261020020000_whatsapp_retention.sql`: **ainda NÃO aplicada.** O fundador interrompeu a aplicação e a mantém em espera. Estado conferido antes: a fila tinha 2 linhas, nenhuma com mais de 30 dias, então a limpeza não apagaria nada hoje. **Atenção:** depois de aplicada, o conteúdo bruto de mensagens com mais de 30 dias é apagado e não volta.
 2. **Texto da política de privacidade (item 1.5), a publicar junto com a migration acima.** Em `src/app/politica-de-privacidade/page.tsx`, na seção "5. Por quanto tempo guardamos", acrescentar:
    > *Mensagens do WhatsApp:* o conteúdo bruto (texto e dados enviados pela Meta) fica na fila de processamento por até 30 dias. Depois disso, guardamos só um registro técnico, sem o texto, ligado ao seu número (tipo da mensagem, data e resultado), até você excluir a conta. Os lançamentos que você confirmou continuam na sua conta.
 
