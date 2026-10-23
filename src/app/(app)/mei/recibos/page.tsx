@@ -6,8 +6,10 @@ import { useSupabase } from "@/lib/useSupabase";
 import { brl, formatDateBR, todayISO } from "@/lib/format";
 import { BackTitle, Card, Empty, ErrorNote, Label, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 import { AlertTriangle, Plus, Printer } from "lucide-react";
+import { receiptNotesFor } from "@/lib/meiNota";
 
 type MeiClient = { id: string; name: string };
+type CatalogOpt = { id: string; name: string; description: string | null; unit_price: number };
 type Invoice = {
   id: string;
   invoice_number: number;
@@ -25,6 +27,8 @@ export default function RecibosPage() {
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [clients, setClients] = useState<MeiClient[]>([]);
+  const [catalog, setCatalog] = useState<CatalogOpt[]>([]);
+  const [catalogId, setCatalogId] = useState("");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [nextNumber, setNextNumber] = useState(1);
 
@@ -54,6 +58,14 @@ export default function RecibosPage() {
     }
 
     setClients((clientsData ?? []) as MeiClient[]);
+
+    // Catálogo de produtos e serviços (opcional: se falhar, o recibo continua funcionando sem ele)
+    const { data: catalogData } = await supabase
+      .from("mei_items")
+      .select("id,name,description,unit_price")
+      .eq("archived", false)
+      .order("name");
+    setCatalog(((catalogData ?? []) as CatalogOpt[]).map((x) => ({ ...x, unit_price: Number(x.unit_price) })));
 
     // Carregar recibos
     const { data: invoicesData, error: invoicesError } = await supabase
@@ -122,6 +134,7 @@ export default function RecibosPage() {
     } else {
       setClientId("");
       setClientName("");
+      setCatalogId("");
       setValue("");
       setNotes("");
       setInvoiceDate(today);
@@ -129,6 +142,15 @@ export default function RecibosPage() {
       load();
     }
   }
+
+  // Escolher um item do catálogo preenche a descrição e o valor (continua editável)
+  const pickCatalog = (id: string) => {
+    setCatalogId(id);
+    const it = catalog.find((c) => c.id === id);
+    if (!it) return;
+    setNotes(receiptNotesFor(it));
+    if (it.unit_price > 0) setValue(String(it.unit_price));
+  };
 
   const printInvoice = (invoice: Invoice) => {
     const html = generateInvoiceHtml(invoice);
@@ -160,6 +182,11 @@ export default function RecibosPage() {
               você precisaria de um sistema fiscal integrado (RPA, NFC-e, etc.), que é uma solução
               paga. Aqui você registra apenas para seu controle interno.
             </p>
+            <p className="mt-1">
+              O MEI emite a nota de serviço sem custo no emissor do governo. A{" "}
+              <Link href="/mei/nota" className="font-bold underline underline-offset-2">Ficha da nota fiscal</Link>{" "}
+              reúne todos os dados para você copiar lá.
+            </p>
           </div>
         </div>
       </Card>
@@ -168,6 +195,19 @@ export default function RecibosPage() {
       <Card>
         <h2 className="font-extrabold text-lg mb-4">Novo recibo #{nextNumber}</h2>
         <form onSubmit={createInvoice} className="space-y-4">
+          {catalog.length > 0 && (
+            <div>
+              <Label>Produto ou serviço do catálogo (opcional)</Label>
+              <select className={inputCls} value={catalogId} onChange={(e) => pickCatalog(e.target.value)}>
+                <option value="">Sem item do catálogo</option>
+                {catalog.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.unit_price > 0 ? ` · ${brl(c.unit_price)}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Cliente</Label>
@@ -294,9 +334,17 @@ export default function RecibosPage() {
         )}
       </Card>
 
-      <Link href="/mei/clientes" className={btnGhostCls}>
-        Ir para clientes e cobranças
-      </Link>
+      <div className="flex flex-wrap gap-2">
+        <Link href="/mei/clientes" className={btnGhostCls}>
+          Ir para clientes e cobranças
+        </Link>
+        <Link href="/mei/produtos" className={btnGhostCls}>
+          Produtos e serviços
+        </Link>
+        <Link href="/mei/nota" className={btnGhostCls}>
+          Ficha da nota fiscal
+        </Link>
+      </div>
     </div>
   );
 }
@@ -363,7 +411,7 @@ function generateInvoiceHtml(invoice: Invoice): string {
 
     <div class="section">
       <div class="section-title">Cliente</div>
-      <div class="section-content client">${invoice.client_name || "Não informado"}</div>
+      <div class="section-content client">${escapeHtml(invoice.client_name || "Não informado")}</div>
     </div>
 
     <div class="section">
