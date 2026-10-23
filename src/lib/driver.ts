@@ -14,8 +14,28 @@ export const isFuel = (v: unknown): v is FuelKind => typeof v === "string" && Ob
 
 export type Vehicle = {
   id: string; name: string; fuel: FuelKind; efficiency: number; fuel_price: number;
+  /** Só carro flex: média e preço no etanol (efficiency/fuel_price ficam para a gasolina). */
+  efficiency_alt: number | null; fuel_price_alt: number | null;
   cost_per_km: number; daily_rent: number; archived: boolean;
 };
+
+/** Combustível usado no dia. Carro flex escolhe gasolina ou etanol; os outros usam o do cadastro. */
+export type DayFuel = Exclude<FuelKind, "flex">;
+
+/** Dados do carro para o dia: o que fica gravado no registro (combustível, média e preço). */
+export function vehicleFuelFor(v: Vehicle, dayFuel?: DayFuel | null): { fuel: DayFuel; efficiency: number; price: number } {
+  if (v.fuel !== "flex") return { fuel: v.fuel, efficiency: v.efficiency, price: v.fuel_price };
+  if (dayFuel === "etanol") return { fuel: "etanol", efficiency: v.efficiency_alt ?? v.efficiency, price: v.fuel_price_alt ?? 0 };
+  return { fuel: "gasolina", efficiency: v.efficiency, price: v.fuel_price };
+}
+
+/** Carro flex com as duas médias e os dois preços: qual combustível sai mais barato por km agora. */
+export function flexAdvice(v: Vehicle): { gasolina: number; etanol: number; best: "gasolina" | "etanol" } | null {
+  if (v.fuel !== "flex" || !(v.efficiency > 0) || !(num(v.efficiency_alt) > 0) || !(v.fuel_price > 0) || !(num(v.fuel_price_alt) > 0)) return null;
+  const gasolina = Math.round((v.fuel_price / v.efficiency) * 1000) / 1000;
+  const etanol = Math.round((num(v.fuel_price_alt) / num(v.efficiency_alt)) * 1000) / 1000;
+  return { gasolina, etanol, best: etanol < gasolina ? "etanol" : "gasolina" };
+}
 
 export type Earning = { platform: string; amount: number; hours?: number | null; trips?: number | null };
 
@@ -175,12 +195,14 @@ export function normalizeShift(r: Record<string, unknown>): Shift {
 }
 
 export const SHIFT_COLUMNS = "id,date,vehicle_id,start_time,end_time,break_minutes,km,fuel,efficiency,fuel_price,cost_per_km,rent,earnings,tips,tolls,parking,wash,food,other_cost,notes,income_tx_id,expense_tx_id";
-export const VEHICLE_COLUMNS = "id,name,fuel,efficiency,fuel_price,cost_per_km,daily_rent,archived";
+export const VEHICLE_COLUMNS = "id,name,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived";
 
 export function normalizeVehicle(r: Record<string, unknown>): Vehicle {
   return {
     id: String(r.id), name: String(r.name ?? "Carro"), fuel: isFuel(r.fuel) ? r.fuel : "gasolina",
-    efficiency: num(r.efficiency), fuel_price: num(r.fuel_price), cost_per_km: num(r.cost_per_km), daily_rent: num(r.daily_rent), archived: Boolean(r.archived),
+    efficiency: num(r.efficiency), fuel_price: num(r.fuel_price),
+    efficiency_alt: r.efficiency_alt == null ? null : num(r.efficiency_alt), fuel_price_alt: r.fuel_price_alt == null ? null : num(r.fuel_price_alt),
+    cost_per_km: num(r.cost_per_km), daily_rent: num(r.daily_rent), archived: Boolean(r.archived),
   };
 }
 

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { brl, parseMoney, todayISO } from "@/lib/format";
-import { FUELS, hoursLabel, shiftMetrics, type Earning, type Shift, type Vehicle } from "@/lib/driver";
+import { FUELS, flexAdvice, hoursLabel, shiftMetrics, vehicleFuelFor, type DayFuel, type Earning, type Shift, type Vehicle } from "@/lib/driver";
 import { PLATFORMS, platformKeyFromName, platformOf } from "@/lib/driverPlatforms";
 import { PlatformBadge } from "@/components/driver/PlatformBadge";
 import { Card, ErrorNote, Label, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
@@ -14,21 +14,30 @@ type EarnDraft = { amount: string; hours: string; trips: string };
 const str = (n: number | null | undefined) => (n ? String(n).replace(".", ",") : "");
 const money = (s: string) => (s.trim() ? parseMoney(s) : 0);
 
-export function ShiftForm({ supabase, userId, vehicles, editing, onSaved, onCancel }: {
-  supabase: unknown; userId: string; vehicles: Vehicle[]; editing: Shift | null; onSaved: () => void; onCancel?: () => void;
+export type LastUsed = { vehicle_id: string | null; fuel: string | null } | null;
+
+export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSaved, onCancel }: {
+  supabase: unknown; userId: string; vehicles: Vehicle[]; editing: Shift | null; lastUsed?: LastUsed; onSaved: () => void; onCancel?: () => void;
 }) {
   const db = supabase as Db;
   const active = vehicles.filter((v) => !v.archived || v.id === editing?.vehicle_id);
   const [date, setDate] = useState(editing?.date ?? todayISO());
-  const [vehicleId, setVehicleId] = useState(editing?.vehicle_id ?? active[0]?.id ?? "");
+  // Dia novo já vem com o carro do último dia (ou o primeiro cadastrado).
+  const lastActive = lastUsed?.vehicle_id && active.some((v) => v.id === lastUsed.vehicle_id) ? lastUsed.vehicle_id : null;
+  const [vehicleId, setVehicleId] = useState(editing ? editing.vehicle_id ?? "" : lastActive ?? active[0]?.id ?? "");
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? null;
+  // Carro flex: gasolina ou etanol no dia (começa com o do último dia).
+  const [dayFuel, setDayFuel] = useState<DayFuel>(() => {
+    const f = editing ? editing.fuel : lastUsed?.vehicle_id === vehicleId ? lastUsed?.fuel : null;
+    return f === "etanol" ? "etanol" : "gasolina";
+  });
   const [start, setStart] = useState((editing?.start_time ?? "").slice(0, 5));
   const [end, setEnd] = useState((editing?.end_time ?? "").slice(0, 5));
   const [pause, setPause] = useState(editing?.break_minutes ? String(editing.break_minutes) : "");
   const [kmMode, setKmMode] = useState<"km" | "odo">("km");
   const [km, setKm] = useState(str(editing?.km));
   const [odo, setOdo] = useState({ a: "", b: "" });
-  const [price, setPrice] = useState(str(editing ? editing.fuel_price : vehicle?.fuel_price));
+  const [price, setPrice] = useState(str(editing ? editing.fuel_price : vehicle ? vehicleFuelFor(vehicle, dayFuel).price : null));
   const [earn, setEarn] = useState<Record<string, EarnDraft>>(() => Object.fromEntries((editing?.earnings ?? []).map((e) => [e.platform, { amount: str(e.amount), hours: str(e.hours), trips: str(e.trips) }])));
   const [order, setOrder] = useState<string[]>(() => (editing?.earnings ?? []).map((e) => e.platform));
   const [custom, setCustom] = useState("");
@@ -38,11 +47,20 @@ export function ShiftForm({ supabase, userId, vehicles, editing, onSaved, onCanc
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Ao trocar de carro num dia novo (ou num dia antigo para outro carro), o preço do combustível vem do carro.
+  // Mantém o que foi gravado num dia antigo enquanto o carro e o combustível forem os mesmos.
+  const keepSaved = (id: string, f: DayFuel) => Boolean(editing && editing.vehicle_id === id && (editing.fuel === f || (editing.fuel === "flex" && f === "gasolina") || vehicles.find((v) => v.id === id)?.fuel !== "flex"));
+
+  // Ao trocar de carro (ou de combustível no flex), o preço vem do cadastro do carro.
   function pickVehicle(id: string) {
     setVehicleId(id);
     const v = vehicles.find((x) => x.id === id);
-    if (v && (!editing || id !== editing.vehicle_id)) setPrice(str(v.fuel_price));
+    if (v && !keepSaved(id, dayFuel)) setPrice(str(vehicleFuelFor(v, dayFuel).price));
+    if (v && keepSaved(id, dayFuel) && editing) setPrice(str(editing.fuel_price));
+  }
+  function pickFuel(f: DayFuel) {
+    setDayFuel(f);
+    if (!vehicle) return;
+    setPrice(str(keepSaved(vehicle.id, f) && editing ? editing.fuel_price : vehicleFuelFor(vehicle, f).price));
   }
 
   function toggle(key: string) {
@@ -63,16 +81,18 @@ export function ShiftForm({ supabase, userId, vehicles, editing, onSaved, onCanc
 
   const kmValue = kmMode === "km" ? money(km) : Math.max(0, money(odo.b) - money(odo.a));
 
-  // Snapshot do carro: dia novo ou carro trocado usa o carro atual; dia antigo mantém o que foi gravado.
+  // Snapshot do carro: dia novo ou carro/combustível trocado usa o cadastro atual; dia antigo mantém o que foi gravado.
   const snap = useMemo(() => {
-    const keep = editing && editing.vehicle_id === vehicleId;
+    const keep = keepSaved(vehicleId, dayFuel);
+    const now = vehicle ? vehicleFuelFor(vehicle, dayFuel) : null;
     return {
-      fuel: keep ? editing!.fuel : vehicle?.fuel ?? null,
-      efficiency: keep ? editing!.efficiency : vehicle?.efficiency ?? null,
+      fuel: keep ? editing!.fuel : now?.fuel ?? null,
+      efficiency: keep ? editing!.efficiency : now?.efficiency ?? null,
       cost_per_km: keep ? editing!.cost_per_km : vehicle?.cost_per_km ?? 0,
       rent: keep ? editing!.rent : vehicle?.daily_rent ?? 0,
     };
-  }, [editing, vehicle, vehicleId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, vehicle, vehicleId, dayFuel]);
 
   const earnings: Earning[] = order.filter((k) => earn[k]).map((k) => ({
     platform: k, amount: money(earn[k].amount),
@@ -110,7 +130,9 @@ export function ShiftForm({ supabase, userId, vehicles, editing, onSaved, onCanc
     onSaved();
   }
 
-  const fuelUnit = vehicle ? FUELS[vehicle.fuel].price : "R$ por litro";
+  const fuelUnit = vehicle ? (vehicle.fuel === "flex" ? `R$ por litro de ${dayFuel}` : FUELS[vehicle.fuel].price) : "R$ por litro";
+  const unitShort = vehicle ? FUELS[vehicle.fuel === "flex" ? dayFuel : vehicle.fuel].unit : "km/l";
+  const advice = vehicle ? flexAdvice(vehicle) : null;
 
   return (
     <form onSubmit={save} className="space-y-4">
@@ -123,6 +145,26 @@ export function ShiftForm({ supabase, userId, vehicles, editing, onSaved, onCanc
               {active.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select></div>
         </div>
+        {vehicle && (
+          <div className="rounded-2xl bg-brand-dark/5 dark:bg-white/5 px-3.5 py-2.5 space-y-2">
+            {vehicle.fuel === "flex" && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500">Rodou com</span>
+                {(["gasolina", "etanol"] as const).map((f) => (
+                  <button key={f} type="button" onClick={() => pickFuel(f)} aria-pressed={dayFuel === f}
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${dayFuel === f ? "bg-brand-dark text-white dark:bg-brand-vivid" : "bg-white/70 dark:bg-[#1E1E1E] text-gray-500"}`}>
+                    {f === "gasolina" ? "Gasolina" : "Etanol"}
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-gray-500">
+              {vehicle.name}: {snap.efficiency ? `${String(snap.efficiency).replace(".", ",")} ${unitShort}` : "sem média"}
+              {vehicle.cost_per_km > 0 ? ` · manutenção ${brl(vehicle.cost_per_km)}/km` : ""}{vehicle.daily_rent > 0 ? ` · aluguel ${brl(vehicle.daily_rent)}/dia` : ""}. Já vem do cadastro do carro.
+            </p>
+            {advice && <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Com os preços cadastrados, {advice.best} sai mais barato ({brl(advice[advice.best])}/km).</p>}
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-3">
           <div><Label>Começou</Label><input type="time" className={inputCls} value={start} onChange={(e) => setStart(e.target.value)} /></div>
           <div><Label>Parou</Label><input type="time" className={inputCls} value={end} onChange={(e) => setEnd(e.target.value)} /></div>

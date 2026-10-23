@@ -5,7 +5,7 @@ import { useSupabase } from "@/lib/useSupabase";
 import { brl, formatDateBR, todayISO } from "@/lib/format";
 import { SHIFT_COLUMNS, VEHICLE_COLUMNS, fuelCost, normalizeShift, normalizeVehicle, shiftMetrics, type Shift, type Vehicle } from "@/lib/driver";
 import { platformOf } from "@/lib/driverPlatforms";
-import { ShiftForm } from "@/components/driver/ShiftForm";
+import { ShiftForm, type LastUsed } from "@/components/driver/ShiftForm";
 import { ResultsPanel, type Period } from "@/components/driver/ResultsPanel";
 import { VehiclesPanel } from "@/components/driver/VehiclesPanel";
 import { BackTitle, Card, Empty, ErrorNote, Label, Toggle, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
@@ -42,6 +42,7 @@ export default function MotoristaPage() {
   const [formKey, setFormKey] = useState(0);
   const [saved, setSaved] = useState<string | null>(null);
   const [launching, setLaunching] = useState<Shift | null>(null);
+  const [lastUsed, setLastUsed] = useState<LastUsed>(null);
   const period = useMemo(() => periodFor(preset, custom), [preset, custom]);
 
   const loadVehicles = useCallback(async () => {
@@ -57,10 +58,16 @@ export default function MotoristaPage() {
     setShifts(((data ?? []) as Record<string, unknown>[]).map(normalizeShift));
   }, [supabase, period.from, period.to]);
 
+  // Carro e combustível do último dia registrado: o próximo dia já começa com eles.
+  const loadLast = useCallback(async () => {
+    const { data } = await supabase.from("driver_shifts").select("vehicle_id,fuel").order("date", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    setLastUsed((data as LastUsed) ?? null);
+  }, [supabase]);
+
   useEffect(() => {
     if (!ready || !userId) return;
-    Promise.all([loadVehicles(), loadShifts()]).then(() => setLoading(false));
-  }, [ready, userId, loadVehicles, loadShifts]);
+    Promise.all([loadVehicles(), loadShifts(), loadLast()]).then(() => setLoading(false));
+  }, [ready, userId, loadVehicles, loadShifts, loadLast]);
 
   async function remove(s: Shift) {
     if (!window.confirm(`Excluir o dia ${formatDateBR(s.date)}?${s.income_tx_id ? " Os lançamentos que você mandou para o financeiro continuam lá." : ""}`)) return;
@@ -68,12 +75,13 @@ export default function MotoristaPage() {
     if (err) setError("Não foi possível excluir."); else loadShifts();
   }
 
-  function afterSave() {
+  async function afterSave() {
     setSaved(editing ? "Dia atualizado." : "Dia salvo! Veja o resumo em Resultados.");
+    if (editing) setTab("resultados");
     setEditing(null);
+    await loadLast();
     setFormKey((k) => k + 1);
     loadShifts();
-    if (editing) setTab("resultados");
   }
 
   if (loading) return <div className="max-w-3xl mx-auto"><BackTitle title="Motorista de app" /><Empty>Carregando…</Empty></div>;
@@ -96,7 +104,7 @@ export default function MotoristaPage() {
               {vehicles.filter((v) => !v.archived).length === 0 && !editing && (
                 <Card className="mb-4 !p-4"><p className="text-sm">Cadastre seu carro em <button className="font-bold text-brand-dark dark:text-brand-soft underline" onClick={() => setTab("carros")}>Meus carros</button> para o app calcular o combustível. Dá para registrar o dia sem carro também.</p></Card>
               )}
-              <ShiftForm key={`${formKey}-${editing?.id ?? "novo"}`} supabase={supabase} userId={userId!} vehicles={vehicles} editing={editing}
+              <ShiftForm key={`${formKey}-${editing?.id ?? "novo"}`} supabase={supabase} userId={userId!} vehicles={vehicles} editing={editing} lastUsed={lastUsed}
                 onSaved={afterSave} onCancel={editing ? () => { setEditing(null); setTab("resultados"); } : undefined} />
             </>
           )}

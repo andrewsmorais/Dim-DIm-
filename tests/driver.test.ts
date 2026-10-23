@@ -1,7 +1,7 @@
 // Testes offline do Motorista de app: horas, combustível, ganho por hora/km, divisão por plataforma e exportação.
 // Rodar: npm run test:driver
 import assert from "node:assert/strict";
-import { fuelCost, normalizeShift, platformShare, shiftMetrics, summarize, workedHours, type Shift } from "../src/lib/driver";
+import { flexAdvice, fuelCost, normalizeVehicle, vehicleFuelFor, normalizeShift, platformShare, shiftMetrics, summarize, workedHours, type Shift } from "../src/lib/driver";
 import { platformKeyFromName, platformOf } from "../src/lib/driverPlatforms";
 import { driverCsv } from "../src/lib/driverExport";
 
@@ -101,13 +101,28 @@ t("Plataformas: conhecidas, digitadas e selo neutro", () => {
 });
 
 t("Planilha: resumo com ganho bruto, despesas e lucro líquido no topo; sem fórmula", () => {
-  const csv = driverCsv([{ ...base, notes: "=HYPERLINK(\"x\")" }], [{ id: "v1", name: "Onix", fuel: "gasolina", efficiency: 12.5, fuel_price: 6, cost_per_km: 0.1, daily_rent: 0, archived: false }], { from: "2026-10-01", to: "2026-10-31" });
+  const csv = driverCsv([{ ...base, notes: "=HYPERLINK(\"x\")" }], [{ id: "v1", name: "Onix", fuel: "gasolina", efficiency: 12.5, fuel_price: 6, efficiency_alt: null, fuel_price_alt: null, cost_per_km: 0.1, daily_rent: 0, archived: false }], { from: "2026-10-01", to: "2026-10-31" });
   assert.ok(csv.startsWith("﻿"));
   const lines = csv.split("\r\n");
   const idx = (s: string) => lines.findIndex((l) => l.startsWith(s));
   assert.ok(idx("GANHO BRUTO;420,00") > 0 && idx("GANHO BRUTO") < idx("DESPESAS;151,00") && idx("DESPESAS") < idx("LUCRO LÍQUIDO;269,00"));
   assert.ok(lines.some((l) => l.startsWith("20/10/2026;Onix;08:00;18:00;9,00;200,0;Uber 300,00 | 99 100,00;420,00")));
   assert.ok(csv.includes("'=HYPERLINK"));
+});
+
+t("Carro flex: cadastro guarda gasolina e etanol; o dia usa o escolhido", () => {
+  const flex = normalizeVehicle({ id: "f", name: "Onix", fuel: "flex", efficiency: "12", fuel_price: "6.00", efficiency_alt: "8.5", fuel_price_alt: "4.10", cost_per_km: 0, daily_rent: 0 });
+  assert.deepEqual(vehicleFuelFor(flex, "gasolina"), { fuel: "gasolina", efficiency: 12, price: 6 });
+  assert.deepEqual(vehicleFuelFor(flex, "etanol"), { fuel: "etanol", efficiency: 8.5, price: 4.1 });
+  assert.deepEqual(vehicleFuelFor(flex), { fuel: "gasolina", efficiency: 12, price: 6 });
+  const a = flexAdvice(flex)!;
+  assert.equal(a.gasolina, 0.5);
+  assert.equal(a.etanol, 0.482);
+  assert.equal(a.best, "etanol");
+  assert.equal(flexAdvice({ ...flex, fuel_price_alt: null }), null);
+  const gnv = normalizeVehicle({ id: "g", name: "Spin", fuel: "gnv", efficiency: 13, fuel_price: 4.5 });
+  assert.deepEqual(vehicleFuelFor(gnv, "etanol"), { fuel: "gnv", efficiency: 13, price: 4.5 });
+  assert.equal(gnv.efficiency_alt, null);
 });
 
 console.log(`ok: ${pass} testes`);

@@ -374,7 +374,7 @@ const TASKS: Record<Exclude<TaskId, "profile">, TaskDef> = {
     table: "shopping_items", label: "itens das listas de compras",
     columns: "id,list_id,name,quantity,unit,est_price,checked,checked_at", order: [asc("list_id"), asc("position"), asc("id")],
   },
-  driver_vehicles: { table: "driver_vehicles", label: "carros", entity: true, columns: "id,user_id,name,fuel,efficiency,fuel_price,cost_per_km,daily_rent,archived,created_at", order: [asc("created_at"), asc("id")] },
+  driver_vehicles: { table: "driver_vehicles", label: "carros", entity: true, columns: "id,user_id,name,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived,created_at", order: [asc("created_at"), asc("id")] },
   driver_shifts: { table: "driver_shifts", label: "dias de motorista", columns: "user_id," + SHIFT_COLUMNS, order: [desc("date"), asc("id")] },
   mei_clients: { table: "mei_clients", label: "clientes", entity: true, columns: "id,user_id,name,document,phone,email,notes,archived,created_at", order: [asc("created_at"), asc("id")] },
   mei_invoices: {
@@ -533,7 +533,8 @@ export const DATASETS: DatasetDef[] = [
     id: "driver_vehicles", item: "driver", file: "motorista-carros.csv", jsonKey: "motorista_carros", title: "Motorista de app: carros",
     description: "Seus carros, com combustível, média e custos.",
     tasks: ["driver_vehicles"],
-    columns: [c("nome", "Carro"), c("combustivel", "Combustível"), c("media", "Média (km por litro/m³/kWh)", "number"), c("preco_combustivel", "Preço do combustível", "money"),
+    columns: [c("nome", "Carro"), c("combustivel", "Combustível"), c("media", "Média (km por litro/m³/kWh; no flex, gasolina)", "number"), c("preco_combustivel", "Preço do combustível (no flex, gasolina)", "money"),
+      c("media_etanol", "Média no etanol (flex)", "number"), c("preco_etanol", "Preço do etanol (flex)", "money"),
       c("custo_por_km", "Manutenção por km", "money"), c("aluguel_dia", "Aluguel por dia", "money"), c("arquivado", "Arquivado", "bool"), c("criado_em", "Criado em", "date")],
   },
   {
@@ -892,6 +893,7 @@ export function buildDatasets(raw: Partial<Record<TaskId, TaskResult>>, plan: Pl
     }));
     push("driver_vehicles", rowsOf("driver_vehicles").map((r) => ({
       nome: str(r.name), combustivel: isFuel(r.fuel) ? FUELS[r.fuel].label : str(r.fuel), media: num(r.efficiency), preco_combustivel: money(r.fuel_price),
+      media_etanol: r.efficiency_alt == null ? null : num(r.efficiency_alt), preco_etanol: r.fuel_price_alt == null ? null : money(r.fuel_price_alt),
       custo_por_km: money(r.cost_per_km), aluguel_dia: money(r.daily_rent), arquivado: bool(r.archived), criado_em: str(r.created_at),
     })));
   }
