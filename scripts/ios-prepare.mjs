@@ -21,3 +21,15 @@ if (src.includes(old)) {
   console.error('[ios-prepare] formato inesperado em', file, '- confira a dependência capacitor-swift-pm.');
   process.exit(1);
 }
+
+// Plugin de voz (@capgo/capacitor-speech-recognition 8.x): já traz Package.swift para o Capacitor 8 ("from 8.0.0"), nada a ajustar.
+// Só avisa se algum dia vier com a faixa antiga, para não descobrir isso no Codemagic.
+const speech = 'node_modules/@capgo/capacitor-speech-recognition/Package.swift';
+if (existsSync(speech)) {
+  const sp = readFileSync(speech, 'utf8');
+  if (/capacitor-swift-pm\.git", (from|exact): "7\./.test(sp)) {
+    console.error('[ios-prepare] speech-recognition declara Capacitor 7 no Package.swift: atualize o plugin para a versão 8.x.');
+    process.exit(1);
+  }
+  console.log('[ios-prepare] speech-recognition: Package.swift compatível com o Capacitor 8');
+}

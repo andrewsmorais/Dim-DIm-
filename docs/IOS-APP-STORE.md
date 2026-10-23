@@ -11,6 +11,7 @@ Legenda: **[VOCÊ]** = só o dono consegue fazer (conta, chave, aprovação). **
 - Login com a Apple (nativo) e com o Google (abre o navegador do sistema e volta pelo link `jakash://`).
 - Notificações nativas (APNs) usando os mesmos lembretes do site; a permissão é pedida em Configurações > Notificações.
 - Bloqueio com Face ID (opcional, desligado), exportar CSV pela folha de compartilhar, vibração leve ao salvar um lançamento.
+- Lançamento por voz: microfone em "Novo lançamento" (botão +) que preenche o formulário; quem confere e salva é a pessoa. No app usa o reconhecimento de fala da Apple (grátis, plugin `@capgo/capacitor-speech-recognition`, pt-BR).
 - Compra de assinatura pela Apple (IAP) com confirmação no servidor, restaurar compras, gerenciar assinatura. **Fica desligada** até você ligar `NEXT_PUBLIC_IOS_IAP=1`.
 - `codemagic.yaml` (workflow `ios-release`), migration `supabase/migrations/20261023010000_ios_app.sql` (**não aplicada**), testes em `tests/ios-app.test.ts`.
 
@@ -79,6 +80,7 @@ Instale o app pelo TestFlight e confira:
 - [ ] Configurações > Bloqueio com Face ID: liga, fecha o app, volta depois de 5 minutos e pede Face ID (com o código do iPhone como alternativa).
 - [ ] Relatórios > CSV e Configurações > Dados > Exportar: abre a folha de compartilhar. Conferir também os botões de imprimir/PDF do MEI (`window.print`), que podem não funcionar no iOS.
 - [ ] Anexar comprovante: pede câmera/fotos com texto em português.
+- [ ] Botão + > microfone: pede Microfone e Reconhecimento de Fala (texto em português) só no primeiro toque; dizer "gastei 50 reais no almoço agora" preenche tipo, valor, descrição, categoria e data; nada é salvo até tocar em Salvar. Testar também com permissão negada (deve mostrar como liberar em Ajustes), em modo avião (a Apple usa o reconhecimento no aparelho se o idioma português estiver baixado; senão avisa que está sem conexão) e "almoço 50 e uber 20" (o segundo item aparece em "Também entendi").
 - [ ] Links externos (compartilhar, e-mail) abrem fora do app.
 - [ ] Modo avião: aparece "Sem conexão" e "Tentar de novo" volta ao site.
 - [ ] Margens de cima e de baixo (notch e barra inferior) ficaram certas, nos modos claro e escuro.
@@ -180,12 +182,14 @@ gastos,orçamento,despesas,controle,contas a pagar,cartão,dívidas,MEI,planejam
 | Informações de contato > **Nome** | Sim | Sim | Não | Funcionalidade do app |
 | Informações financeiras > **Outras informações financeiras** (lançamentos, contas, cartões, dívidas, objetivos, investimentos) | Sim | Sim | Não | Funcionalidade do app |
 | Conteúdo do usuário > **Fotos ou vídeos** (fotos de comprovantes) | Sim | Sim | Não | Funcionalidade do app |
-| Conteúdo do usuário > **Outro conteúdo do usuário** (descrições e mensagens ao chat) | Sim | Sim | Não | Funcionalidade do app |
+| Conteúdo do usuário > **Outro conteúdo do usuário** (descrições, mensagens ao chat e, no lançamento por voz, a frase já transcrita em texto quando a IA é usada) | Sim | Sim | Não | Funcionalidade do app |
 | Identificadores > **ID do usuário** | Sim | Sim | Não | Funcionalidade do app |
 | Identificadores > **ID do dispositivo** (token de notificação) | Sim | Sim | Não | Funcionalidade do app |
 | Compras > **Histórico de compras** (plano e situação da assinatura) | Sim | Sim | Não | Funcionalidade do app |
 | Diagnóstico (falhas, desempenho) | **Não** (o app não tem SDK de falhas) | n/a | n/a | n/a |
 | Localização, contatos, saúde, navegação, pesquisa, uso de publicidade | Não | n/a | n/a | n/a |
+
+**Áudio (lançamento por voz):** no app iOS o áudio vai só para o reconhecimento de fala da Apple (`SFSpeechRecognizer`), no próprio iPhone quando o aparelho tem o idioma baixado e, se não tiver, pelo serviço de fala da Apple. O Jakash recebe apenas o texto, nunca o áudio, e não grava nada. Por isso **não** há linha de "Dados de áudio" na tabela acima (dado que não chega a nós não é "coletado"). O envio do áudio para transcrição (OpenAI) existe só em navegadores sem reconhecimento de fala (ex.: Firefox) e **não é usado dentro do app**. Se preferir declarar por cautela, marque "Dados de áudio > Conteúdo de áudio", não ligado a rastreio, finalidade "Funcionalidade do app", e atualize o `PrivacyInfo.xcprivacy` (`NSPrivacyCollectedDataTypeAudioData`).
 
 O CPF/CNPJ só é pedido para quem paga pelo site e não passa pelo app iOS. Se um dia entrar um serviço de análise ou de falhas, atualize a tabela e o arquivo `ios/App/App/PrivacyInfo.xcprivacy`.
 
@@ -204,11 +208,12 @@ COMO USAR
 - O app abre no login. Também é possível entrar com a Apple ou com o Google.
 - Assinatura: Configurações > Planos e assinatura > aba "Planos". A compra é feita pela App Store (compra no app) com 3 assinaturas mensais do grupo "Jakash": jakash.essencial.mensal, jakash.familia.mensal e jakash.mei.mensal. Há "Restaurar compras" e "Gerenciar assinatura".
 - Chat da Jaki (menu): assistente com inteligência artificial para registrar gastos e tirar dúvidas. Não há contato entre usuários.
+- Lançamento por voz: botão + > microfone. O app pede Microfone e Reconhecimento de Fala só quando você toca no microfone. Nada é salvo sem você tocar em Salvar.
 - Notificações: Configurações > Notificações > "Avisos neste aparelho" (a permissão só é pedida aí).
 - Bloqueio com Face ID: Configurações (opcional, vem desligado).
 - Excluir a conta: Configurações > Dados > Excluir minha conta (digitar EXCLUIR).
 
-O app é uma versão nativa do serviço Jakash e usa recursos do iPhone (login com a Apple, notificações, Face ID, compartilhar arquivos, compra pela App Store).
+O app é uma versão nativa do serviço Jakash e usa recursos do iPhone (login com a Apple, notificações, Face ID, microfone e reconhecimento de fala, compartilhar arquivos, compra pela App Store).
 
 Contato: [PREENCHER: nome, telefone e e-mail do responsável]
 ```
@@ -239,3 +244,5 @@ Extras se quiser (até 10): Lista de compras (`/comprar`), Chat da Jaki (`/chat`
 - Renovação, cancelamento e estorno: a Apple avisa `POST /api/apple/notifications`; o servidor ignora o conteúdo e consulta o estado real na Apple antes de alterar o perfil.
 - Notificações: `src/lib/apns.ts` envia por HTTP/2 com JWT ES256 (chave `.p8`); tokens recusados pela Apple (410 / BadDeviceToken) são apagados.
 - O plugin `@capacitor-community/apple-sign-in` declara Capacitor 7 no Swift Package; `scripts/ios-prepare.mjs` libera a faixa para o 8 (o Codemagic roda isso sozinho; localmente use `npm run ios:sync`).
+- Voz: `src/lib/voiceInput.ts` escolhe o caminho (app iOS com o plugin `@capgo/capacitor-speech-recognition`; navegador com a Web Speech API; só sem nenhum dos dois, gravação de até 20 s enviada a `/api/voice/transcribe`). O texto é entendido por `src/lib/voiceParse.ts` (local, grátis); só sem valor ou tipo chama `/api/voice/parse` (IA, conta no limite diário). O plugin é MPL-2.0 (uso sem alterar os arquivos dele não obriga a abrir o código do app), já declara `capacitor-swift-pm from 8.0.0` e por isso não precisa de ajuste no `scripts/ios-prepare.mjs` (o script só confere). Os textos de permissão ficam no `Info.plist` (`NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription`).
+- Como o app carrega o site, a tela de voz chega para todo mundo no deploy, mas o microfone só aparece no app depois de instalar um build novo com o plugin (builds antigos escondem o botão em vez de pedir uma permissão que o app antigo não declara). Depois de atualizar dependências, rode `npm run ios:sync` (o Codemagic roda `cap sync ios` sozinho) e confira se `ios/App/CapApp-SPM/Package.swift` lista `CapgoCapacitorSpeechRecognition`.
