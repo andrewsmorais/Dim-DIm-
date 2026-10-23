@@ -7,6 +7,8 @@ import { useSupabase } from "@/lib/useSupabase";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { BackTitle, Card } from "@/components/ui/page";
 import { InstallGuide } from "@/components/InstallGuide";
+import { BiometricLockSetting } from "@/components/BiometricLockSetting";
+import { useIsNative } from "@/lib/useIsNative";
 
 const ITEMS: { icon: LucideIcon; title: string; desc: string; href?: string; soon?: boolean }[] = [
   { icon: User, title: "Meu perfil", desc: "Nome, e-mail e data de nascimento.", href: "/configuracoes/perfil" },
@@ -26,6 +28,7 @@ export default function ConfiguracoesPage() {
   const router = useRouter();
   const { supabase } = useSupabase();
   const isAdmin = useIsAdmin();
+  const { native } = useIsNative();
 
   async function logout() {
     await supabase.auth.signOut();
@@ -81,7 +84,8 @@ export default function ConfiguracoesPage() {
           )}
         </ul>
       </Card>
-      <Card className="mt-4"><InstallGuide /></Card>
+      {/* No app iOS: bloqueio com Face ID no lugar do passo a passo de instalar o app. */}
+      {native ? <div className="mt-4"><BiometricLockSetting /></div> : <Card className="mt-4"><InstallGuide /></Card>}
       <button onClick={logout} className="mt-6 w-full flex items-center justify-center gap-2 rounded-full border border-red-500/30 text-red-500 font-bold py-3 text-sm"><LogOut size={16} /> Sair da conta</button>
     </div>
   );

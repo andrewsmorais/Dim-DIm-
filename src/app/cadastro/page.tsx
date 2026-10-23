@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuthShell, authBtn, authInput, Divider, AppleButton, GoogleButton, Notice } from "@/components/auth/AuthShell";
 import { authError } from "@/lib/authUtil";
+import { useIsNative } from "@/lib/useIsNative";
+import { signInWithAppleNative, signInWithGoogleNative } from "@/lib/nativeAuth";
 
 export default function CadastroPage() {
   const router = useRouter();
+  const { native } = useIsNative();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,6 +34,14 @@ export default function CadastroPage() {
 
   async function social(provider: "google" | "apple") {
     setBusy(true); setError("");
+    if (native) {
+      const supabase = createClient();
+      const r = provider === "apple" ? await signInWithAppleNative(supabase) : await signInWithGoogleNative(supabase, "/dashboard");
+      if (!r.ok && !r.cancelled) setError(r.message ? authError(r.message) : "Não foi possível entrar. Tente novamente.");
+      if (r.ok && provider === "apple") { router.replace("/dashboard"); router.refresh(); return; }
+      setBusy(false);
+      return;
+    }
     const { error: err } = await createClient().auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${window.location.origin}/auth/callback?next=/dashboard` },
@@ -41,7 +52,7 @@ export default function CadastroPage() {
   if (sent) {
     return (
       <AuthShell title="Confira seu e-mail">
-        <p className="text-center text-gray-600">Enviamos um link de confirmação para <strong>{email}</strong>. Clique nele para ativar a conta. Se não achar, olhe o spam.</p>
+        <p className="text-center text-gray-600">Enviamos um link de confirmação para <strong>{email}</strong>. Clique nele para ativar a conta. Se não achar, olhe o spam.{native && " Depois de confirmar, volte para o app e entre com o seu e-mail e a senha."}</p>
         <div className="mt-8 text-center text-sm font-medium text-gray-500"><Link href="/login" className="text-[#00A152] hover:underline">Voltar para o login</Link></div>
       </AuthShell>
     );

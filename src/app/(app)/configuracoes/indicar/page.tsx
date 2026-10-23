@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Check, Copy, Gift, MessageCircle } from "lucide-react";
+import { useIsNative } from "@/lib/useIsNative";
 import { BackTitle, Card, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type Info = { code: string; link: string; stats: { signedUp: number; subscribed: number; rewarded: number }; autoReward: boolean };
 
 export default function IndicarPage() {
+  const { native } = useIsNative();
   const [info, setInfo] = useState<Info | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -27,7 +29,7 @@ export default function IndicarPage() {
 
   return (
     <div className="max-w-2xl mx-auto pb-20 space-y-6">
-      <BackTitle title="Indicar amigos" subtitle={info?.autoReward ? "Você e seu amigo ganham 1 mês grátis quando ele assinar." : "Convide amigos e acompanhe as indicações."} href="/menu" />
+      <BackTitle title="Indicar amigos" subtitle={!native && info?.autoReward ? "Você e seu amigo ganham 1 mês grátis quando ele assinar." : "Convide amigos e acompanhe as indicações."} href="/menu" />
       <ErrorNote message={error} />
       {!info && !error && <Empty>Carregando…</Empty>}
       {info && (
@@ -44,16 +46,16 @@ export default function IndicarPage() {
             </div>
           </Card>
 
-          <Card>
+          {!native && <Card>
             <h2 className="font-extrabold text-lg mb-3">Suas indicações</h2>
             <dl className="grid grid-cols-3 gap-3 text-center">
               <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-3"><dd className="text-2xl font-extrabold">{info.stats.signedUp}</dd><dt className="text-xs text-gray-500">cadastraram</dt></div>
               <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-3"><dd className="text-2xl font-extrabold">{info.stats.subscribed}</dd><dt className="text-xs text-gray-500">assinaram</dt></div>
               <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-3"><dd className="text-2xl font-extrabold">{info.stats.rewarded}</dd><dt className="text-xs text-gray-500">com mês grátis</dt></div>
             </dl>
-          </Card>
+          </Card>}
 
-          <Card>
+          {!native && <Card>
             <h2 className="font-extrabold text-lg mb-2">Como funciona</h2>
             <ol className="list-decimal pl-5 space-y-1.5 text-sm text-gray-600 dark:text-gray-300">
               <li>Seu amigo cria a conta pelo seu link.</li>
@@ -61,7 +63,7 @@ export default function IndicarPage() {
               <li>{info.autoReward ? "Vocês dois ganham 1 mês grátis: a próxima cobrança de cada um é adiada em um mês." : "O mês grátis para os dois ainda não é aplicado automaticamente. Sua indicação fica registrada aqui."}</li>
             </ol>
             <p className="text-xs text-gray-400 mt-3">A indicação só vale para quem criou a conta há poucos dias e entrou pelo seu link. Não vale indicar a si mesmo.</p>
-          </Card>
+          </Card>}
         </>
       )}
     </div>

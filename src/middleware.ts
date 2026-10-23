@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isNativeUserAgent } from '@/lib/native';
 
 // Renova a sessão do Supabase a cada acesso e manda para o login quem não está logado nas telas do app.
 // As rotas /api cuidam da própria autenticação; páginas públicas (landing, login, cadastro, contador, etc.) ficam livres.
@@ -25,8 +26,11 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isProtected = PROTECTED.some((p) => path === p || path.startsWith(p + '/'));
-  // Bloqueio das telas só com NEXT_PUBLIC_REQUIRE_LOGIN=1 (por enquanto o login é de entrada livre).
-  if (isProtected && !user && process.env.NEXT_PUBLIC_REQUIRE_LOGIN === '1') {
+  // App iOS (User-Agent "JakashApp/"): login sempre obrigatório e sem a landing de vendas (guideline 3.1.1/3.1.3 da Apple).
+  const native = isNativeUserAgent(request.headers.get('user-agent'));
+  if (native && path === '/') return NextResponse.redirect(new URL(user ? '/dashboard' : '/login', request.url));
+  // No site, o bloqueio das telas só vale com NEXT_PUBLIC_REQUIRE_LOGIN=1 (por enquanto o login é de entrada livre).
+  if (isProtected && !user && (native || process.env.NEXT_PUBLIC_REQUIRE_LOGIN === '1')) {
     const login = new URL('/login', request.url);
     login.searchParams.set('next', path + request.nextUrl.search);
     return NextResponse.redirect(login);

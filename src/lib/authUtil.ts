@@ -1,6 +1,8 @@
 // Só aceita caminhos internos como destino depois do login (evita redirecionamento para sites externos).
 export function safeNext(next: string | null | undefined, fallback = "/dashboard"): string {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
+  // Tab e quebra de linha são ignorados pelo navegador ("/\t/site.com" viraria "//site.com"): recusa qualquer caractere de controle.
+  if (/[\u0000-\u001f\u007f]/.test(next)) return fallback;
   return next;
 }
 

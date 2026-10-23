@@ -6,11 +6,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuthShell, authBtn, authInput, Divider, AppleButton, GoogleButton, Notice } from "@/components/auth/AuthShell";
 import { authError, LOGIN_BYPASS, safeNext } from "@/lib/authUtil";
+import { useIsNative } from "@/lib/useIsNative";
+import { signInWithAppleNative, signInWithGoogleNative } from "@/lib/nativeAuth";
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
+  const { native } = useIsNative();
+  // No app o login é obrigatório: o atalho de entrar com campos vazios fica desligado.
+  const bypass = LOGIN_BYPASS && !native;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,7 +24,7 @@ function LoginForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (LOGIN_BYPASS && !email.trim() && !password) { router.replace(next); return; }
+    if (bypass && !email.trim() && !password) { router.replace(next); return; }
     setBusy(true); setError("");
     const { error: err } = await createClient().auth.signInWithPassword({ email: email.trim(), password });
     if (err) { setError(authError(err.message)); setBusy(false); return; }
@@ -29,6 +34,15 @@ function LoginForm() {
 
   async function social(provider: "google" | "apple") {
     setBusy(true); setError("");
+    if (native) {
+      const supabase = createClient();
+      const r = provider === "apple" ? await signInWithAppleNative(supabase) : await signInWithGoogleNative(supabase, next);
+      if (!r.ok && !r.cancelled) setError(r.message ? authError(r.message) : "Não foi possível entrar. Tente novamente.");
+      // Apple: a sessão já existe aqui. Google: o login termina quando o app recebe o link jakash://.
+      if (r.ok && provider === "apple") { router.replace(next); router.refresh(); return; }
+      setBusy(false);
+      return;
+    }
     const { error: err } = await createClient().auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
@@ -41,11 +55,11 @@ function LoginForm() {
       <form onSubmit={submit} className="space-y-5">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-1.5">E-mail</label>
-          <input id="email" type="email" required={!LOGIN_BYPASS} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} placeholder="seu@email.com" />
+          <input id="email" type="email" required={!bypass} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} placeholder="seu@email.com" />
         </div>
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-600 mb-1.5">Senha</label>
-          <input id="password" type="password" required={!LOGIN_BYPASS} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} placeholder="••••••••" />
+          <input id="password" type="password" required={!bypass} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} placeholder="••••••••" />
         </div>
         <div className="flex justify-end">
           <Link href="/esqueci-senha" className="text-sm text-[#00A152] font-medium hover:underline">Esqueci minha senha</Link>

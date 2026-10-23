@@ -7,6 +7,7 @@ import { useSupabase } from "@/lib/useSupabase";
 import { brl, currentMonth, monthRange } from "@/lib/format";
 import { buildClassifier, CATEGORY_TIPS, type CatFlagRow } from "@/lib/essentials";
 import { PageHeader, Card, Progress, Empty, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
+import { saveOrShareText } from "@/lib/nativeShare";
 
 type Row = { description: string; amount: number; type: "income" | "expense"; date: string; category: string; categoryId: string | null };
 
@@ -56,12 +57,7 @@ export default function RelatoriosPage() {
   function exportCsv() {
     const esc = (v: string) => `"${v.replace(/"/g, '""').replace(/^([=+\-@])/, "'$1")}"`;
     const lines = ["Data;Descrição;Categoria;Tipo;Valor", ...rows.map((r) => [r.date, esc(r.description), esc(r.category), r.type === "income" ? "Receita" : "Despesa", r.amount.toFixed(2).replace(".", ",")].join(";"))];
-    const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `jakash-${month}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    void saveOrShareText(`jakash-${month}.csv`, "﻿" + lines.join("\n")); // no app iOS abre a folha de compartilhar
   }
 
   return (

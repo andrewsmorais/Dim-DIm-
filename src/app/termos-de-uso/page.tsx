@@ -32,6 +32,7 @@ export default function TermosPage() {
         <li><strong>Troca de plano:</strong> você pode mudar de plano em Configurações › Planos. O novo valor vale a partir da próxima renovação.</li>
         <li><strong>Atraso:</strong> se o pagamento não for confirmado, o acesso pode ser limitado até a regularização.</li>
       </ul>
+      <p><strong>Assinatura feita no app para iPhone:</strong> quando você assina pelo app, a cobrança é feita pela sua conta da Apple (App Store). O pagamento é debitado na confirmação da compra e a assinatura renova sozinha todo mês, pelo mesmo valor, a menos que seja cancelada pelo menos 24 horas antes do fim do período. Você gerencia e cancela em Ajustes do iPhone › seu nome › Assinaturas, e os pedidos de reembolso seguem as regras da Apple. Teste grátis e formas de pagamento do site (Pix e boleto) não valem para assinaturas feitas pela App Store.</p>
 
       <h2>4. Cancelamento e reembolso</h2>
       <p>Você pode cancelar a renovação quando quiser, sem multa, em Configurações › Planos, e continua com acesso até o fim do período já pago. As regras de reembolso estão na <Link href="/politica-de-reembolso">Política de reembolso</Link>.</p>

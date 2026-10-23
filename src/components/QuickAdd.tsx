@@ -11,6 +11,7 @@ import { buildCardPurchase, dueDateFor, invoiceMonthFor, splitInstallments } fro
 import { ACCEPT, stashFile } from "@/lib/fileImport";
 import { RECEIPT_ACCEPT, uploadReceipt } from "@/lib/receipts";
 import { KIND_LABEL, type RevenueKind } from "@/lib/mei";
+import { lightImpact } from "@/lib/haptics";
 import { Label, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
 
 type Acc = { id: string; name: string; is_business: boolean };
@@ -113,6 +114,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     setF({ ...f, amount: "", description: "", installments: 1 });
     setReceipt(null);
     window.dispatchEvent(new Event("jakash:changed"));
+    void lightImpact(); // vibração leve no app iOS (no site não faz nada)
     onClose();
   }
 

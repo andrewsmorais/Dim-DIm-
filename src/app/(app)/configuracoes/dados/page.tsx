@@ -1,11 +1,12 @@
 "use client";
 
 import { removeAllReceipts } from "@/lib/receipts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Download, RotateCcw, UserX, X } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { BackTitle, Card, ErrorNote, Label, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
+import { saveOrShareText } from "@/lib/nativeShare";
 
 const RESET_OPTIONS = [
   { id: "transactions", label: "Lançamentos" },
@@ -29,6 +30,11 @@ export default function DadosPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [apple, setApple] = useState(false); // assina pela App Store: a Apple cobra, o Jakash não consegue cancelar
+
+  useEffect(() => {
+    fetch("/api/plan", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((j) => setApple(j?.billingProvider === "apple" && ["active", "past_due"].includes(j?.status))).catch(() => undefined);
+  }, []);
 
   async function exportCsv() {
     setError(null); setMsg(null);
@@ -46,13 +52,8 @@ export default function DadosPage() {
     const names = new Map((cats.data ?? []).map((c) => [c.id, c.name]));
     const esc = (v: string) => `"${v.replace(/"/g, '""').replace(/^([=+\-@])/, "'$1")}"`;
     const lines = ["Data;Descrição;Categoria;Tipo;Valor", ...rows.map((r) => [r.date, esc(r.description), esc(names.get(r.category_id) ?? "Sem categoria"), r.type === "income" ? "Receita" : "Despesa", Number(r.amount).toFixed(2).replace(".", ",")].join(";"))];
-    const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "jakash-lancamentos.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
-    setMsg(`${rows.length} lançamentos exportados.`);
+    const delivered = await saveOrShareText("jakash-lancamentos.csv", "﻿" + lines.join("\n")); // no app iOS abre a folha de compartilhar
+    if (delivered) setMsg(`${rows.length} lançamentos exportados.`); else setError("Não foi possível salvar o arquivo.");
   }
 
   async function doReset() {
@@ -122,7 +123,10 @@ export default function DadosPage() {
                 ))}</div>
               </>
             ) : (
-              <p className="text-sm text-gray-500">Sua conta, seus lançamentos e todos os dados serão apagados de forma definitiva, e a assinatura será cancelada. Não há como recuperar.</p>
+              <>
+                <p className="text-sm text-gray-500">Sua conta, seus lançamentos e todos os dados serão apagados de forma definitiva{apple ? "" : ", e a assinatura será cancelada"}. Não há como recuperar.</p>
+                {apple && <p className="text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-500/10 rounded-2xl p-3">Sua assinatura é da App Store e não é cancelada ao excluir a conta. Para não ser cobrado de novo, cancele em Ajustes do iPhone › seu nome › Assinaturas.</p>}
+              </>
             )}
             <div><Label>Digite {modal === "reset" ? "APAGAR" : "EXCLUIR"} para confirmar</Label><input className={inputCls} value={confirm} onChange={(e) => setConfirm(e.target.value)} /></div>
             <ErrorNote message={error} />

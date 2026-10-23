@@ -44,6 +44,7 @@ export default function PrivacidadePage() {
         <li><strong>Asaas:</strong> processamento de pagamentos e assinaturas.</li>
         <li><strong>OpenAI:</strong> respostas do Chat da Jaki e leitura de arquivos importados pela inteligência artificial e redação da explicação do plano de dívidas (ela recebe valores e nomes das dívidas que você cadastrou, nunca CPF).</li>
         <li><strong>Resend:</strong> envio de e-mails do serviço.</li>
+        <li><strong>Apple:</strong> no app para iPhone, login com a Apple, assinatura pela App Store e avisos no aparelho (notificações). A Apple trata os pagamentos feitos na App Store; o Jakash não recebe os dados do seu cartão.</li>
       </ul>
       <p>Alguns desses prestadores ficam fora do Brasil, o que significa transferência internacional de dados, feita com as garantias previstas na LGPD. Também podemos compartilhar dados quando a lei ou uma ordem de autoridade exigir.</p>
       <p><strong>Gestão compartilhada:</strong> se você convidar alguém, essa pessoa verá os dados financeiros compartilhados (veja os <Link href="/termos-de-uso">Termos de uso</Link>). Perfil, assinatura e conversas do chat não são compartilhados.</p>

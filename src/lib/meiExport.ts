@@ -1,5 +1,6 @@
 // Exportação da receita anual do MEI para a DASN-SIMEI. Roda no navegador (sem custo de servidor).
 import { KIND_LABEL, dasnTotals, type RevenueKind, type YearSummary } from "@/lib/mei";
+import { saveOrShareText } from "@/lib/nativeShare";
 
 export type DasnRow = { date: string; description: string; amount: number; kind: RevenueKind; client: string };
 
@@ -28,12 +29,6 @@ export function dasnCsv(year: number, rows: DasnRow[], s: YearSummary): string {
 }
 
 export function downloadText(filename: string, content: string, mime = "text/csv;charset=utf-8") {
-  const url = URL.createObjectURL(new Blob([content], { type: mime }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // No navegador baixa o arquivo; no app iOS (onde blob não baixa) abre a folha de compartilhar.
+  void saveOrShareText(filename, content, mime);
 }
