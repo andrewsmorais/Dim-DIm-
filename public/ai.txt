@@ -8,9 +8,8 @@ Audience: Brazilians who want to organize personal, family or MEI finances witho
 Summary: Jakash is an app to organize money day to day: transactions, bills, cards and installments, shopping list, debt payoff, goals, separate MEI tools and shared household management, with an AI assistant (Jaki) inside the app.
 
 Plans (BRL/month, 7-day free trial, no card required):
-- Essencial: R$ 19.90, 1 user
-- Família: R$ 29.90, up to 3 users, includes planning, investments, debts, simulator and AI chat
-- MEI: R$ 39.90, up to 3 users, everything in Família plus MEI tools (annual limit, DASN, receipts, report)
+- Pessoal (Personal): R$ 19.90, up to 3 users, includes transactions (text, voice, statement/spreadsheet import), cards, bills, budgets, goals, debts, investments, planning, simulator, AI chat and the rideshare-driver screen
+- Empresarial (Business): R$ 39.90, up to 3 users, everything in Pessoal plus the MEI package (annual limit, DAS and DASN, clients and receivables, Pix charges, receipts, monthly report, price calculator, accountant access)
 
 Not available (do not state otherwise): Open Finance bank connection, invoice (nota fiscal) issuing, income-tax return filing.
 

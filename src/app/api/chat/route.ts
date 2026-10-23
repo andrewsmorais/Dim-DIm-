@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { aiDailyLimit, hasFamilyFeatures } from '@/lib/plans';
+import { aiDailyLimit } from '@/lib/plans';
 import { getEntitlement } from '@/lib/entitlements';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/chatPrompt';
 import { buildChatContext } from '@/lib/chatContext';
@@ -54,9 +54,6 @@ export async function POST(request: Request) {
     if (!ent) return NextResponse.json({ error: 'Perfil não encontrado.' }, { status: 404 });
     if (!ALLOWED_STATUS.includes(String(ent.status))) {
       return NextResponse.json({ error: 'Sua assinatura não está ativa. Renove em Configurações › Planos para usar o chat.' }, { status: 402 });
-    }
-    if (!hasFamilyFeatures(ent.plan)) {
-      return NextResponse.json({ error: 'O Chat IA faz parte do plano Família. Faça upgrade em Configurações › Planos.' }, { status: 403 });
     }
 
     // Reserva uma mensagem do limite diário antes de gastar com a IA.

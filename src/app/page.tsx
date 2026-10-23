@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { CTAButton } from "@/components/CTAButton";
 import { FAQItem } from "@/components/FAQItem";
 import { SectionBadge } from "@/components/SectionBadge";
-import { PLANS, planPrice, type PlanId } from "@/lib/plans";
+import { PLANS, PLAN_FEATURES, PLAN_TAGLINE, planPrice, type PlanId } from "@/lib/plans";
 import { FAQS, homeJsonLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import {
@@ -14,46 +14,10 @@ import {
   CheckCircle2, Lock
 } from "lucide-react";
 
-// Preços NÃO ficam aqui: vêm de lib/plans (planPrice), a mesma fonte da cobrança.
+// Preços e listas NÃO ficam aqui: vêm de lib/plans (planPrice, PLAN_FEATURES), a mesma fonte da cobrança.
 const LANDING_PLANS: { id: PlanId; title: string; subtitle: string; highlight?: boolean; features: string[] }[] = [
-  {
-    id: "cpf",
-    title: PLANS.cpf.name,
-    subtitle: "Para organizar as suas finanças",
-    features: [
-      "1 pessoa",
-      "Lançamentos e importação de extrato (OFX, CSV, PDF)",
-      "Painel com gráficos, limites e objetivos",
-      "Contas a pagar, dívidas e reserva de emergência",
-      "Lista de compras (Comprar)",
-      "Contas bancárias, cartões e categorias",
-    ],
-  },
-  {
-    id: "familia",
-    title: PLANS.familia.name,
-    subtitle: "Para casal, família ou sócios",
-    highlight: true,
-    features: [
-      "Tudo do Essencial",
-      `Até ${PLANS.familia.members} pessoas na mesma casa`,
-      "Planejamento mensal e simulador",
-      "Chat IA para perguntar sobre as suas finanças",
-      "Investimentos",
-      "Relatórios e link para o seu contador",
-    ],
-  },
-  {
-    id: "mei",
-    title: PLANS.mei.name,
-    subtitle: "Para MEI e autônomo",
-    features: [
-      "Tudo do plano Família",
-      "Controle do limite anual do MEI",
-      "DASN, recibos e relatório do MEI",
-      "Contas recorrentes (ex.: DAS) com lembrete",
-    ],
-  },
+  { id: "cpf", title: PLANS.cpf.name, subtitle: PLAN_TAGLINE.cpf, highlight: true, features: PLAN_FEATURES.cpf },
+  { id: "mei", title: PLANS.mei.name, subtitle: PLAN_TAGLINE.mei, features: PLAN_FEATURES.mei },
 ];
 
 export default function LandingPage() {
@@ -319,7 +283,7 @@ export default function LandingPage() {
               </p>
               <ul className="space-y-4 mb-10">
                 {[
-                  'Pergunte ao Chat IA do app, no plano Família ou MEI',
+                  'Pergunte à Jaki no Chat IA do app, em qualquer plano',
                   'Insights mensais sobre as suas finanças',
                   'Exemplo: "Quanto gastei com delivery?"'
                 ].map((item, i) => (
@@ -409,11 +373,11 @@ export default function LandingPage() {
             </h2>
             <p className="text-gray-500 font-medium mb-12">7 dias grátis em qualquer plano, sem cadastrar cartão. Cancele quando quiser.</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch text-left max-w-4xl mx-auto">
               {LANDING_PLANS.map((p) => (
                 <div key={p.id} className={`relative flex flex-col bg-white rounded-[2rem] p-8 shadow-xl ${p.highlight ? "border-2 border-brand-dark" : "border-2 border-brand-dark/10"}`}>
                   {p.highlight && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold text-white bg-brand-dark px-4 py-1 rounded-full uppercase tracking-widest">Mais escolhido</span>
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold text-white bg-brand-dark px-4 py-1 rounded-full uppercase tracking-widest">Para começar</span>
                   )}
                   <p className="text-xl font-extrabold">{p.title}</p>
                   <p className="text-sm text-gray-500 mb-5">{p.subtitle}</p>

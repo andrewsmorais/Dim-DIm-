@@ -1,24 +1,67 @@
 // Fonte unica de verdade dos planos. O valor cobrado SEMPRE vem daqui (servidor),
 // nunca do navegador.
 //
-// Ids (gravados em profiles.subscription_plan e no Asaas):
-//   cpf    = Jakash Essencial (1 pessoa)       — id mantido para nao quebrar quem ja assina
-//   familia = Jakash Familia  (ate 3 pessoas)
-//   mei    = Jakash MEI       (tudo do Familia + ferramentas MEI)
+// Dois planos a venda (decisao de 23/10/2026). Ids (gravados em profiles.subscription_plan e no Asaas) NAO mudam:
+//   cpf = Jakash Pessoal      (tudo do uso pessoal, ate 3 pessoas na mesma casa)
+//   mei = Jakash Empresarial  (tudo do Pessoal + pacote MEI)
+// O plano antigo 'familia' deixou de ser vendido: se aparecer gravado, vale como 'cpf' (ver LEGACY_PLAN_ALIASES).
 // appleProductId = produto de assinatura mensal na App Store Connect (compra dentro do app iOS).
 export const PLANS = {
-  cpf: { name: 'Jakash Essencial', value: 19.9, members: 1, aiDaily: 30, appleProductId: 'jakash.essencial.mensal' },
-  familia: { name: 'Jakash Família', value: 29.9, members: 3, aiDaily: 40, appleProductId: 'jakash.familia.mensal' },
-  mei: { name: 'Jakash MEI', value: 39.9, members: 3, aiDaily: 60, appleProductId: 'jakash.mei.mensal' },
+  cpf: { name: 'Jakash Pessoal', value: 19.9, members: 3, aiDaily: 40, appleProductId: 'jakash.pessoal.mensal' },
+  mei: { name: 'Jakash Empresarial', value: 39.9, members: 3, aiDaily: 60, appleProductId: 'jakash.empresarial.mensal' },
 } as const;
 
 export type PlanId = keyof typeof PLANS;
 
+// Planos a venda (checkout, paywalls, landing, SEO).
 export const PLAN_IDS = Object.keys(PLANS) as PlanId[];
 
+// Valores antigos que ainda podem estar gravados no perfil e hoje equivalem a um plano atual.
+export const LEGACY_PLAN_ALIASES = { familia: 'cpf' } as const satisfies Record<string, PlanId>;
+
+// So os planos a venda. Use para ACEITAR um plano novo (checkout); para ler o que esta gravado, use canonicalPlan.
 export function isPlanId(value: unknown): value is PlanId {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(PLANS, value);
 }
+
+// Plano de um valor gravado no perfil: ids atuais valem como sao, 'familia' (legado) vale como 'cpf'; o resto, null.
+export function canonicalPlan(value: unknown): PlanId | null {
+  if (isPlanId(value)) return value;
+  if (typeof value === 'string' && Object.prototype.hasOwnProperty.call(LEGACY_PLAN_ALIASES, value)) {
+    return LEGACY_PLAN_ALIASES[value as keyof typeof LEGACY_PLAN_ALIASES];
+  }
+  return null;
+}
+
+// Textos de venda (mesma lista na landing, em Configuracoes > Planos e no paywall do iOS).
+export const PLAN_TAGLINE: Record<PlanId, string> = {
+  cpf: 'Para organizar as finanças pessoais, sozinho ou com quem divide as contas',
+  mei: 'Para quem tem MEI ou negócio próprio',
+};
+
+export const PLAN_FEATURES: Record<PlanId, string[]> = {
+  cpf: [
+    'Lançamentos por texto, voz e importação de extrato ou planilha',
+    'Cartões e contas a pagar',
+    'Limites e objetivos',
+    'Dívidas e reserva de emergência',
+    'Investimentos, planejamento do mês e simulador',
+    'Chat da Jaki, a assistente de IA',
+    'Motorista de app',
+    `Dividir com até ${PLANS.cpf.members} pessoas (casal, família ou sócios)`,
+    'Categorias e subcategorias personalizáveis',
+  ],
+  mei: [
+    'Tudo do Jakash Pessoal',
+    'Controle do limite anual do MEI',
+    'DAS e DASN',
+    'Clientes e valores a receber',
+    'Cobrança por Pix',
+    'Recibos e relatório mensal',
+    'Calculadora de preço',
+    'Acesso do contador',
+  ],
+};
 
 // Produto da App Store -> plano (null = produto que o Jakash não conhece).
 export function planFromAppleProduct(productId: unknown): PlanId | null {
@@ -35,21 +78,11 @@ export function planFromValue(value: number): PlanId | null {
   return PLAN_IDS.find((id) => Math.abs(PLANS[id].value - value) < 0.005) ?? null;
 }
 
-// Quem ainda nao escolheu plano (periodo de teste) tem acesso a tudo; so o Essencial e limitado.
-export function hasFamilyFeatures(plan?: string | null): boolean {
-  return plan !== 'cpf';
-}
-
-// Telas que so existem do plano Familia em diante.
-export const FAMILY_ONLY_PATHS = ['/planejamento', '/investimentos', '/simulador', '/chat'] as const;
-
-export function isFamilyOnlyPath(pathname: string): boolean {
-  return FAMILY_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-}
-
-// Quantas pessoas (contando o dono) cabem na gestao compartilhada.
+// Quantas pessoas (contando o dono) cabem na gestao compartilhada. Todos os planos comportam 3;
+// quem ainda nao escolheu plano (periodo de teste) e 'familia' (legado) tambem.
 export function memberLimit(plan?: string | null): number {
-  return isPlanId(plan) ? PLANS[plan].members : PLANS.familia.members;
+  const id = canonicalPlan(plan);
+  return id ? PLANS[id].members : PLANS.cpf.members;
 }
 
 // Mensagens do Chat IA por dia, por usuário (controle de custo). AI_CHAT_DAILY_LIMIT, se definida, vale para todos.
@@ -57,5 +90,6 @@ export function aiDailyLimit(plan?: string | null): number {
   const override = Number(process.env.AI_CHAT_DAILY_LIMIT);
   if (Number.isFinite(override) && override > 0) return Math.floor(override);
   if (plan === 'cnpj') return PLANS.mei.aiDaily;
-  return isPlanId(plan) ? PLANS[plan].aiDaily : PLANS.cpf.aiDaily;
+  const id = canonicalPlan(plan);
+  return id ? PLANS[id].aiDaily : PLANS.cpf.aiDaily;
 }

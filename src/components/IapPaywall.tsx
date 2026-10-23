@@ -3,21 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Check, ExternalLink, Loader2, RotateCcw } from "lucide-react";
-import { PLANS, PLAN_IDS, type PlanId } from "@/lib/plans";
+import { PLANS, PLAN_FEATURES, PLAN_IDS, PLAN_TAGLINE, type PlanId } from "@/lib/plans";
 import { loadStoreProducts, MANAGE_SUBSCRIPTIONS_URL, purchasePlan, restorePurchases, type StoreProduct } from "@/lib/nativePurchases";
 import { Card, ErrorNote, btnCls, btnGhostCls } from "@/components/ui/page";
 
-const FEATURES: Record<PlanId, string[]> = {
-  cpf: ["1 pessoa", "Lançamentos e importação de extrato", "Painel com gráficos, limites e objetivos", "Dívidas, reserva de emergência e contas a pagar", "Categorias e subcategorias personalizáveis"],
-  familia: ["Tudo do Essencial", `Até ${PLANS.familia.members} pessoas na mesma casa (gestão compartilhada)`, "Planejamento mensal e simulador", "Chat IA para perguntar sobre as suas finanças", "Investimentos e dívidas", "Relatórios e link para o seu contador"],
-  mei: ["Tudo do plano Família", "Controle do limite anual do MEI", "DASN, recibos e relatório do MEI", "Contas recorrentes (ex.: DAS) com lembrete"],
-};
-const SUBTITLE: Record<PlanId, string> = { cpf: "Para organizar as suas finanças", familia: "Para casal, família ou sócios", mei: "Para MEI e autônomo" };
-
 type Props = {
   userId: string;
-  /** Mostra só estes planos (ex.: o convite para o Família na trava de recursos). */
-  only?: PlanId[];
   currentPlan?: PlanId | null;
   /** true = já assina pela App Store: mostra "Gerenciar assinatura". */
   subscribedViaApple?: boolean;
@@ -25,7 +16,7 @@ type Props = {
 };
 
 // Planos e compra pela App Store (Apple IAP). Só é montado no app iOS com NEXT_PUBLIC_IOS_IAP=1.
-export function IapPaywall({ userId, only, currentPlan, subscribedViaApple, onPurchased }: Props) {
+export function IapPaywall({ userId, currentPlan, subscribedViaApple, onPurchased }: Props) {
   const [products, setProducts] = useState<StoreProduct[] | null>(null);
   const [busy, setBusy] = useState<PlanId | "restore" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,20 +30,18 @@ export function IapPaywall({ userId, only, currentPlan, subscribedViaApple, onPu
     if (r.ok) onPurchased(); else if (!r.cancelled) setError(r.message);
   }
 
-  const ids = (only ?? PLAN_IDS).filter((id) => PLAN_IDS.includes(id));
-
   return (
     <div className="space-y-4">
-      {ids.map((id) => {
+      {PLAN_IDS.map((id) => {
         const price = products?.find((p) => p.plan === id)?.priceString;
         const isCurrent = currentPlan === id && subscribedViaApple;
         return (
           <Card key={id} className={isCurrent ? "ring-2 ring-brand-dark" : ""}>
-            <div><p className="text-xl font-extrabold">{PLANS[id].name}</p><p className="text-sm text-gray-500">{SUBTITLE[id]}</p></div>
+            <div><p className="text-xl font-extrabold">{PLANS[id].name}</p><p className="text-sm text-gray-500">{PLAN_TAGLINE[id]}</p></div>
             <p className="my-5">
               {price ? <><span className="text-4xl font-extrabold">{price}</span><span className="text-gray-500"> / mês</span></> : <span className="text-sm text-gray-500">{products === null ? "Carregando…" : "Indisponível no momento."}</span>}
             </p>
-            <ul className="space-y-2 mb-5">{FEATURES[id].map((f) => <li key={f} className="flex gap-2 text-sm"><Check size={16} className="text-emerald-500 shrink-0 mt-0.5" />{f}</li>)}</ul>
+            <ul className="space-y-2 mb-5">{PLAN_FEATURES[id].map((f) => <li key={f} className="flex gap-2 text-sm"><Check size={16} className="text-emerald-500 shrink-0 mt-0.5" />{f}</li>)}</ul>
             {isCurrent ? <p className="text-center text-sm font-bold text-brand-dark dark:text-brand-soft">Seu plano atual</p> : (
               <button type="button" disabled={!price || busy !== null} onClick={() => void run(id, () => purchasePlan(id, userId))} className={btnCls + " w-full disabled:opacity-60"}>
                 {busy === id ? <><Loader2 size={16} className="animate-spin" /> Processando…</> : price ? `Assinar ${PLANS[id].name}` : "Indisponível"}

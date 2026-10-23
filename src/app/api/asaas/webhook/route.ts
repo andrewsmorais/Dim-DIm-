@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { handleReferralPayment } from '@/lib/referrals';
-import { PLANS, isPlanId } from '@/lib/plans';
+import { PLANS, canonicalPlan } from '@/lib/plans';
 
 function safeEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a);
@@ -37,8 +37,11 @@ async function recordBillingEvent(
   // A conta do Asaas é compartilhada com outros projetos: cobrança de cliente que não é do Jakash não entra nas métricas.
   if (!profile) return;
 
-  const plan = (profile.subscription_plan as string | null) ?? null;
-  const planValue = isPlanId(plan) ? PLANS[plan].value : 0;
+  // 'familia' (plano antigo, não é mais vendido) conta como 'cpf'; valores desconhecidos (zap, piloto...) ficam como estão.
+  const stored = (profile.subscription_plan as string | null) ?? null;
+  const known = canonicalPlan(stored);
+  const plan = known ?? stored;
+  const planValue = known ? PLANS[known].value : 0;
   const amount = Number(body.payment?.value ?? planValue) || 0;
 
   const row = {
