@@ -126,6 +126,7 @@ ok('filtro: período inclui as duas pontas e usa a coluna de data de cada tabela
   assert.deepEqual(buildFilters('investment_movements', o, ME).map((x) => x.column), ['moved_on', 'moved_on']);
   assert.deepEqual(buildFilters('card_invoice_payments', o, ME).map((x) => x.column), ['paid_on', 'paid_on']);
   assert.deepEqual(buildFilters('mei_invoices', o, ME).map((x) => x.column), ['invoice_date', 'invoice_date']);
+  assert.deepEqual(buildFilters('mei_suppliers', o, ME), []); // cadastro: sem data, não filtra por período
   assert.deepEqual(buildFilters('goals', o, ME), []); // sem data: não filtra
   assert.deepEqual(buildFilters('budgets', o, ME), []);
 });
@@ -157,14 +158,14 @@ ok('applyFilters na memória segue as mesmas regras', () => {
 ok('plano: lançamentos filtram no servidor (casa, empresa e período) e trazem as tabelas de nomes', () => {
   const plan = buildQueryPlan(baseOpts({ items: ['transactions'], scope: 'empresa', from: '2026-01-01', to: '2026-12-31' }), baseCtx);
   const ids = plan.map((p) => p.id);
-  assert.deepEqual(ids, ['categories', 'accounts', 'credit_cards', 'mei_clients', 'transactions']);
+  assert.deepEqual(ids, ['categories', 'accounts', 'credit_cards', 'mei_clients', 'mei_suppliers', 'transactions']);
   const tx = plan.find((p) => p.id === 'transactions')!;
   assert.deepEqual(tx.filters, [
     { op: 'eq', column: 'user_id', value: ME }, { op: 'eq', column: 'is_business', value: true },
     { op: 'gte', column: 'date', value: '2026-01-01' }, { op: 'lte', column: 'date', value: '2026-12-31' },
   ]);
   // tabelas de nomes são lidas inteiras (o nome de uma conta pessoal pode aparecer num lançamento da empresa)
-  for (const id of ['categories', 'accounts', 'credit_cards', 'mei_clients']) assert.deepEqual(plan.find((p) => p.id === id)!.filters, [], id);
+  for (const id of ['categories', 'accounts', 'credit_cards', 'mei_clients', 'mei_suppliers']) assert.deepEqual(plan.find((p) => p.id === id)!.filters, [], id);
   assert.equal(plan.find((p) => p.id === 'accounts')!.local.length, 2);
 });
 ok('plano: só lê o que os itens escolhidos pedem', () => {
@@ -188,8 +189,8 @@ ok('plano: pacote MEI só para quem usa o app para a empresa', () => {
   assert.deepEqual(effectiveItems(baseOpts({ items: ['mei', 'goals'] }), ctx), ['goals']);
   assert.equal(buildQueryPlan(baseOpts({ items: ['mei'] }), ctx).length, 0);
   assert.equal(validateOptions(baseOpts({ items: ['mei'] }), ctx), 'Escolha ao menos um item.');
-  assert.equal(buildQueryPlan(baseOpts({ items: ['transactions'] }), ctx).some((p) => p.id === 'mei_clients'), false);
-  assert.deepEqual(buildQueryPlan(baseOpts({ items: ['mei'] }), baseCtx).map((p) => p.id), ['mei_clients', 'mei_invoices']);
+  assert.equal(buildQueryPlan(baseOpts({ items: ['transactions'] }), ctx).some((p) => p.id === 'mei_clients' || p.id === 'mei_suppliers'), false);
+  assert.deepEqual(buildQueryPlan(baseOpts({ items: ['mei'] }), baseCtx).map((p) => p.id), ['mei_clients', 'mei_suppliers', 'mei_invoices']);
 });
 ok('opções: validação em português', () => {
   assert.equal(validateOptions(baseOpts(), baseCtx), null);
@@ -342,6 +343,7 @@ const DATA: Record<string, Record<string, unknown>[]> = {
     { id: 't4', user_id: PARTNER, category_id: 'c-par', amount: 40, description: 'Do Bruno', type: 'expense', date: '2026-10-11', is_recurring: false, account_id: 'a3', card_id: null, debit_card_id: null, invoice_month: null, installment_number: null, installment_total: null, is_business: false, attachment_name: null, revenue_kind: null, client_id: null, is_owner_draw: false },
   ],
   mei_clients: [{ id: 'm1', user_id: ME, name: 'Cliente Ltda', document: '12.345.678/0001-90', phone: '11 4000-0000', email: 'c@x.com', notes: null, archived: false, created_at: '2026-02-01T12:00:00Z' }],
+  mei_suppliers: [{ id: 'f1', user_id: ME, name: 'Embalagens Sul', document: '12345678000190', phone: '51 3000-0000', email: null, pix_key: '12345678000190', category: 'Embalagens', notes: null, archived: false, created_at: '2026-03-01T12:00:00Z' }],
   mei_invoices: [{ id: 'i1', user_id: ME, invoice_number: 7, client_id: 'm1', client_name: 'antigo', value: 500, invoice_date: '2026-09-15', notes: 'obs' }],
   bills: [{ id: 'b1', user_id: ME, description: 'Luz', amount: 150, due_date: '2026-10-20', type: 'expense', recurrence: 'monthly', status: 'pending', paid_at: null, is_business: false, revenue_kind: null, client_id: null, debt_id: null, created_at: '2026-10-01T10:00:00Z' }],
   debts: [{ id: 'd1', user_id: ME, name: 'Empréstimo', kind: 'emprestimo', balance: 900, monthly_rate: 2.5, min_payment: 80, archived: false, creditor: 'Banco', original_amount: 1000, status: 'atrasada', overdue_since: '2026-08-01', essential: false, cash_offer: null, agreement_installments: null, agreement_amount: null, agreement_first_due: null, created_at: '2026-01-01T10:00:00Z' }],
@@ -372,18 +374,18 @@ ok('CSV em .zip: um arquivo por item, BOM, ";" e LEIA-ME', async () => {
   const files = await unzip(r.data as Uint8Array);
   assert.deepEqual(Object.keys(files).sort(), [
     'LEIA-ME.txt', 'aportes-dos-objetivos.csv', 'cartoes.csv', 'categorias.csv', 'contas-a-pagar-e-receber.csv', 'contas-bancarias.csv', 'dividas.csv', 'investimentos.csv',
-    'itens-das-listas-de-compras.csv', 'lancamentos.csv', 'limites-do-mes.csv', 'listas-de-compras.csv', 'mei-clientes.csv', 'mei-recibos.csv', 'motorista-carros.csv', 'motorista-dias.csv', 'movimentacoes-de-investimentos.csv',
+    'itens-das-listas-de-compras.csv', 'lancamentos.csv', 'limites-do-mes.csv', 'listas-de-compras.csv', 'mei-clientes.csv', 'mei-fornecedores.csv', 'mei-recibos.csv', 'motorista-carros.csv', 'motorista-dias.csv', 'movimentacoes-de-investimentos.csv',
     'objetivos.csv', 'pagamentos-de-divida.csv', 'pagamentos-de-fatura.csv', 'parcelamentos.csv', 'perfil.csv',
   ]);
   for (const [name, text] of Object.entries(files)) assert.equal(text.charCodeAt(0), 0xfeff, `${name} sem BOM`);
 
   const lanc = files['lancamentos.csv'].split('\r\n');
-  assert.equal(lanc[0], CSV_BOM + 'Data;Descrição;Tipo;Valor;Categoria;Subcategoria;Conta;Cartão de crédito;Cartão de débito;Fatura (mês de vencimento);Parcela;Total de parcelas;Pessoal/Empresa;Tipo de receita (MEI);Cliente;Retirada do sócio;Recorrente;Nome do anexo');
+  assert.equal(lanc[0], CSV_BOM + 'Data;Descrição;Tipo;Valor;Categoria;Subcategoria;Conta;Cartão de crédito;Cartão de débito;Fatura (mês de vencimento);Parcela;Total de parcelas;Pessoal/Empresa;Tipo de receita (MEI);Cliente;Fornecedor;Retirada do sócio;Recorrente;Nome do anexo');
   // só as linhas do usuário (a do Bruno fica de fora com a casa desligada)
   assert.equal(lanc.length, 3 + 1 + 1); // cabeçalho + 3 + linha final vazia
-  assert.equal(lanc[1], '10/10/2026;"Compra; ""do mês""";Despesa;87,90;Alimentação;Supermercado;Nubank;;;;;;Pessoal;;;Não;Não;');
-  assert.equal(lanc[2], "30/09/2026;'=cmd|calc;Receita;3000,00;Sem categoria;;Conta MEI;;;;;;Empresa;Serviços;Cliente Ltda;Não;Sim;nota.pdf");
-  assert.equal(lanc[3], '12/08/2026;TV (1/3);Despesa;100,00;Alimentação;;;Roxinho;;09/2026;1;3;Pessoal;;;Não;Não;');
+  assert.equal(lanc[1], '10/10/2026;"Compra; ""do mês""";Despesa;87,90;Alimentação;Supermercado;Nubank;;;;;;Pessoal;;;;Não;Não;');
+  assert.equal(lanc[2], "30/09/2026;'=cmd|calc;Receita;3000,00;Sem categoria;;Conta MEI;;;;;;Empresa;Serviços;Cliente Ltda;;Não;Sim;nota.pdf");
+  assert.equal(lanc[3], '12/08/2026;TV (1/3);Despesa;100,00;Alimentação;;;Roxinho;;09/2026;1;3;Pessoal;;;;Não;Não;');
   assert.equal(files['lancamentos.csv'].includes('Do Bruno'), false);
 
   assert.match(files['contas-bancarias.csv'], /Nubank;Conta corrente;Nubank;100,00;1234,56;Pessoal;Não;01\/01\/2026/);
@@ -402,6 +404,7 @@ ok('CSV em .zip: um arquivo por item, BOM, ";" e LEIA-ME', async () => {
   assert.match(files['itens-das-listas-de-compras.csv'], /Mercado;Arroz;2;kg;12,90;Sim;10\/10\/2026/);
   assert.match(files['mei-recibos.csv'], /7;15\/09\/2026;Cliente Ltda;500,00;obs/);
   assert.match(files['mei-clientes.csv'], /Cliente Ltda;12\.345\.678\/0001-90;11 4000-0000;c@x\.com/);
+  assert.equal(files['mei-fornecedores.csv'], CSV_BOM + 'Fornecedor;O que fornece;CPF/CNPJ;Telefone;E-mail;Chave Pix;Observações;Arquivado;Criado em\r\nEmbalagens Sul;Embalagens;12345678000190;51 3000-0000;;12345678000190;;Não;01/03/2026\r\n');
   assert.match(files['parcelamentos.csv'], /TV;Roxinho;100,00;3;300,00;/);
   assert.match(files['parcelamentos.csv'], /09\/2026/);
   // categorias: próprias e padrão; a do parceiro não entra com a casa desligada; fórmula protegida
@@ -477,11 +480,34 @@ ok('JSON: tudo num arquivo, datas ISO, números de verdade e filtros descritos',
   assert.deepEqual(Object.keys(j.dados).sort(), ['lancamentos', 'objetivos', 'aportes_dos_objetivos', 'perfil'].sort());
 });
 
+ok('Fornecedor: aparece nos lançamentos e nas contas da empresa, inclusive o de um fornecedor arquivado', async () => {
+  const data = structuredClone(DATA);
+  data.transactions[0].is_business = true;
+  (data.transactions[0] as Record<string, unknown>).supplier_id = 'f1';
+  data.mei_suppliers.push({ id: 'f2', user_id: ME, name: 'Casa do Frete', document: null, phone: null, email: null, pix_key: null, category: 'Frete e entrega', notes: null, archived: true, created_at: '2026-04-01T12:00:00Z' });
+  data.bills[0].is_business = true;
+  (data.bills[0] as Record<string, unknown>).supplier_id = 'f2';
+  const r = await runExport(fakeClient(data, RPCS), baseOpts({ items: ['transactions', 'bills', 'mei'] }), baseCtx);
+  const files = await unzip(r.data as Uint8Array);
+  assert.match(files['lancamentos.csv'], /Alimentação;Supermercado;Nubank;;;;;;Empresa;;;Embalagens Sul;Não;Não;/);
+  assert.match(files['contas-a-pagar-e-receber.csv'], /Luz;A pagar;150,00;Pendente;;Todo mês;;Empresa;;;Casa do Frete;/);
+  assert.match(files['mei-fornecedores.csv'], /Casa do Frete;Frete e entrega;;;;;;Sim;01\/04\/2026/);
+  // o plano lê a tabela de fornecedores inteira (o nome precisa ser achado mesmo com filtro de período)
+  const plan = buildQueryPlan(baseOpts({ items: ['bills'], from: '2026-10-01' }), baseCtx);
+  assert.deepEqual(plan.find((p) => p.id === 'mei_suppliers')!.filters, []);
+  assert.match(plan.find((p) => p.id === 'bills')!.columns, /supplier_id/);
+  assert.match(buildQueryPlan(baseOpts({ items: ['transactions'] }), baseCtx).find((p) => p.id === 'transactions')!.columns, /supplier_id/);
+  const j = JSON.parse((await runExport(fakeClient(data, RPCS), baseOpts({ format: 'json', items: ['mei'] }), baseCtx)).data as string);
+  assert.deepEqual(j.dados.mei_fornecedores.map((f: { nome: string }) => f.nome), ['Embalagens Sul', 'Casa do Frete']);
+});
+
 ok('quem não usa o app para a empresa não vê colunas nem arquivos de empresa', async () => {
   const ctx = { ...baseCtx, isMei: false };
   const r = await runExport(fakeClient(DATA, RPCS), { ...DEFAULT_OPTIONS(false), items: ['transactions', 'mei', 'profile'] }, ctx);
   const files = await unzip(r.data as Uint8Array);
   assert.equal('mei-clientes.csv' in files, false);
+  assert.equal('mei-fornecedores.csv' in files, false);
+  assert.equal(files['lancamentos.csv'].includes('Fornecedor'), false);
   assert.equal(files['lancamentos.csv'].includes('Pessoal/Empresa'), false);
   assert.equal(files['perfil.csv'].includes('Ana ME'), false);
   assert.equal(files['perfil.csv'].includes('00.000.000/0001-00'), false);

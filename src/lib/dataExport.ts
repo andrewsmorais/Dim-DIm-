@@ -58,7 +58,7 @@ export const EXPORT_ITEMS: ExportItem[] = [
   { id: "categories", label: "Categorias e subcategorias", hint: "As do Jakash e as suas." },
   { id: "shopping", label: "Listas de compras e itens", hint: "Listas, itens e preços estimados." },
   { id: "driver", label: "Motorista de app", hint: "Cada dia trabalhado com ganho bruto, despesas e lucro líquido, e os seus carros." },
-  { id: "mei", label: "MEI: clientes e recibos", hint: "Clientes e recibos emitidos.", meiOnly: true },
+  { id: "mei", label: "MEI: clientes, fornecedores e recibos", hint: "Clientes, fornecedores e recibos emitidos.", meiOnly: true },
   { id: "profile", label: "Perfil", hint: "Só dados do seu cadastro. Sem senhas, cobrança ou chaves." },
 ];
 
@@ -253,6 +253,7 @@ const TABLE_META: Record<string, TableMeta> = {
   driver_vehicles: { owner: "user_id" },
   driver_shifts: { owner: "user_id", date: "date" },
   mei_clients: { owner: "user_id" },
+  mei_suppliers: { owner: "user_id" },
   mei_invoices: { owner: "user_id", date: "invoice_date" },
 };
 
@@ -294,7 +295,7 @@ export function applyFilters<T extends Record<string, unknown>>(rows: T[], filte
 export type TaskId =
   | "transactions" | "installment_rows" | "accounts" | "account_balances" | "credit_cards" | "card_invoice_payments" | "bills"
   | "debts" | "debt_payments" | "goals" | "goal_contributions" | "budgets" | "investments" | "investment_movements"
-  | "categories" | "category_flags" | "shopping_lists" | "shopping_items" | "driver_vehicles" | "driver_shifts" | "mei_clients" | "mei_invoices" | "profile";
+  | "categories" | "category_flags" | "shopping_lists" | "shopping_items" | "driver_vehicles" | "driver_shifts" | "mei_clients" | "mei_suppliers" | "mei_invoices" | "profile";
 
 export type PlanTask = {
   id: TaskId;
@@ -328,7 +329,7 @@ const desc = (column: string) => ({ column, ascending: false });
 const TASKS: Record<Exclude<TaskId, "profile">, TaskDef> = {
   transactions: {
     table: "transactions", label: "lançamentos",
-    columns: "id,user_id,category_id,amount,description,type,date,is_recurring,account_id,card_id,debit_card_id,invoice_month,installment_number,installment_total,is_business,attachment_name,revenue_kind,client_id,is_owner_draw",
+    columns: "id,user_id,category_id,amount,description,type,date,is_recurring,account_id,card_id,debit_card_id,invoice_month,installment_number,installment_total,is_business,attachment_name,revenue_kind,client_id,supplier_id,is_owner_draw",
     order: [desc("date"), asc("id")],
   },
   installment_rows: {
@@ -345,7 +346,7 @@ const TASKS: Record<Exclude<TaskId, "profile">, TaskDef> = {
   card_invoice_payments: { table: "card_invoice_payments", label: "pagamentos de fatura", columns: "id,user_id,card_id,invoice_month,amount,paid_on,account_id", order: [desc("paid_on"), asc("id")] },
   bills: {
     table: "bills", label: "contas a pagar e receber",
-    columns: "id,user_id,description,amount,due_date,type,recurrence,status,paid_at,is_business,revenue_kind,client_id,debt_id,created_at", order: [asc("due_date"), asc("id")],
+    columns: "id,user_id,description,amount,due_date,type,recurrence,status,paid_at,is_business,revenue_kind,client_id,supplier_id,debt_id,created_at", order: [asc("due_date"), asc("id")],
   },
   debts: {
     table: "debts", label: "dívidas", entity: true,
@@ -377,6 +378,7 @@ const TASKS: Record<Exclude<TaskId, "profile">, TaskDef> = {
   driver_vehicles: { table: "driver_vehicles", label: "carros", entity: true, columns: "id,user_id,name,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived,created_at", order: [asc("created_at"), asc("id")] },
   driver_shifts: { table: "driver_shifts", label: "dias de motorista", columns: "user_id," + SHIFT_COLUMNS, order: [desc("date"), asc("id")] },
   mei_clients: { table: "mei_clients", label: "clientes", entity: true, columns: "id,user_id,name,document,phone,email,notes,archived,created_at", order: [asc("created_at"), asc("id")] },
+  mei_suppliers: { table: "mei_suppliers", label: "fornecedores", entity: true, columns: "id,user_id,name,document,phone,email,pix_key,category,notes,archived,created_at", order: [asc("created_at"), asc("id")] },
   mei_invoices: {
     table: "mei_invoices", label: "recibos", columns: "id,user_id,invoice_number,client_id,client_name,value,invoice_date,notes", order: [desc("invoice_date"), desc("invoice_number")],
   },
@@ -391,7 +393,7 @@ const TASKS: Record<Exclude<TaskId, "profile">, TaskDef> = {
 export type DatasetId =
   | "transactions" | "accounts" | "cards" | "invoice_payments" | "installments" | "bills" | "debts" | "debt_payments" | "goals"
   | "goal_contributions" | "budgets" | "investments" | "investment_movements" | "categories" | "shopping_lists" | "shopping_items"
-  | "driver_shifts" | "driver_vehicles" | "mei_clients" | "mei_invoices" | "profile";
+  | "driver_shifts" | "driver_vehicles" | "mei_clients" | "mei_suppliers" | "mei_invoices" | "profile";
 
 const c = (key: string, header: string, kind: CellKind = "text", flags: Pick<Column, "household" | "business"> = {}): Column => ({ key, header, kind, ...flags });
 const PESSOA = c("pessoa", "Pessoa", "text", { household: true });
@@ -414,11 +416,11 @@ export const DATASETS: DatasetDef[] = [
   {
     id: "transactions", item: "transactions", file: "lancamentos.csv", jsonKey: "lancamentos", title: "Lançamentos",
     description: "Receitas e despesas, com categoria, conta, cartão, fatura e parcela.",
-    tasks: ["transactions", "categories", "accounts", "credit_cards", "mei_clients"],
+    tasks: ["transactions", "categories", "accounts", "credit_cards", "mei_clients", "mei_suppliers"],
     columns: [PESSOA, c("data", "Data", "date"), c("descricao", "Descrição"), c("tipo", "Tipo"), c("valor", "Valor", "money"), c("categoria", "Categoria"), c("subcategoria", "Subcategoria"),
       c("conta", "Conta"), c("cartao_credito", "Cartão de crédito"), c("cartao_debito", "Cartão de débito"), c("fatura", "Fatura (mês de vencimento)", "month"),
       c("parcela", "Parcela", "int"), c("total_parcelas", "Total de parcelas", "int"), TIPO_USO,
-      c("tipo_receita_mei", "Tipo de receita (MEI)", "text", { business: true }), c("cliente", "Cliente", "text", { business: true }),
+      c("tipo_receita_mei", "Tipo de receita (MEI)", "text", { business: true }), c("cliente", "Cliente", "text", { business: true }), c("fornecedor", "Fornecedor", "text", { business: true }),
       c("retirada_do_socio", "Retirada do sócio", "bool", { business: true }), c("recorrente", "Recorrente", "bool"), c("anexo", "Nome do anexo")],
   },
   {
@@ -451,9 +453,9 @@ export const DATASETS: DatasetDef[] = [
   {
     id: "bills", item: "bills", file: "contas-a-pagar-e-receber.csv", jsonKey: "contas_a_pagar_e_receber", title: "Contas a pagar e receber",
     description: "Contas pelo vencimento, com a situação.",
-    tasks: ["bills", "debts", "mei_clients"],
+    tasks: ["bills", "debts", "mei_clients", "mei_suppliers"],
     columns: [PESSOA, c("vencimento", "Vencimento", "date"), c("descricao", "Descrição"), c("tipo", "Tipo"), c("valor", "Valor", "money"), c("situacao", "Situação"), c("paga_em", "Paga em", "date"), c("repete", "Repete"),
-      c("divida", "Dívida ligada"), TIPO_USO, c("tipo_receita_mei", "Tipo de receita (MEI)", "text", { business: true }), c("cliente", "Cliente", "text", { business: true }), c("criada_em", "Criada em", "date")],
+      c("divida", "Dívida ligada"), TIPO_USO, c("tipo_receita_mei", "Tipo de receita (MEI)", "text", { business: true }), c("cliente", "Cliente", "text", { business: true }), c("fornecedor", "Fornecedor", "text", { business: true }), c("criada_em", "Criada em", "date")],
   },
   {
     id: "debts", item: "debts", file: "dividas.csv", jsonKey: "dividas", title: "Dívidas",
@@ -544,6 +546,12 @@ export const DATASETS: DatasetDef[] = [
     columns: [c("nome", "Cliente"), c("documento", "CPF/CNPJ"), c("telefone", "Telefone"), c("email", "E-mail"), c("observacoes", "Observações"), c("arquivado", "Arquivado", "bool"), c("criado_em", "Criado em", "date")],
   },
   {
+    id: "mei_suppliers", item: "mei", file: "mei-fornecedores.csv", jsonKey: "mei_fornecedores", title: "MEI: fornecedores",
+    description: "Seus fornecedores (contatos que você cadastrou).",
+    tasks: ["mei_suppliers"],
+    columns: [c("nome", "Fornecedor"), c("fornece", "O que fornece"), c("documento", "CPF/CNPJ"), c("telefone", "Telefone"), c("email", "E-mail"), c("chave_pix", "Chave Pix"), c("observacoes", "Observações"), c("arquivado", "Arquivado", "bool"), c("criado_em", "Criado em", "date")],
+  },
+  {
     id: "mei_invoices", item: "mei", file: "mei-recibos.csv", jsonKey: "mei_recibos", title: "MEI: recibos",
     description: "Recibos emitidos, pela data.",
     tasks: ["mei_invoices", "mei_clients"],
@@ -570,7 +578,7 @@ export function columnsFor(ds: DatasetDef, opts: Pick<ExportOptions, "household"
 }
 
 const TASK_ORDER: TaskId[] = [
-  "categories", "category_flags", "accounts", "account_balances", "credit_cards", "mei_clients", "debts", "goals", "investments", "shopping_lists",
+  "categories", "category_flags", "accounts", "account_balances", "credit_cards", "mei_clients", "mei_suppliers", "debts", "goals", "investments", "shopping_lists",
   "transactions", "installment_rows", "card_invoice_payments", "bills", "debt_payments", "goal_contributions", "budgets", "investment_movements", "shopping_items", "driver_vehicles", "driver_shifts", "mei_invoices", "profile",
 ];
 
@@ -583,7 +591,7 @@ export function buildQueryPlan(opts: ExportOptions, ctx: ExportContext): PlanTas
   const needed = new Set<TaskId>();
   for (const ds of datasetsForItems(items)) {
     for (const t of ds.tasks) {
-      if (t === "mei_clients" && !ctx.isMei) continue;
+      if ((t === "mei_clients" || t === "mei_suppliers") && !ctx.isMei) continue;
       needed.add(t);
     }
   }
@@ -755,6 +763,7 @@ export function buildDatasets(raw: Partial<Record<TaskId, TaskResult>>, plan: Pl
   const accounts = byId(allRowsOf("accounts"));
   const cards = byId(allRowsOf("credit_cards"));
   const clients = byId(allRowsOf("mei_clients"));
+  const suppliers = byId(allRowsOf("mei_suppliers"));
   const debts = byId(allRowsOf("debts"));
   const goals = byId(allRowsOf("goals"));
   const invs = byId(allRowsOf("investments"));
@@ -787,7 +796,7 @@ export function buildDatasets(raw: Partial<Record<TaskId, TaskResult>>, plan: Pl
         pessoa: person(r.user_id), data: str(r.date), descricao: str(r.description), tipo: label(TIPO_LANC, r.type), valor: money(r.amount),
         categoria: cp.categoria, subcategoria: cp.subcategoria, conta: nameOf(accounts, r.account_id), cartao_credito: nameOf(cards, r.card_id), cartao_debito: nameOf(cards, r.debit_card_id),
         fatura: str(r.invoice_month), parcela: int(r.installment_number), total_parcelas: int(r.installment_total), pessoal_empresa: uso(r.is_business),
-        tipo_receita_mei: label(TIPO_RECEITA, r.revenue_kind), cliente: nameOf(clients, r.client_id), retirada_do_socio: bool(r.is_owner_draw), recorrente: bool(r.is_recurring), anexo: str(r.attachment_name),
+        tipo_receita_mei: label(TIPO_RECEITA, r.revenue_kind), cliente: nameOf(clients, r.client_id), fornecedor: nameOf(suppliers, r.supplier_id), retirada_do_socio: bool(r.is_owner_draw), recorrente: bool(r.is_recurring), anexo: str(r.attachment_name),
       };
     }));
   }
@@ -848,7 +857,7 @@ export function buildDatasets(raw: Partial<Record<TaskId, TaskResult>>, plan: Pl
     push("bills", rowsOf("bills").map((r) => ({
       pessoa: person(r.user_id), vencimento: str(r.due_date), descricao: str(r.description), tipo: r.type === "income" ? "A receber" : "A pagar", valor: money(r.amount),
       situacao: r.status === "paid" ? "Paga" : "Pendente", paga_em: str(r.paid_at), repete: r.recurrence === "monthly" ? "Todo mês" : "Não repete",
-      divida: nameOf(debts, r.debt_id), pessoal_empresa: uso(r.is_business), tipo_receita_mei: label(TIPO_RECEITA, r.revenue_kind), cliente: nameOf(clients, r.client_id), criada_em: str(r.created_at),
+      divida: nameOf(debts, r.debt_id), pessoal_empresa: uso(r.is_business), tipo_receita_mei: label(TIPO_RECEITA, r.revenue_kind), cliente: nameOf(clients, r.client_id), fornecedor: nameOf(suppliers, r.supplier_id), criada_em: str(r.created_at),
     })));
   }
 
@@ -950,6 +959,10 @@ export function buildDatasets(raw: Partial<Record<TaskId, TaskResult>>, plan: Pl
   if (wants("mei_clients") || wants("mei_invoices")) {
     push("mei_clients", rowsOf("mei_clients").map((r) => ({
       nome: str(r.name), documento: str(r.document), telefone: str(r.phone), email: str(r.email), observacoes: str(r.notes), arquivado: bool(r.archived), criado_em: str(r.created_at),
+    })));
+    push("mei_suppliers", rowsOf("mei_suppliers").map((r) => ({
+      nome: str(r.name), fornece: str(r.category), documento: str(r.document), telefone: str(r.phone), email: str(r.email), chave_pix: str(r.pix_key),
+      observacoes: str(r.notes), arquivado: bool(r.archived), criado_em: str(r.created_at),
     })));
     push("mei_invoices", rowsOf("mei_invoices").map((r) => ({
       numero: int(r.invoice_number), data: str(r.invoice_date), cliente: nameOf(clients, r.client_id) ?? str(r.client_name), valor: money(r.value), observacoes: str(r.notes),
