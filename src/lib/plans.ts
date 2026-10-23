@@ -5,10 +5,11 @@
 //   cpf    = Jakash Essencial (1 pessoa)       — id mantido para nao quebrar quem ja assina
 //   familia = Jakash Familia  (ate 3 pessoas)
 //   mei    = Jakash MEI       (tudo do Familia + ferramentas MEI)
+// appleProductId = produto de assinatura mensal na App Store Connect (compra dentro do app iOS).
 export const PLANS = {
-  cpf: { name: 'Jakash Essencial', value: 19.9, members: 1, aiDaily: 30 },
-  familia: { name: 'Jakash Família', value: 29.9, members: 3, aiDaily: 40 },
-  mei: { name: 'Jakash MEI', value: 39.9, members: 3, aiDaily: 60 },
+  cpf: { name: 'Jakash Essencial', value: 19.9, members: 1, aiDaily: 30, appleProductId: 'jakash.essencial.mensal' },
+  familia: { name: 'Jakash Família', value: 29.9, members: 3, aiDaily: 40, appleProductId: 'jakash.familia.mensal' },
+  mei: { name: 'Jakash MEI', value: 39.9, members: 3, aiDaily: 60, appleProductId: 'jakash.mei.mensal' },
 } as const;
 
 export type PlanId = keyof typeof PLANS;
@@ -17,6 +18,11 @@ export const PLAN_IDS = Object.keys(PLANS) as PlanId[];
 
 export function isPlanId(value: unknown): value is PlanId {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(PLANS, value);
+}
+
+// Produto da App Store -> plano (null = produto que o Jakash não conhece).
+export function planFromAppleProduct(productId: unknown): PlanId | null {
+  return PLAN_IDS.find((id) => PLANS[id].appleProductId === productId) ?? null;
 }
 
 // Preço do plano sempre em reais (a moeda de exibição do usuário não muda o valor cobrado).

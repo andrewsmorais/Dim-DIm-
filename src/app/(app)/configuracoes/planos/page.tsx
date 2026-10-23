@@ -6,7 +6,13 @@ import { useSupabase } from "@/lib/useSupabase";
 import { PLANS, PLAN_IDS, isPlanId, planPrice, type PlanId } from "@/lib/plans";
 import { brl, formatDateBR } from "@/lib/format";
 import { CheckoutButton } from "@/components/CheckoutButton";
+import { IapPaywall } from "@/components/IapPaywall";
+import { useIsNative } from "@/lib/useIsNative";
+import { IOS_IAP_ENABLED } from "@/lib/native";
+import { MANAGE_SUBSCRIPTIONS_URL } from "@/lib/nativePurchases";
 import { BackTitle, Card, Label, Empty, ErrorNote, inputCls, btnGhostCls } from "@/components/ui/page";
+
+type PlanInfo = { billingProvider: "apple" | "asaas" | null; asaasLive: boolean };
 
 type Profile = { subscription_status: string; subscription_plan: string | null; subscription_expires_at: string | null; asaas_subscription_id: string | null };
 type Invoice = { id: string; status: string; value: number; dueDate: string | null; createdAt: string | null; paidAt: string | null; invoiceUrl: string | null; receiptUrl: string | null };
@@ -34,6 +40,10 @@ const SUBTITLE: Record<PlanId, string> = {
 
 export default function PlanosPage() {
   const { supabase, userId, ready } = useSupabase();
+  const { native } = useIsNative();
+  // No app iOS: sem preços nem compra pelo site (regra 3.1.1/3.1.3 da Apple). Com NEXT_PUBLIC_IOS_IAP=1 a compra é pela App Store.
+  const iap = native && IOS_IAP_ENABLED;
+  const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [tab, setTab] = useState<"sub" | "plans">("sub");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -47,6 +57,8 @@ export default function PlanosPage() {
     const res = await fetch("/api/asaas/invoices");
     const json = await res.json().catch(() => ({}));
     setInvoices(json.invoices ?? []);
+    const info = await fetch("/api/plan", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setPlanInfo(info ? { billingProvider: info.billingProvider ?? null, asaasLive: Boolean(info.asaasLive) } : { billingProvider: null, asaasLive: false });
   }
 
   useEffect(() => { if (ready && userId) load(); // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,18 +77,21 @@ export default function PlanosPage() {
   const planKey: PlanId | null = isPlanId(profile?.subscription_plan) ? profile.subscription_plan : null;
   const hasSub = Boolean(profile?.asaas_subscription_id);
   const canCancel = hasSub && profile?.subscription_status !== "canceled";
+  const viaApple = planInfo?.billingProvider === "apple";
+  const showPlansTab = !native || iap;
+  const activeTab = showPlansTab ? tab : "sub";
 
   return (
     <div className="max-w-xl mx-auto pb-20">
-      <BackTitle title="Planos" subtitle="Seu plano, faturas e cancelamento." href="/configuracoes" />
+      <BackTitle title="Planos" subtitle={native ? "Seu plano e a sua assinatura." : "Seu plano, faturas e cancelamento."} href="/configuracoes" />
 
-      <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-5">
+      {showPlansTab && <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-5">
         {([["sub", "Assinatura"], ["plans", "Planos"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
         ))}
-      </div>
+      </div>}
 
-      {tab === "sub" && (
+      {activeTab === "sub" && (
         <div className="space-y-4">
           <Card>
             <p className="text-xs font-bold text-gray-500 mb-3">STATUS DA ASSINATURA</p>
@@ -85,22 +100,31 @@ export default function PlanosPage() {
               <div><p className="font-extrabold">{planKey ? PLANS[planKey].name : "Nenhum plano ativo"}</p><span className={`inline-block mt-1 text-xs font-bold rounded-full px-3 py-1 ${st.tone}`}>{st.label}</span></div>
             </div>
             {profile?.subscription_status === "trial" && profile.subscription_expires_at && (
-              <p className="text-sm text-sky-700 dark:text-sky-300 bg-sky-500/10 rounded-2xl p-4 mt-4">Seu período de teste está ativo até {formatDateBR(profile.subscription_expires_at.slice(0, 10))}. Se não cancelar antes do fim, a cobrança mensal começa automaticamente.</p>
+              <p className="text-sm text-sky-700 dark:text-sky-300 bg-sky-500/10 rounded-2xl p-4 mt-4">
+                Seu período de teste está ativo até {formatDateBR(profile.subscription_expires_at.slice(0, 10))}.
+                {native ? (iap && !planInfo?.asaasLive ? " Para continuar depois do teste, escolha um plano na aba Planos." : "") : " Se não cancelar antes do fim, a cobrança mensal começa automaticamente."}
+              </p>
             )}
             {planKey && (
               <dl className="mt-4 space-y-2 text-sm border-t border-gray-100 dark:border-[#262626] pt-4">
                 <div className="flex justify-between"><dt className="text-gray-500">Plano</dt><dd className="font-bold">{PLANS[planKey].name}</dd></div>
-                <div className="flex justify-between"><dt className="text-gray-500">Valor</dt><dd className="font-bold">{planPrice(planKey)} / mês</dd></div>
+                {!native && <div className="flex justify-between"><dt className="text-gray-500">Valor</dt><dd className="font-bold">{planPrice(planKey)} / mês</dd></div>}
                 {profile?.subscription_expires_at && <div className="flex justify-between"><dt className="text-gray-500">{profile.subscription_status === "trial" ? "Fim do teste" : "Próxima renovação"}</dt><dd className="font-bold">{formatDateBR(profile.subscription_expires_at.slice(0, 10))}</dd></div>}
               </dl>
             )}
-            {!hasSub && <button onClick={() => setTab("plans")} className={btnGhostCls + " w-full mt-4 !py-3"}>Ver planos</button>}
+            {viaApple && (
+              <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                <p>Assinatura feita pela App Store.</p>
+                {native ? <a href={MANAGE_SUBSCRIPTIONS_URL} className={btnGhostCls + " w-full mt-3 !py-3"}><ExternalLink size={16} /> Gerenciar assinatura</a> : <p className="text-xs text-gray-500 mt-1">Para alterar ou cancelar, use Ajustes do iPhone › seu nome › Assinaturas.</p>}
+              </div>
+            )}
+            {!hasSub && !viaApple && (!native || (iap && !planInfo?.asaasLive)) && <button onClick={() => setTab("plans")} className={btnGhostCls + " w-full mt-4 !py-3"}>Ver planos</button>}
             {canCancel && <button onClick={cancel} className={btnGhostCls + " w-full mt-4 !py-3 !text-red-500"}>Cancelar renovação</button>}
             <ErrorNote message={error} />
             {msg && <p className="text-sm text-emerald-600 font-bold mt-3">{msg}</p>}
           </Card>
 
-          <div>
+          {(!native || invoices.length > 0) && <div>
             <p className="font-extrabold text-lg mb-1">Faturas</p>
             <p className="text-sm text-gray-500 mb-3">Histórico das cobranças desta assinatura.</p>
             {invoices.length === 0 ? <Card><Empty>Nenhuma fatura ainda.</Empty></Card> : (
@@ -124,11 +148,17 @@ export default function PlanosPage() {
                 ))}
               </div>
             )}
-          </div>
+          </div>}
         </div>
       )}
 
-      {tab === "plans" && (
+      {activeTab === "plans" && iap && (
+        planInfo === null ? <Empty>Carregando…</Empty>
+        : planInfo.asaasLive ? <Card><p className="text-sm text-gray-600 dark:text-gray-300">Você já tem uma assinatura ativa. Veja os detalhes na aba Assinatura.</p></Card>
+        : userId ? <IapPaywall userId={userId} currentPlan={planKey} subscribedViaApple={viaApple} onPurchased={() => { setMsg("Assinatura ativada. Obrigado!"); setTab("sub"); load(); }} /> : null
+      )}
+
+      {activeTab === "plans" && !native && (
         <div className="space-y-4">
           <Card><Label>CPF ou CNPJ (necessário para emitir a cobrança)</Label><input className={inputCls} inputMode="numeric" placeholder="Somente números" value={doc} onChange={(e) => setDoc(e.target.value)} /></Card>
           {PLAN_IDS.map((id) => (

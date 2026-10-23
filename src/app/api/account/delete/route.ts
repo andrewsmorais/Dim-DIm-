@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { readBilling } from '@/lib/billingProfile';
 
 const ASAAS_URL = process.env.ASAAS_API_URL || 'https://sandbox.asaas.com/api/v3';
 
@@ -21,6 +22,10 @@ export async function POST(request: Request) {
     .select('asaas_subscription_id')
     .eq('id', user.id)
     .single();
+
+  // Assinatura pela App Store: não dá para cancelar pelo servidor. Avisamos para cancelar em Ajustes do iPhone.
+  const billing = await readBilling(admin, user.id);
+  const appleSubscription = billing?.billing_provider === 'apple' && ['active', 'past_due'].includes(String(billing.subscription_status));
 
   // 1. Para a cobrança (melhor esforço: se falhar, a exclusão continua e o erro fica no log)
   const apiKey = process.env.ASAAS_API_KEY;
@@ -52,5 +57,5 @@ export async function POST(request: Request) {
     console.error('Delete account: falha ao excluir usuário', error);
     return NextResponse.json({ error: 'Não foi possível excluir agora. Tente novamente.' }, { status: 500 });
   }
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, appleSubscription });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PLANS, isPlanId } from '@/lib/plans';
+import { readBilling } from '@/lib/billingProfile';
 
 // Sandbox por padrão. Em produção defina ASAAS_API_URL=https://api.asaas.com/v3
 const ASAAS_URL = process.env.ASAAS_API_URL || 'https://sandbox.asaas.com/api/v3';
@@ -60,6 +61,12 @@ export async function POST(request: Request) {
 
     if (!profile) {
       return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 });
+    }
+
+    // Assinatura feita pela App Store: quem gerencia é a Apple (Ajustes do iPhone), não o Asaas.
+    const billing = await readBilling(admin, user.id);
+    if (billing?.billing_provider === 'apple' && ['active', 'past_due'].includes(String(profile.subscription_status))) {
+      return NextResponse.json({ error: 'Sua assinatura é gerenciada pela App Store (Ajustes do iPhone › Assinaturas).' }, { status: 409 });
     }
 
     // Troca de plano (upgrade/downgrade) de quem já tem assinatura: atualiza o valor da MESMA assinatura no Asaas,
