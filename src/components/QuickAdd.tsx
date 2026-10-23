@@ -13,7 +13,9 @@ import { ACCEPT, stashFile } from "@/lib/fileImport";
 import { RECEIPT_ACCEPT, uploadReceipt } from "@/lib/receipts";
 import { KIND_LABEL, type RevenueKind } from "@/lib/mei";
 import { lightImpact } from "@/lib/haptics";
+import { useMeiSuppliers } from "@/lib/useMeiSuppliers";
 import { Label, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
+import { SupplierSelect } from "@/components/mei/SupplierSelect";
 import { VoiceEntry } from "@/components/VoiceEntry";
 import type { VoiceItem } from "@/lib/voiceParse";
 
@@ -33,6 +35,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
   const router = useRouter();
   const { supabase, userId } = useSupabase();
   const { isMei } = useUsageType();
+  const { active: suppliers } = useMeiSuppliers(supabase, userId, open && isMei);
   const [cats, setCats] = useState<CatRow[]>([]);
   const [accs, setAccs] = useState<Acc[]>([]);
   const [cards, setCards] = useState<CardOpt[]>([]);
@@ -44,7 +47,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
   const [f, setF] = useState({
     type: "expense" as "income" | "expense", amount: "", description: "", category_id: "", account_id: "", date: todayISO(), paid: true,
     method: "account" as "account" | "card" | "debit", card_id: "", installments: 1, biz: false,
-    kind: "servicos" as RevenueKind, draw: false,
+    kind: "servicos" as RevenueKind, draw: false, supplier_id: "",
   });
 
   const fRef = useRef(f);
@@ -96,7 +99,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
       setCards(list);
       const activity = ((pr.data as { mei_activity?: RevenueKind } | null)?.mei_activity ?? "servicos") as RevenueKind;
       setF((p) => ({
-        ...p, date: todayISO(), installments: 1, kind: activity, draw: false,
+        ...p, date: todayISO(), installments: 1, kind: activity, draw: false, supplier_id: "",
         ...(preset?.cardId && list.some((x) => x.id === preset.cardId)
           ? { type: "expense" as const, method: "card" as const, card_id: preset.cardId, biz: Boolean(list.find((x) => x.id === preset.cardId)?.is_business) }
           : { method: "account" as const, card_id: credits.length === 1 ? credits[0].id : "", biz: false }),
@@ -122,6 +125,10 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
   const methods = [["account", "Conta"] as const, ...(creditCards.length ? [["card", "Crédito"] as const] : []), ...(debitCards.length ? [["debit", "Débito"] as const] : [])];
   const total = parseMoney(f.amount);
   const per = Number.isNaN(total) || !(total > 0) ? 0 : splitInstallments(total, f.installments)[0];
+  // Fornecedor (opcional): só em despesa da empresa que vira lançamento (à vista, crédito ou débito), que não seja retirada do sócio,
+  // e só para quem já cadastrou fornecedores.
+  const isDraw = f.draw && !useCard && !useDebit;
+  const showSupplier = isMei && f.biz && !isIncome && !isDraw && (useCard || useDebit || f.paid) && suppliers.length > 0;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -130,6 +137,8 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     if (useCard && !card) { setError("Escolha o cartão."); return; }
     if (useDebit && (!debit || !debit.pay_account_id)) { setError(debit ? "Este cartão de débito está sem conta vinculada. Edite o cartão e escolha a conta." : "Escolha o cartão de débito."); return; }
     setSaving(true);
+    // Só vai na gravação quando escolhido (assim nada muda para quem não usa fornecedores).
+    const sup = showSupplier && f.supplier_id && suppliers.some((x) => x.id === f.supplier_id) ? { supplier_id: f.supplier_id } : {};
     let att: { attachment_path?: string; attachment_name?: string } = {};
     if (receipt && !(!useCard && !useDebit && !f.paid)) {
       try { const r = await uploadReceipt(supabase, userId!, receipt); att = { attachment_path: r.path, attachment_name: r.name }; }
@@ -140,19 +149,19 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
       const rows = buildCardPurchase(card, {
         userId: userId!, description: f.description.trim(), total: amount, installments: f.installments, date: f.date, category_id: f.category_id || null,
       });
-      res = await supabase.from("transactions").insert(rows.map((r) => ({ ...r, is_business: f.biz, ...att })));
+      res = await supabase.from("transactions").insert(rows.map((r) => ({ ...r, is_business: f.biz, ...att, ...sup })));
     } else if (useDebit && debit) {
       // Débito sai da conta na hora: lançamento normal na conta do cartão, marcado com o cartão usado.
       res = await supabase.from("transactions").insert({
         user_id: userId, description: f.description.trim(), amount, type: "expense", date: f.date,
-        category_id: f.category_id || null, account_id: debit.pay_account_id, debit_card_id: debit.id, origin: "manual", is_business: f.biz, ...att,
+        category_id: f.category_id || null, account_id: debit.pay_account_id, debit_card_id: debit.id, origin: "manual", is_business: f.biz, ...att, ...sup,
       });
     } else if (f.paid) {
       res = await supabase.from("transactions").insert({
         user_id: userId, description: f.description.trim(), amount, type: f.type, date: f.date,
         category_id: f.category_id || null, account_id: f.account_id || null, origin: "manual", is_business: f.biz, ...att,
         revenue_kind: f.biz && f.type === "income" ? f.kind : null,
-        is_owner_draw: f.biz && f.type === "expense" && f.draw,
+        is_owner_draw: f.biz && f.type === "expense" && f.draw, ...sup,
       });
     } else {
       res = await supabase.from("bills").insert({
@@ -161,7 +170,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     }
     setSaving(false);
     if (res.error) { setError("Não foi possível salvar."); return; }
-    setF({ ...f, amount: "", description: "", installments: 1 });
+    setF({ ...f, amount: "", description: "", installments: 1, supplier_id: "" });
     setReceipt(null);
     setVoiceFields([]);
     window.dispatchEvent(new Event("jakash:changed"));
@@ -284,6 +293,7 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
             <input type="checkbox" checked={f.draw} onChange={(e) => setF({ ...f, draw: e.target.checked })} className="h-5 w-5 accent-brand-dark" />
           </label>
         )}
+        {showSupplier && <SupplierSelect suppliers={suppliers} value={f.supplier_id} onChange={(id) => setF({ ...f, supplier_id: id })} onNavigate={onClose} />}
         <ErrorNote message={error} />
         {(useCard || useDebit || f.paid) && (
           <div>

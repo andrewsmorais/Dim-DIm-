@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, CalendarClock, FileText, Users, ClipboardCheck, Calculator } from "lucide-react";
+import { AlertTriangle, CalendarClock, FileText, Users, ClipboardCheck, Calculator, Truck } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
@@ -151,6 +151,12 @@ export default function MeiPage() {
           <Card className="h-full hover:shadow-lg transition-shadow">
             <p className="font-extrabold flex items-center gap-2"><Users size={18} /> Clientes e a receber</p>
             <p className="text-sm text-gray-500 mt-1">Quem ainda não pagou, cobrança no WhatsApp com Pix e histórico por cliente.</p>
+          </Card>
+        </Link>
+        <Link href="/mei/fornecedores" className="block">
+          <Card className="h-full hover:shadow-lg transition-shadow">
+            <p className="font-extrabold flex items-center gap-2"><Truck size={18} /> Fornecedores</p>
+            <p className="text-sm text-gray-500 mt-1">Quem te vende, quanto você compra de cada um e o que ainda deve.</p>
           </Card>
         </Link>
         <Link href="/mei/preco" className="block">
