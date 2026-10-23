@@ -3,10 +3,10 @@
 import { removeAllReceipts } from "@/lib/receipts";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Download, RotateCcw, UserX, X } from "lucide-react";
+import { ChevronRight, RotateCcw, UserX, X } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { BackTitle, Card, ErrorNote, Label, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
-import { saveOrShareText } from "@/lib/nativeShare";
+import DataExport from "@/components/DataExport";
 
 const RESET_OPTIONS = [
   { id: "transactions", label: "Lançamentos" },
@@ -36,26 +36,6 @@ export default function DadosPage() {
     fetch("/api/plan", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((j) => setApple(j?.billingProvider === "apple" && ["active", "past_due"].includes(j?.status))).catch(() => undefined);
   }, []);
 
-  async function exportCsv() {
-    setError(null); setMsg(null);
-    const [cats, first] = await Promise.all([
-      supabase.from("categories").select("id,name"),
-      supabase.from("transactions").select("date,description,amount,type,category_id").order("date", { ascending: false }).range(0, 999),
-    ]);
-    if (cats.error || first.error) { setError("Não foi possível exportar."); return; }
-    let rows = first.data ?? [];
-    for (let from = 1000; rows.length === from && from < 20000; from += 1000) {
-      const next = await supabase.from("transactions").select("date,description,amount,type,category_id").order("date", { ascending: false }).range(from, from + 999);
-      if (next.error) { setError("Não foi possível exportar."); return; }
-      rows = rows.concat(next.data ?? []);
-    }
-    const names = new Map((cats.data ?? []).map((c) => [c.id, c.name]));
-    const esc = (v: string) => `"${v.replace(/"/g, '""').replace(/^([=+\-@])/, "'$1")}"`;
-    const lines = ["Data;Descrição;Categoria;Tipo;Valor", ...rows.map((r) => [r.date, esc(r.description), esc(names.get(r.category_id) ?? "Sem categoria"), r.type === "income" ? "Receita" : "Despesa", Number(r.amount).toFixed(2).replace(".", ",")].join(";"))];
-    const delivered = await saveOrShareText("jakash-lancamentos.csv", "﻿" + lines.join("\n")); // no app iOS abre a folha de compartilhar
-    if (delivered) setMsg(`${rows.length} lançamentos exportados.`); else setError("Não foi possível salvar o arquivo.");
-  }
-
   async function doReset() {
     if (confirm.trim().toUpperCase() !== "APAGAR" || picked.length === 0) { setError("Escolha o que apagar e digite APAGAR."); return; }
     setBusy(true); setError(null);
@@ -81,7 +61,6 @@ export default function DadosPage() {
   }
 
   const rows = [
-    { icon: Download, title: "Exportar lançamentos", desc: "Baixe todos os seus lançamentos em CSV.", onClick: exportCsv },
     { icon: RotateCcw, title: "Começar do zero", desc: "Escolha o que apagar dos seus dados financeiros.", onClick: () => { setModal("reset"); setError(null); setConfirm(""); } },
     { icon: UserX, title: "Excluir minha conta", desc: "Apaga sua conta e todos os dados, de forma definitiva.", onClick: () => { setModal("delete"); setError(null); setConfirm(""); } },
   ];
@@ -89,6 +68,7 @@ export default function DadosPage() {
   return (
     <div className="max-w-xl mx-auto pb-20">
       <BackTitle title="Dados" subtitle="Seus dados são seus: exporte ou apague quando quiser." href="/configuracoes" />
+      <DataExport />
       <Card className="!p-2">
         <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
           {rows.map((r) => (

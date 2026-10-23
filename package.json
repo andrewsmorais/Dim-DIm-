@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:ios": "tsx --tsconfig tsconfig.json tests/ios-app.test.ts",
+    "test:export": "tsx --tsconfig tsconfig.json tests/data-export.test.ts",
     "ios:prepare": "node scripts/ios-prepare.mjs",
     "ios:sync": "node scripts/ios-prepare.mjs && cap sync ios",
     "ios:assets": "capacitor-assets generate --ios"
@@ -30,6 +31,7 @@
     "@supabase/supabase-js": "^2.117.3",
     "clsx": "^2.1.1",
     "decimal.js": "^10.6.0",
+    "jszip": "^3.10.1",
     "lucide-react": "^1.52.0",
     "next": "^15.5.28",
     "next-themes": "^0.4.6",
