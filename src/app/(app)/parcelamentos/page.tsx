@@ -13,6 +13,7 @@ import { WhoBadge } from "@/components/WhoBadge";
 import { InstitutionBadge } from "@/components/InstitutionBadge";
 import { BackTitle, Card, Empty, ErrorNote, Progress, btnCls } from "@/components/ui/page";
 import { SectionTabs } from "@/components/SectionTabs";
+import { loadLogos } from "@/lib/logoImage";
 
 const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const shortMonth = (m: string) => `${SHORT[Number(m.slice(5, 7)) - 1]}/${m.slice(2, 4)}`;
@@ -20,6 +21,7 @@ const shortMonth = (m: string) => `${SHORT[Number(m.slice(5, 7)) - 1]}/${m.slice
 export default function ParcelamentosPage() {
   const { supabase, userId, ready } = useSupabase();
   const { cards, loading: loadingCards } = useCards();
+  const [logos, setLogos] = useState<Record<string, string>>({});
   const { money } = useHideValues();
   const { nameOf } = usePartnership();
   const [rows, setRows] = useState<InstallmentRow[]>([]);
@@ -42,6 +44,7 @@ export default function ParcelamentosPage() {
   }, [supabase]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
+  useEffect(() => { if (ready && userId) loadLogos(supabase).then(setLogos); }, [ready, userId, supabase]);
   useEffect(() => {
     const h = () => load();
     window.addEventListener("jakash:changed", h);
@@ -131,7 +134,7 @@ export default function ParcelamentosPage() {
                 <Card key={p.group} className="!p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex items-center gap-3">
-                      <InstitutionBadge institution={cards.find((c) => c.id === p.cardId)?.institution} name={cardName(p.cardId)} size={40} />
+                      <InstitutionBadge institution={cards.find((c) => c.id === p.cardId)?.institution} name={cardName(p.cardId)} logo={p.cardId ? logos[p.cardId] : undefined} size={40} />
                       <div className="min-w-0">
                         <p className="font-extrabold truncate">{p.name}</p>
                         <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{cardName(p.cardId)}<WhoBadge name={nameOf(p.userId)} /></p>

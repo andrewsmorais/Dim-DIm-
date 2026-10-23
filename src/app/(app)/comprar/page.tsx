@@ -10,6 +10,7 @@ import { useHideValues } from "@/lib/useHideValues";
 import { brl, monthRange, parseMoney, todayISO } from "@/lib/format";
 import { invoiceMonthFor } from "@/lib/cards";
 import { rootId, type CatRow } from "@/lib/categories";
+import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
 import { budgetLeft, listTotals, parseShoppingInput, quantityLabel, suggestNames, type ShopItem } from "@/lib/shopping";
 import { BackTitle, Card, Empty, ErrorNote, Label, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
@@ -33,6 +34,7 @@ export default function ComprarPage() {
   const [text, setText] = useState("");
   const [waiting, setWaiting] = useState(0); // alterações ainda não salvas (sinal fraco)
   const [cats, setCats] = useState<CatRow[]>([]);
+  const [hiddenCats, setHiddenCats] = useState<Set<string>>(new Set());
   const [accs, setAccs] = useState<Acc[]>([]);
   const [foodLimit, setFoodLimit] = useState<number | null>(null);
   const [foodSpent, setFoodSpent] = useState(0);
@@ -121,13 +123,14 @@ export default function ComprarPage() {
       const month = todayISO().slice(0, 7);
       const { start, end } = monthRange(month);
       const [c, a, b, t] = await Promise.all([
-        supabase.from("categories").select("id,name,type,parent_id").eq("type", "expense").order("name"),
+        loadCategoryState(supabase, userId).then((st) => ({ data: st.cats.filter((x) => x.type === "expense"), hidden: st.hidden })),
         supabase.from("accounts").select("id,name").eq("archived", false).order("created_at"),
         supabase.from("budgets").select("category_id,amount_limit"),
         supabase.from("transactions").select("amount,type,category_id").eq("type", "expense").gte("date", start).lt("date", end).limit(5000),
       ]);
       const cl = (c.data ?? []) as CatRow[];
       setCats(cl);
+      setHiddenCats(c.hidden);
       setAccs((a.data ?? []) as Acc[]);
       const food = cl.find((x) => !x.parent_id && /aliment/i.test(x.name));
       if (!food) { setFoodLimit(null); return; }
@@ -320,7 +323,7 @@ export default function ComprarPage() {
               <div><Label>Categoria</Label>
                 <select className={inputCls} value={fin.category_id} onChange={(e) => setFin({ ...fin, category_id: e.target.value })}>
                   <option value="">Sem categoria</option>
-                  {cats.filter((c) => !c.parent_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {visibleCats(cats, hiddenCats, [fin.category_id]).filter((c) => !c.parent_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select></div>
               <div><Label>Data</Label><input type="date" className={inputCls} value={fin.date} max={todayISO()} onChange={(e) => setFin({ ...fin, date: e.target.value })} /></div>
             </div>

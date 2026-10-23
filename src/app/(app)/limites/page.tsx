@@ -6,6 +6,7 @@ import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, 
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, parseMoney, currentMonth, monthRange, shiftMonth, monthProgress } from "@/lib/format";
 import { rootId, type CatRow } from "@/lib/categories";
+import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
 import { BackTitle, Card, Label, MonthNav, Progress, Empty, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 import { SectionTabs } from "@/components/SectionTabs";
 
@@ -18,6 +19,7 @@ export default function LimitesPage() {
   const { supabase, userId, ready } = useSupabase();
   const [month, setMonth] = useState(currentMonth());
   const [cats, setCats] = useState<CatRow[]>([]);
+  const [hiddenCats, setHiddenCats] = useState<Set<string>>(new Set());
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -27,16 +29,17 @@ export default function LimitesPage() {
     const from = monthRange(shiftMonth(month, -2)).start;
     const to = monthRange(shiftMonth(month, 2)).end;
     const [c, b, t] = await Promise.all([
-      supabase.from("categories").select("id,name,type,parent_id").eq("type", "expense").order("name"),
+      loadCategoryState(supabase, userId),
       supabase.from("budgets").select("id,category_id,amount_limit"),
       supabase.from("transactions").select("amount,type,date,category_id").gte("date", from).lt("date", to).limit(5000),
     ]);
     if (c.error || b.error || t.error) { setError("Não foi possível carregar os dados."); return; }
     setError(null);
-    setCats((c.data ?? []) as CatRow[]);
+    setCats(c.cats.filter((x) => x.type === "expense"));
+    setHiddenCats(c.hidden);
     setBudgets(((b.data ?? []) as Budget[]).map((x) => ({ ...x, amount_limit: Number(x.amount_limit) })));
     setTxs(((t.data ?? []) as Tx[]).map((x) => ({ ...x, amount: Number(x.amount) })));
-  }, [supabase, month]);
+  }, [supabase, month, userId]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
   useEffect(() => {
@@ -45,7 +48,8 @@ export default function LimitesPage() {
     return () => window.removeEventListener("jakash:changed", h);
   }, [load]);
 
-  const parents = useMemo(() => cats.filter((c) => !c.parent_id), [cats]);
+  // Na escolha, só as categorias à mostra (e as que já têm limite).
+  const parents = useMemo(() => visibleCats(cats, hiddenCats, budgets.map((b) => b.category_id)).filter((c) => !c.parent_id), [cats, hiddenCats, budgets]);
   const general = budgets.find((b) => !b.category_id);
   const catBudgets = budgets.filter((b) => b.category_id);
   const limitTotal = general?.amount_limit ?? catBudgets.reduce((s, b) => s + b.amount_limit, 0);

@@ -14,9 +14,10 @@ import { WhoBadge } from "@/components/WhoBadge";
 import { usePartnership } from "@/lib/usePartnership";
 import { BackTitle, Card, Label, Empty, ErrorNote, Progress, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 import { SectionTabs } from "@/components/SectionTabs";
+import { loadLogos } from "@/lib/logoImage";
 
 type Acc = { id: string; name: string };
-const EMPTY_FORM = { kind: "credito" as "credito" | "debito", name: "", brand: "outro", limit: "", closing: "", due: "", pay_account_id: "", institution: "" };
+const EMPTY_FORM = { kind: "credito" as "credito" | "debito", name: "", brand: "outro", limit: "", closing: "", due: "", pay_account_id: "", institution: "", logo: null as string | null };
 
 export default function CartoesPage() {
   const { supabase, userId, ready } = useSupabase();
@@ -30,6 +31,8 @@ export default function CartoesPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debitSpend, setDebitSpend] = useState<Record<string, number>>({});
+  const [logos, setLogos] = useState<Record<string, string>>({});
+  useEffect(() => { if (ready && userId) loadLogos(supabase).then(setLogos); }, [ready, userId, supabase, cards]);
 
   useEffect(() => {
     if (!ready || !userId) return;
@@ -63,7 +66,7 @@ export default function CartoesPage() {
 
   function openNew() { setForm(EMPTY_FORM); setEditing("new"); setError(null); setConfirmDelete(false); }
   function openEdit(c: CardRow) {
-    setForm({ kind: c.kind, name: c.name, brand: c.brand, limit: String(c.credit_limit).replace(".", ","), closing: String(c.closing_day), due: String(c.due_day), pay_account_id: c.pay_account_id ?? "", institution: c.institution ?? "" });
+    setForm({ kind: c.kind, name: c.name, brand: c.brand, limit: String(c.credit_limit).replace(".", ","), closing: String(c.closing_day), due: String(c.due_day), pay_account_id: c.pay_account_id ?? "", institution: c.institution ?? "", logo: logos[c.id] ?? null });
     setEditing(c.id); setError(null); setConfirmDelete(false);
   }
 
@@ -86,6 +89,9 @@ export default function CartoesPage() {
       }
       payload = { kind: "credito", name: form.name.trim(), brand: form.brand, credit_limit: limit, closing_day: closing, due_day: due, pay_account_id: form.pay_account_id || null, institution: form.institution || null };
     }
+    // A imagem só entra no envio quando mudou (assim nada depende da coluna nova para quem não usa imagem).
+    const logoChanged = form.logo !== ((editing && editing !== "new" ? logos[editing] : null) ?? null);
+    if (logoChanged) payload = { ...payload, logo: form.logo };
     const res = editing === "new"
       ? await supabase.from("credit_cards").insert({ ...payload, user_id: userId })
       : await supabase.from("credit_cards").update(payload).eq("id", editing);
@@ -142,7 +148,7 @@ export default function CartoesPage() {
             return (
               <Card key={c.id} className="!p-4">
                 <div className="flex items-center gap-3">
-                  <InstitutionBadge institution={c.institution} name={c.name} size={48} />
+                  <InstitutionBadge institution={c.institution} name={c.name} logo={logos[c.id]} size={48} />
                   <div className="min-w-0 flex-1">
                     <p className="font-extrabold truncate flex items-center gap-2">{c.name}<span className="rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-bold">Débito</span></p>
                     <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{BRANDS[c.brand] ?? "Outro"} · sai da conta {accName ?? "vinculada"}<WhoBadge name={nameOf(c.user_id)} /></p>
@@ -175,7 +181,7 @@ export default function CartoesPage() {
           return (
             <Card key={c.id} className="!p-4">
               <div className="flex items-center gap-3">
-                <InstitutionBadge institution={c.institution} name={c.name} size={48} />
+                <InstitutionBadge institution={c.institution} name={c.name} logo={logos[c.id]} size={48} />
                 <div className="min-w-0 flex-1">
                   <p className="font-extrabold truncate">{c.name}</p>
                   <p className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">{BRANDS[c.brand] ?? "Outro"} · fecha dia {c.closing_day} · vence dia {c.due_day}<WhoBadge name={nameOf(c.user_id)} /></p>
@@ -243,7 +249,7 @@ export default function CartoesPage() {
               <p className="text-xs font-bold text-gray-500">Cartão de {form.kind === "debito" ? "débito" : "crédito"}</p>
             )}
             <div><Label>Nome do cartão</Label><input autoFocus className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Nubank" /></div>
-            <InstitutionSelect value={form.institution} onChange={(v) => setForm({ ...form, institution: v })} name={form.name} />
+            <InstitutionSelect value={form.institution} onChange={(v) => setForm({ ...form, institution: v })} name={form.name} logo={form.logo} onLogoChange={(v) => setForm({ ...form, logo: v })} />
             {form.kind === "credito" ? (
               <>
                 <div className="grid grid-cols-2 gap-3">

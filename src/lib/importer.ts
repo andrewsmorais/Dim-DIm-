@@ -11,8 +11,9 @@ export type ParsedRow = {
 };
 
 export type ParseResult = {
-  format: "ofx" | "csv" | "xlsx" | "ai";
-  kind?: "bank" | "card"; // só o OFX informa
+  format: "ofx" | "csv" | "xlsx" | "xls" | "ai";
+  kind?: "bank" | "card"; // OFX, layout conhecido (ex.: fatura Nubank) ou documento lido pela IA
+  source?: FileSource; // banco/layout reconhecido pelo cabeçalho
   rows: ParsedRow[];
   document?: string; // só PDF/foto lidos por IA: extrato, fatura, nota, comprovante...
   skipped: number; // linhas sem data/valor (cabeçalhos, saldos, totais)
@@ -154,7 +155,12 @@ export function splitCSV(text: string, delim: string): string[][] {
   return out.map((r) => r.map((x) => x.trim()));
 }
 
-type Cols = { date: number; desc: number[]; amount: number; debit: number; credit: number; kind: number; id: number };
+type Cols = { date: number; desc: number[]; amount: number; debit: number; credit: number; kind: number; id: number; parcel: number };
+
+// Colunas que não descrevem o lançamento (dados do portador do cartão), mesmo tendo "nome" no título.
+const NOT_DESC = /nome no cartao|nome do cartao|final do cartao|portador|titular|^cartao$|numero do cartao/;
+// Valor em moeda estrangeira ou cotação: só serve se não houver coluna em reais.
+const FOREIGN = /(^|\s)(us|usd|dolar|dolares|eur|euro|moeda estrangeira|cotacao)(\s|$)/;
 
 function mapHeader(cells: string[]): Cols | null {
   const h = cells.map(lightNorm);
@@ -169,17 +175,39 @@ function mapHeader(cells: string[]): Cols | null {
   // coluna única "Débito/Crédito" = indicador de tipo, não duas colunas de valor
   const kind = debit >= 0 && debit === credit ? debit : first(/^(tipo|natureza|d c|dc)$|^tipo (de )?(lancamento|transacao|movimentacao)/, [date]);
   const twoCols = debit >= 0 && credit >= 0 && debit !== credit;
-  const amount = twoCols ? -1 : first(/(^|\s)(valor|amount|quantia|montante)(\s|$)/, [date, kind]);
+  // Várias colunas de valor (ex.: C6 "Valor (em US$)" e "Valor (em R$)"): prefere a em reais.
+  const AMT = /(^|\s)(valor|amount|quantia|montante)(\s|$)/;
+  let amount = -1;
+  if (!twoCols) {
+    const cand = h.map((x, i) => i).filter((i) => i !== date && i !== kind && AMT.test(h[i]));
+    amount = cand.find((i) => /(^|\s)(r|brl|reais)(\s|$)/.test(h[i])) ?? cand.find((i) => !FOREIGN.test(h[i])) ?? cand[0] ?? -1;
+  }
   if (amount < 0 && !twoCols) return null;
   const id = first(/^(identificador|id|fitid)$/);
-  const skipDesc = [date, amount, debit, credit, kind, id];
+  const parcel = first(/^(parcela|parcelas|parcelamento|n parcela)$/);
+  const skipDesc = [date, amount, debit, credit, kind, id, parcel];
   const desc: number[] = [];
   h.forEach((x, i) => {
     if (skipDesc.indexOf(i) >= 0) return;
-    if (/saldo|categoria|category|^valor|^data/.test(x)) return;
-    if (/descri|historico|estabelecimento|titulo|title|memo|detalhe|lancamento|nome|beneficiario|favorecido/.test(x)) desc.push(i);
+    if (/saldo|categoria|category|^valor|^data|cotacao/.test(x) || NOT_DESC.test(x)) return;
+    if (/descri|historico|estabelecimento|titulo|title|memo|detalhe|lancamento|nome|beneficiario|favorecido|transaction type|tipo de transacao/.test(x)) desc.push(i);
   });
-  return { date, desc, amount, debit: twoCols ? debit : -1, credit: twoCols ? credit : -1, kind, id };
+  return { date, desc, amount, debit: twoCols ? debit : -1, credit: twoCols ? credit : -1, kind, id, parcel };
+}
+
+// ---------- origem do arquivo (banco e tipo), pelo cabeçalho ----------
+
+export type FileSource = { institution?: string; kind?: "bank" | "card"; label: string };
+
+/** Reconhece layouts conhecidos de exportação. Só dica: a pessoa confere o destino e o sinal na prévia. */
+export function detectSource(header: string[]): FileSource | undefined {
+  const h = header.map(lightNorm).filter(Boolean).join("|");
+  if (h === "date|title|amount") return { institution: "nubank", kind: "card", label: "Fatura do cartão Nubank" };
+  if (/^data\|valor\|identificador\|descricao$/.test(h)) return { institution: "nubank", kind: "bank", label: "Extrato da conta Nubank" };
+  if (/nome no cartao/.test(h) && /final do cartao/.test(h)) return { institution: "c6", kind: "card", label: "Fatura do cartão C6 Bank" };
+  if (/release date/.test(h) && /transaction net amount/.test(h)) return { institution: "mercadopago", kind: "bank", label: "Extrato do Mercado Pago" };
+  if (/(^|\|)(parcela|parcelas)(\||$)|final do cartao|nome no cartao/.test(h)) return { kind: "card", label: "Fatura de cartão" };
+  return undefined;
 }
 
 // Sem cabeçalho reconhecível: descobre as colunas pelo conteúdo das primeiras linhas.
@@ -201,48 +229,94 @@ function guessCols(rows: string[][]): Cols | null {
     const avg = sample.reduce((n, r) => n + (r[i] ?? "").length, 0) / Math.max(sample.length, 1);
     if (avg > best && frac(i, (v) => !Number.isFinite(parseAmountBR(v))) >= 0.6) { best = avg; desc = i; }
   }
-  return { date, desc: desc >= 0 ? [desc] : [], amount, debit: -1, credit: -1, kind: -1, id: -1 };
+  return { date, desc: desc >= 0 ? [desc] : [], amount, debit: -1, credit: -1, kind: -1, id: -1, parcel: -1 };
+}
+
+/** "2/6", "02 de 06", "Parcela 2/6" -> " (2/6)"; "Única", "À vista" ou vazio -> "" */
+function parcelSuffix(v: string): string {
+  const m = /(\d{1,2})\s*(?:\/|de)\s*(\d{1,2})/i.exec(v ?? "");
+  return m && +m[2] >= 2 ? ` (${+m[1]}/${+m[2]})` : "";
 }
 
 export function parseCSV(text: string): ParseResult {
-  const grid = splitCSV(text, detectDelimiter(text));
+  return { ...parseGrid(splitCSV(text, detectDelimiter(text))), format: "csv" };
+}
+
+/** Tabela já separada em linhas e colunas (CSV, planilha .xlsx ou tabela HTML salva como .xls). */
+export function parseGrid(grid: string[][]): ParseResult {
   let cols: Cols | null = null;
   let start = 0;
+  let source: FileSource | undefined;
   for (let i = 0; i < Math.min(grid.length, 25) && !cols; i++) {
     const c = mapHeader(grid[i]);
-    if (c) { cols = c; start = i + 1; }
+    if (c) { cols = c; start = i + 1; source = detectSource(grid[i]); }
   }
   if (!cols) cols = guessCols(grid);
-  if (!cols) throw new Error("Não consegui identificar as colunas (data, descrição e valor) neste CSV. Se puder, baixe o extrato em OFX.");
+  if (!cols) throw new Error("Não consegui identificar as colunas (data, descrição e valor) neste arquivo. Confira se a planilha tem data, descrição e valor, ou baixe o extrato em OFX.");
   const c = cols;
   const rows: ParsedRow[] = [];
   let skipped = 0;
+  const descOf = (r: string[]) => {
+    const parts: string[] = [];
+    c.desc.forEach((i) => {
+      const v = (r[i] ?? "").trim();
+      if (v && parts.indexOf(v) < 0) parts.push(v);
+    });
+    // Sem coluna de descrição, o tipo da transação (ex.: Mercado Pago) é melhor do que nada.
+    if (!parts.length && c.kind >= 0 && (r[c.kind] ?? "").trim().length > 2) parts.push(r[c.kind].trim());
+    return parts.join(" - ");
+  };
+  const hasAmount = (r: string[]) => [c.amount, c.debit, c.credit].some((i) => i >= 0 && Number.isFinite(parseAmountBR(r[i] ?? "")));
+  let prev: ParsedRow | null = null;
   grid.slice(start).forEach((r) => {
     const date = parseDateAny(r[c.date] ?? "");
-    if (!date) { skipped++; return; }
+    if (!date) {
+      // Linha de continuação (ex.: Bradesco põe o nome do favorecido na linha de baixo, sem data nem valor).
+      const extra = descOf(r);
+      if (prev && extra && extra.length <= 60 && !hasAmount(r) && !/^(saldo|total)(\s|$)/.test(lightNorm(extra)) && prev.description.length < 120) {
+        prev.description = prev.description === "Sem descrição" ? extra : `${prev.description} - ${extra}`;
+      } else skipped++;
+      return;
+    }
     let amount: number;
     if (c.amount >= 0) {
       amount = parseAmountBR(r[c.amount] ?? "");
       if (Number.isFinite(amount) && c.kind >= 0) {
         const k = lightNorm(r[c.kind] ?? "");
-        if (/^(d|debito|saida|debit|despesa)/.test(k)) amount = -Math.abs(amount);
-        else if (/^(c|credito|entrada|credit|receita)/.test(k)) amount = Math.abs(amount);
+        if (/^(d|debito|saida|debit|despesa)(\s|$)/.test(k)) amount = -Math.abs(amount);
+        else if (/^(c|credito|entrada|credit|receita)(\s|$)/.test(k)) amount = Math.abs(amount);
       }
     } else {
       const d = parseAmountBR(r[c.debit] ?? "");
       const cr = parseAmountBR(r[c.credit] ?? "");
       amount = (Number.isFinite(cr) ? Math.abs(cr) : 0) - (Number.isFinite(d) ? Math.abs(d) : 0);
     }
-    const parts: string[] = [];
-    c.desc.forEach((i) => {
-      const v = (r[i] ?? "").trim();
-      if (v && parts.indexOf(v) < 0) parts.push(v);
-    });
-    const description = parts.join(" - ");
-    if (!Number.isFinite(amount) || amount === 0 || /^(saldo|total|s a l d o)(\s|$)/.test(lightNorm(description))) { skipped++; return; }
-    rows.push({ date, amount, description: description || "Sem descrição", fitid: c.id >= 0 ? (r[c.id] ?? "").trim() || undefined : undefined });
+    let description = descOf(r);
+    if (c.parcel >= 0 && description) description += parcelSuffix(r[c.parcel] ?? "");
+    if (!Number.isFinite(amount) || amount === 0 || /^(saldo|total|s a l d o)(\s|$)/.test(lightNorm(description))) { skipped++; prev = null; return; }
+    prev = { date, amount, description: description || "Sem descrição", fitid: c.id >= 0 ? (r[c.id] ?? "").trim() || undefined : undefined };
+    rows.push(prev);
   });
-  return { format: "csv", rows, skipped };
+  return { format: "csv", kind: source?.kind, source, rows, skipped };
+}
+
+// ---------- tabela HTML (vários bancos baixam o ".xls" como página HTML) ----------
+
+const decodeHtml = (s: string) =>
+  decodeEntities(s.replace(/&nbsp;|&#160;/gi, " ").replace(/&#(\d+);/g, (_m, n: string) => String.fromCharCode(Number(n))));
+
+export function htmlTableGrid(html: string): string[][] {
+  const out: string[][] = [];
+  const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = rowRe.exec(html)) && out.length < 6000) {
+    const cells: string[] = [];
+    const cellRe = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
+    let c: RegExpExecArray | null;
+    while ((c = cellRe.exec(m[1]))) cells.push(decodeHtml(c[1].replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim());
+    if (cells.some((x) => x)) out.push(cells);
+  }
+  return out;
 }
 
 /** Lê OFX ou CSV. PDF, foto e planilha passam por lib/fileImport. */
@@ -252,14 +326,17 @@ export function parseStatement(buf: ArrayBuffer): ParseResult {
     throw new Error("Este PDF precisa ser lido pela IA. Envie-o pela tela de importação.");
   }
   const text = decodeText(buf);
-  const res = /<OFX>|<STMTTRN>/i.test(text) ? parseOFX(text) : parseCSV(text);
+  const res = /<OFX>|<STMTTRN>/i.test(text) ? parseOFX(text)
+    : /<table[\s>]/i.test(text.slice(0, 200000)) ? { ...parseGrid(htmlTableGrid(text)), format: "xls" as const }
+    : parseCSV(text);
   if (!res.rows.length) throw new Error("Não encontrei lançamentos neste arquivo.");
   return res;
 }
 
 /** Em fatura de cartão, vários bancos exportam a compra como valor positivo. Sugere inverter o sinal. */
 export function suggestInvert(res: ParseResult, target: "account" | "card"): boolean {
-  if (target !== "card" || res.kind === "card") return false;
+  // OFX de cartão e leitura por IA já trazem compra como valor negativo.
+  if (target !== "card" || (res.kind === "card" && (res.format === "ofx" || res.format === "ai"))) return false;
   const pos = res.rows.filter((r) => r.amount > 0).length;
   return pos > res.rows.length - pos;
 }

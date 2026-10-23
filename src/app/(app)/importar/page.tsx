@@ -7,17 +7,19 @@ import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 import { brl, formatDateBR } from "@/lib/format";
 import { categoryOptions, type CatRow } from "@/lib/categories";
+import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
 import { addMonthsClamped, invoiceMonthFor } from "@/lib/cards";
 import {
   amountStats, buildPreview, buildRules, suggestInvert,
   type ExistingTx, type ParseResult, type PreviewRow, type Rules, type StatsByType,
 } from "@/lib/importer";
 import { ACCEPT, readAnyFile, takeFile, usesAI } from "@/lib/fileImport";
+import { resolveInstitution } from "@/lib/institutions";
 import { removeOrphanReceipts, uploadReceipt } from "@/lib/receipts";
 import { BackTitle, Card, Label, Toggle, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
-type Acc = { id: string; name: string; is_business: boolean };
-type CardT = { id: string; name: string; closing_day: number; due_day: number; is_business: boolean };
+type Acc = { id: string; name: string; is_business: boolean; institution: string | null };
+type CardT = { id: string; name: string; closing_day: number; due_day: number; is_business: boolean; institution: string | null };
 
 export default function ImportarPage() {
   const { supabase, userId, ready } = useSupabase();
@@ -38,6 +40,7 @@ export default function ImportarPage() {
   const [asBusiness, setAsBusiness] = useState(false);
   const [future, setFuture] = useState(false);
   const [rows, setRows] = useState<PreviewRow[]>([]);
+  const [hiddenCats, setHiddenCats] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ inserted: number; ignored: number; kind: "account" | "card"; id: string } | null>(null);
@@ -46,9 +49,9 @@ export default function ImportarPage() {
     if (!ready || !userId) return;
     (async () => {
       const [a, k, c, h] = await Promise.all([
-        supabase.from("accounts").select("id,name,is_business").eq("user_id", userId).eq("archived", false).order("created_at"),
-        supabase.from("credit_cards").select("id,name,closing_day,due_day,is_business").eq("user_id", userId).eq("archived", false).eq("kind", "credito").order("created_at"),
-        supabase.from("categories").select("id,name,type,parent_id").order("name"),
+        supabase.from("accounts").select("id,name,is_business,institution").eq("user_id", userId).eq("archived", false).order("created_at"),
+        supabase.from("credit_cards").select("id,name,closing_day,due_day,is_business,institution").eq("user_id", userId).eq("archived", false).eq("kind", "credito").order("created_at"),
+        loadCategoryState(supabase, userId),
         supabase.from("transactions").select("description,type,category_id,amount").eq("user_id", userId)
           .order("date", { ascending: false }).limit(3000),
       ]);
@@ -57,7 +60,8 @@ export default function ImportarPage() {
       const crds = (k.data ?? []) as CardT[];
       setAccounts(accs);
       setCards(crds);
-      setCats((c.data ?? []) as CatRow[]);
+      setCats(c.cats);
+      setHiddenCats(c.hidden);
       const hist = (h.data ?? []) as { description: string; type: string; category_id: string | null; amount: number | string }[];
       setRules(buildRules(hist.filter((x) => x.category_id)));
       setStats(amountStats(hist.map((x) => ({ amount: Number(x.amount), type: x.type }))));
@@ -82,8 +86,8 @@ export default function ImportarPage() {
   // A prévia é refeita quando muda o arquivo, o destino ou o sinal.
   useEffect(() => {
     if (!parsed) { setRows([]); return; }
-    setRows(buildPreview({ rows: parsed.rows, invert, targetId: targetId || "x", rules, cats, existing, stats, detectInstallments: targetKind === "card" }));
-  }, [parsed, invert, targetId, rules, cats, existing, stats, targetKind]);
+    setRows(buildPreview({ rows: parsed.rows, invert, targetId: targetId || "x", rules, cats: visibleCats(cats, hiddenCats), existing, stats, detectInstallments: targetKind === "card" }));
+  }, [parsed, invert, targetId, rules, cats, hiddenCats, existing, stats, targetKind]);
 
   const [reading, setReading] = useState(false);
   const [viaAI, setViaAI] = useState(false);
@@ -103,8 +107,15 @@ export default function ImportarPage() {
       setFileName(file.name);
       setViaAI(usesAI(file));
       setSourceFile(usesAI(file) ? file : null);
-      setInvert(suggestInvert(res, targetKind));
-      if (res.kind === "card" && cards.length) { setTargetKind("card"); setTargetId(cards[0].id); }
+      // Destino sugerido pelo arquivo: tipo (conta/cartão) e, se o banco foi reconhecido, a conta/cartão desse banco.
+      let kind = targetKind;
+      if (res.kind === "card" && cards.length) kind = "card";
+      else if (res.kind === "bank" && accounts.length) kind = "account";
+      const list: { id: string; name: string; institution: string | null }[] = kind === "card" ? cards : accounts;
+      const bank = res.source?.institution;
+      const match = bank ? list.find((t) => resolveInstitution(t.institution, t.name)?.key === bank) : undefined;
+      if (kind !== targetKind || match) { setTargetKind(kind); setTargetId((match ?? list.find((t) => t.id === targetId) ?? list[0])?.id ?? ""); }
+      setInvert(suggestInvert(res, kind));
       setParsed(res);
     } catch (err) {
       setParsed(null);
@@ -127,8 +138,10 @@ export default function ImportarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, userId]);
 
-  const optsIncome = useMemo(() => categoryOptions(cats, "income"), [cats]);
-  const optsExpense = useMemo(() => categoryOptions(cats, "expense"), [cats]);
+  // Escolha só entre as categorias à mostra, mantendo as que o histórico já sugeriu.
+  const pickCats = useMemo(() => visibleCats(cats, hiddenCats, rows.map((r) => r.categoryId)), [cats, hiddenCats, rows]);
+  const optsIncome = useMemo(() => categoryOptions(pickCats, "income"), [pickCats]);
+  const optsExpense = useMemo(() => categoryOptions(pickCats, "expense"), [pickCats]);
 
   const setRow = (uid: number, patch: Partial<PreviewRow>) => setRows((rs) => rs.map((r) => (r.uid === uid ? { ...r, ...patch } : r)));
   const chosen = rows.filter((r) => r.include);
@@ -245,7 +258,7 @@ export default function ImportarPage() {
                 <input type="file" className="hidden" accept={ACCEPT} onChange={onFile} disabled={reading} />
               </label>
               {fileName && <span className="ml-3 text-sm text-gray-500">{fileName}</span>}
-              <p className="text-xs text-gray-400 mt-2">Aceita PDF, foto (JPG, PNG), planilha .xlsx, OFX e CSV, até 4 MB. OFX, CSV e planilha são lidos no seu aparelho; PDF e foto são lidos por IA.</p>
+              <p className="text-xs text-gray-400 mt-2">Aceita planilha baixada do banco (.xlsx, .xls ou CSV, como a do Nubank), OFX, PDF e foto, até 4 MB. Planilha, CSV e OFX são lidos no seu aparelho; PDF e foto são lidos por IA.</p>
             </div>
           </div>
         )}
@@ -256,6 +269,7 @@ export default function ImportarPage() {
         <>
           <Card className="mb-6">
             <p className="font-extrabold">{parsed.rows.length} lançamentos · {range}</p>
+            {parsed.source && <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">Arquivo reconhecido: {parsed.source.label}.</p>}
             {viaAI && <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 rounded-xl px-3 py-2 mt-2">Arquivo lido por IA. Confira datas, valores e entradas/saídas antes de importar.</p>}
             {parsed.skipped > 0 && <p className="text-xs text-gray-500 mt-0.5">{parsed.skipped} linhas ignoradas (saldos, totais ou valor zero).</p>}
             <div className="space-y-3 mt-4">

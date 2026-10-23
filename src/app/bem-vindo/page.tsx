@@ -7,6 +7,7 @@ import { useSupabase } from "@/lib/useSupabase";
 import { useSettings } from "@/contexts/SettingsContext";
 import { brl, parseMoney } from "@/lib/format";
 import { Label, Toggle, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
+import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
 
 type Lang = "pt" | "en" | "es";
 type Usage = "pessoal" | "casal" | "empresarial" | "ambos";
@@ -90,7 +91,8 @@ export default function OnboardingPage() {
     supabase.from("profiles").select("onboarding_completed").maybeSingle().then(({ data }) => {
       if (data?.onboarding_completed) router.replace("/dashboard");
     });
-    supabase.from("categories").select("id,name").eq("type", "expense").is("parent_id", null).order("name").then(({ data }) => setCats((data ?? []) as Cat[]));
+    // Só as categorias à mostra (conta nova começa com as básicas).
+    loadCategoryState(supabase, userId).then((st) => setCats(visibleCats(st.cats, st.hidden).filter((c) => c.type === "expense" && !c.parent_id).map((c) => ({ id: c.id, name: c.name }))));
   }, [ready, userId, supabase, router]);
 
   const next = () => { setError(null); setStep((s) => s + 1); };

@@ -7,6 +7,7 @@ import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
 import { categoryOptions, type CatRow } from "@/lib/categories";
+import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
 import { buildCardPurchase, dueDateFor, invoiceMonthFor, splitInstallments } from "@/lib/cards";
 import { ACCEPT, stashFile } from "@/lib/fileImport";
 import { RECEIPT_ACCEPT, uploadReceipt } from "@/lib/receipts";
@@ -81,7 +82,8 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     setError(null);
     setVoiceFields([]);
     Promise.all([
-      supabase.from("categories").select("id,name,type,parent_id").order("name"),
+      // Só as categorias à mostra (as escondidas em Categorias não aparecem aqui nem na voz).
+      loadCategoryState(supabase, userId).then((st) => ({ data: visibleCats(st.cats, st.hidden) })),
       supabase.from("accounts").select("id,name,is_business").eq("archived", false).order("created_at"),
       supabase.from("credit_cards").select("id,name,closing_day,due_day,is_business,kind,pay_account_id").eq("archived", false).order("created_at"),
       supabase.from("profiles").select("mei_activity").eq("id", userId).maybeSingle(),

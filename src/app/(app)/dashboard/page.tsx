@@ -16,6 +16,7 @@ import { FirstWeek } from "@/components/growth/FirstWeek";
 import { HomeShortcuts } from "@/components/HomeShortcuts";
 import { InstitutionBadge } from "@/components/InstitutionBadge";
 import { MonthlyInsight } from "@/components/growth/MonthlyInsight";
+import { loadLogos } from "@/lib/logoImage";
 
 type Tx = { id: string; description: string; amount: number; type: "income" | "expense"; date: string; category_id: string | null };
 type Bill = { id: string; description: string; amount: number; due_date: string; type: "income" | "expense" };
@@ -55,6 +56,7 @@ export default function DashboardPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [logos, setLogos] = useState<Record<string, string>>({});
   const [inv, setInv] = useState<{ value: number; invested: number; count: number }>({ value: 0, invested: 0, count: 0 });
   const { cards, invoices } = useCards();
   const [tab, setTab] = useState<Tab>("expense");
@@ -93,6 +95,7 @@ export default function DashboardPage() {
   }, [supabase, month, day, router]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
+  useEffect(() => { if (ready && userId) loadLogos(supabase).then(setLogos); }, [ready, userId, supabase]);
   useEffect(() => {
     const h = () => load();
     window.addEventListener("jakash:changed", h);
@@ -180,7 +183,7 @@ export default function DashboardPage() {
             <ul className="divide-y divide-gray-100 dark:divide-[#262626]">
               {accounts.map((a) => (
                 <li key={a.id} className="flex items-center justify-between py-3">
-                  <span className="font-bold flex items-center gap-3 min-w-0"><InstitutionBadge institution={a.institution} name={a.name} size={36} /><span className="truncate">{a.name}</span></span>
+                  <span className="font-bold flex items-center gap-3 min-w-0"><InstitutionBadge institution={a.institution} name={a.name} logo={logos[a.id]} size={36} /><span className="truncate">{a.name}</span></span>
                   <span className="text-right"><span className="block text-[10px] text-gray-400">Saldo atual</span><span className="font-extrabold">{money(brl(a.balance))}</span></span>
                 </li>
               ))}
@@ -207,7 +210,7 @@ export default function DashboardPage() {
                 return (
                   <li key={c.id}>
                     <Link href={`/cartoes/${c.id}?m=${im.slice(0, 7)}`} className="flex items-center justify-between py-3 gap-3">
-                      <span className="min-w-0 flex items-center gap-3"><InstitutionBadge institution={c.institution} name={c.name} size={36} /><span className="min-w-0"><span className="block font-bold truncate">{c.name}</span><span className="block text-xs text-gray-500">Vence {formatDateBR(dueDateFor(c, im))}</span></span></span>
+                      <span className="min-w-0 flex items-center gap-3"><InstitutionBadge institution={c.institution} name={c.name} logo={logos[c.id]} size={36} /><span className="min-w-0"><span className="block font-bold truncate">{c.name}</span><span className="block text-xs text-gray-500">Vence {formatDateBR(dueDateFor(c, im))}</span></span></span>
                       <span className="text-right shrink-0"><span className="block font-extrabold">{money(brl(toPay))}</span><InvoiceChip status={invoiceStatus(c, im, total, row?.paid ?? 0, today)} /></span>
                     </Link>
                   </li>

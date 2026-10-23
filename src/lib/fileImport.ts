@@ -1,7 +1,7 @@
-// Leitura de arquivos enviados pela pessoa: OFX/CSV/TXT (no aparelho), planilha XLSX (no aparelho) e PDF/foto (IA, no servidor).
-import { parseCSV, parseStatement, type ParsedRow, type ParseResult } from "@/lib/importer";
+// Leitura de arquivos enviados pela pessoa: OFX/CSV/TXT (no aparelho), planilha XLSX/XLS em HTML (no aparelho) e PDF/foto (IA, no servidor).
+import { parseGrid, parseStatement, type ParsedRow, type ParseResult } from "@/lib/importer";
 
-export const ACCEPT = ".ofx,.qfx,.csv,.txt,.xlsx,.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,text/csv,application/x-ofx,application/pdf,image/*";
+export const ACCEPT = ".ofx,.qfx,.csv,.txt,.xlsx,.xls,.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,text/csv,application/x-ofx,application/pdf,image/*";
 export const MAX_BYTES = 4 * 1024 * 1024;
 
 const ext = (f: File) => (f.name.split(".").pop() ?? "").toLowerCase();
@@ -9,6 +9,12 @@ export const isImage = (f: File) => f.type.startsWith("image/") || ["jpg", "jpeg
 export const isPdf = (f: File) => f.type === "application/pdf" || ext(f) === "pdf";
 export const isSheet = (f: File) => ext(f) === "xlsx" || f.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 export const usesAI = (f: File) => isImage(f) || isPdf(f);
+
+/** .xls de verdade (formato binário do Excel 97-2003). Muitos bancos mandam ".xls" que na verdade é HTML ou texto, e esses a gente lê. */
+export function isBinaryXls(buf: ArrayBuffer): boolean {
+  const b = new Uint8Array(buf.slice(0, 4));
+  return b[0] === 0xd0 && b[1] === 0xcf && b[2] === 0x11 && b[3] === 0xe0;
+}
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -21,10 +27,9 @@ export async function parseSpreadsheet(file: File): Promise<ParseResult> {
     if (v == null) return "";
     if (v instanceof Date) return `${v.getUTCFullYear()}-${pad(v.getUTCMonth() + 1)}-${pad(v.getUTCDate())}`;
     if (typeof v === "number") return String(v).replace(".", ",");
-    return String(v).replace(/[\r\n;"]+/g, " ").trim();
+    return String(v).replace(/[\r\n]+/g, " ").trim();
   };
-  const csv = data.slice(0, 5000).map((row) => row.map(cell).join(";")).join("\n");
-  const res = parseCSV(csv);
+  const res = parseGrid(data.slice(0, 5000).map((row) => row.map(cell)));
   if (!res.rows.length) throw new Error("Não encontrei lançamentos nesta planilha. Use colunas com data, descrição e valor na primeira aba.");
   return { ...res, format: "xlsx" };
 }
@@ -61,8 +66,9 @@ export async function readAnyFile(file: File): Promise<ParseResult> {
   if (usesAI(file)) return parseWithAI(file);
   if (file.size > MAX_BYTES * 2) throw new Error("Arquivo muito grande (máximo 8 MB).");
   if (isSheet(file)) return parseSpreadsheet(file);
-  if (ext(file) === "xls") throw new Error("Planilha .xls antiga não é suportada. Abra e salve como .xlsx ou CSV.");
-  return parseStatement(await file.arrayBuffer());
+  const buf = await file.arrayBuffer();
+  if (ext(file) === "xls" && isBinaryXls(buf)) throw new Error("Esta planilha .xls é do formato antigo do Excel. Abra e salve como .xlsx ou CSV e envie de novo.");
+  return parseStatement(buf);
 }
 
 // Arquivo escolhido na janela "Novo lançamento": fica guardado aqui até a tela de importação abrir.

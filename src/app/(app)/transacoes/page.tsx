@@ -6,6 +6,7 @@ import { CreditCard, FileUp, Paperclip, Plus, Trash2 } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, parseMoney, todayISO, formatDateBR, currentMonth, monthRange } from "@/lib/format";
 import { categoryOptions, type CatRow } from "@/lib/categories";
+import { loadCategoryState, visibleCats } from "@/lib/categoryVisibility";
 import { usePartnership } from "@/lib/usePartnership";
 import { useUsageType } from "@/lib/useUsageType";
 import { openReceipt, removeOrphanReceipts, RECEIPT_ACCEPT, uploadReceipt } from "@/lib/receipts";
@@ -33,23 +34,25 @@ export default function TransacoesPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [hiddenCats, setHiddenCats] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ description: "", amount: "", type: "expense" as "income" | "expense", date: todayISO(), category_id: "" });
 
   const load = useCallback(async () => {
     const { start, end } = monthRange(month);
     const [c, t, k] = await Promise.all([
-      supabase.from("categories").select("id,name,type,parent_id").order("name"),
+      loadCategoryState(supabase, userId),
       supabase.from("transactions").select("id,user_id,description,amount,type,date,category_id,card_id,installment_group,is_business,debit_card_id,attachment_path")
         .gte("date", start).lt("date", end).order("date", { ascending: false }).limit(500),
       supabase.from("credit_cards").select("id,name"),
     ]);
     if (c.error || t.error) setError("Não foi possível carregar os dados.");
     else setError(null);
-    setCats((c.data as CatRow[]) ?? []);
+    setCats(c.cats);
+    setHiddenCats(c.hidden);
     setCardNames(Object.fromEntries((k.data ?? []).map((x) => [x.id, x.name])));
     setTxs(((t.data ?? []) as Tx[]).map((x) => ({ ...x, amount: Number(x.amount) })));
     setLoading(false);
-  }, [supabase, month]);
+  }, [supabase, month, userId]);
 
   useEffect(() => { if (ready && userId) load(); }, [ready, userId, load]);
   useEffect(() => {
@@ -124,7 +127,7 @@ export default function TransacoesPage() {
           <div><Label>Categoria</Label>
             <select className={inputCls} value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
               <option value="">Sem categoria</option>
-              {categoryOptions(cats, form.type).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              {categoryOptions(visibleCats(cats, hiddenCats, [form.category_id]), form.type).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select></div>
           <div><Label>Data</Label><input type="date" className={inputCls} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
           <div className="md:col-span-6"><button className={btnCls} type="submit"><Plus size={16} /> Adicionar</button></div>
