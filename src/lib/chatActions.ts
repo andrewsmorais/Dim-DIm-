@@ -95,3 +95,6 @@ export function parseChatOutput(content: string | null | undefined): { reply: st
     return { reply: FALLBACK_REPLY, actions: [] };
   }
 }
+
+// Reaproveitados pelo lançamento por voz (src/lib/voiceDraft.ts): mesma data AAAA-MM-DD e mesmo valor ("45,5" vale).
+export { date as isoDateSchema, money as moneySchema };

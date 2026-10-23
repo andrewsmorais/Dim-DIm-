@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileUp, Paperclip, X } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
@@ -13,11 +13,19 @@ import { RECEIPT_ACCEPT, uploadReceipt } from "@/lib/receipts";
 import { KIND_LABEL, type RevenueKind } from "@/lib/mei";
 import { lightImpact } from "@/lib/haptics";
 import { Label, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
+import { VoiceEntry } from "@/components/VoiceEntry";
+import type { VoiceItem } from "@/lib/voiceParse";
 
 type Acc = { id: string; name: string; is_business: boolean };
 type CardOpt = { id: string; name: string; closing_day: number; due_day: number; is_business: boolean; kind: "credito" | "debito"; pay_account_id: string | null };
 
-export type QuickAddPreset = { cardId?: string };
+// voice/voiceQueue: lançamento entendido por voz que abre preenchido (o "Também entendi" depois de salvar o primeiro).
+export type QuickAddPreset = { cardId?: string; voice?: VoiceItem; voiceQueue?: VoiceItem[] };
+
+type VoiceField = "type" | "amount" | "description" | "category" | "date" | "biz";
+const fieldAmount = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ","));
+// Destaque dos campos que vieram da voz (some quando a pessoa mexe no campo).
+const HL = " !border-brand-vivid ring-2 ring-brand-vivid/40";
 
 // Janela de novo lançamento (botão + do app). Avisa a tela atual por evento "jakash:changed".
 export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: () => void; preset?: QuickAddPreset }) {
@@ -30,22 +38,56 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [receipt, setReceipt] = useState<File | null>(null);
+  const [voiceFields, setVoiceFields] = useState<VoiceField[]>([]);
+  const voiceQueue = useRef<VoiceItem[]>([]);
   const [f, setF] = useState({
     type: "expense" as "income" | "expense", amount: "", description: "", category_id: "", account_id: "", date: todayISO(), paid: true,
     method: "account" as "account" | "card" | "debit", card_id: "", installments: 1, biz: false,
     kind: "servicos" as RevenueKind, draw: false,
   });
 
+  const fRef = useRef(f);
+  fRef.current = f;
+  const catsRef = useRef(cats);
+  catsRef.current = cats;
+  const hl = (k: VoiceField) => (voiceFields.includes(k) ? HL : "");
+  const unmark = (k: VoiceField) => setVoiceFields((v) => (v.includes(k) ? v.filter((x) => x !== k) : v));
+
+  // Preenche o formulário com o que a voz entendeu. Só preenche: quem confere e salva é a pessoa.
+  function applyVoice(item: VoiceItem, list: CatRow[] = catsRef.current) {
+    const type = item.type ?? fRef.current.type;
+    const cat = item.categoryId ? list.find((c) => c.id === item.categoryId && c.type === type) : undefined;
+    const touched: VoiceField[] = [];
+    if (item.type) touched.push("type");
+    if (item.amount !== null) touched.push("amount");
+    if (item.description) touched.push("description");
+    if (cat) touched.push("category");
+    if (item.date) touched.push("date");
+    if (item.isBusiness !== null) touched.push("biz");
+    setVoiceFields(touched);
+    setF((p) => ({
+      ...p,
+      type,
+      amount: item.amount !== null ? fieldAmount(item.amount) : p.amount,
+      description: item.description || p.description,
+      category_id: cat ? cat.id : type !== p.type ? "" : p.category_id,
+      date: item.date ?? p.date,
+      biz: item.isBusiness ?? p.biz,
+    }));
+  }
+
   useEffect(() => {
     if (!open || !userId) return;
     setError(null);
+    setVoiceFields([]);
     Promise.all([
       supabase.from("categories").select("id,name,type,parent_id").order("name"),
       supabase.from("accounts").select("id,name,is_business").eq("archived", false).order("created_at"),
       supabase.from("credit_cards").select("id,name,closing_day,due_day,is_business,kind,pay_account_id").eq("archived", false).order("created_at"),
       supabase.from("profiles").select("mei_activity").eq("id", userId).maybeSingle(),
     ]).then(([c, a, k, pr]) => {
-      setCats((c.data ?? []) as CatRow[]);
+      const catList = (c.data ?? []) as CatRow[];
+      setCats(catList);
       setAccs((a.data ?? []) as Acc[]);
       const list = (k.data ?? []) as CardOpt[];
       const credits = list.filter((x) => x.kind === "credito");
@@ -57,8 +99,14 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           ? { type: "expense" as const, method: "card" as const, card_id: preset.cardId, biz: Boolean(list.find((x) => x.id === preset.cardId)?.is_business) }
           : { method: "account" as const, card_id: credits.length === 1 ? credits[0].id : "", biz: false }),
       }));
+      // Abriu pelo "Também entendi" da voz: já vem preenchido (e o resto da fila segue depois de salvar).
+      if (preset?.voice) {
+        voiceQueue.current = preset.voiceQueue ?? [];
+        applyVoice(preset.voice, catList);
+      }
     });
-  }, [open, userId, supabase, preset?.cardId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, userId, supabase, preset?.cardId, preset?.voice]);
 
   if (!open) return null;
 
@@ -113,9 +161,14 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
     if (res.error) { setError("Não foi possível salvar."); return; }
     setF({ ...f, amount: "", description: "", installments: 1 });
     setReceipt(null);
+    setVoiceFields([]);
     window.dispatchEvent(new Event("jakash:changed"));
     void lightImpact(); // vibração leve no app iOS (no site não faz nada)
     onClose();
+    // "Também entendi": abre o próximo item já preenchido (a pessoa ainda confere e toca em Salvar).
+    const queue = voiceQueue.current;
+    voiceQueue.current = [];
+    if (queue.length) setTimeout(() => window.dispatchEvent(new CustomEvent("jakash:quickadd", { detail: { voice: queue[0], voiceQueue: queue.slice(1) } })), 150);
   }
 
   return (
@@ -127,6 +180,9 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           <button type="button" onClick={onClose} aria-label="Fechar" className="text-gray-400"><X size={20} /></button>
         </div>
 
+        <VoiceEntry cats={cats} resetKey={preset?.voice} onDraft={(item) => applyVoice(item)} onQueue={(items) => { voiceQueue.current = items; }} />
+        {voiceFields.length > 0 && <p className="text-xs text-gray-500 -mt-2">O que veio da sua voz está destacado. Confira antes de salvar.</p>}
+
         <label className="flex items-center gap-3 rounded-2xl border-2 border-dashed border-brand-dark/30 dark:border-white/15 px-4 py-3 cursor-pointer hover:bg-brand-dark/5 dark:hover:bg-[#1E1E1E]">
           <FileUp size={20} className="text-brand-dark dark:text-brand-soft shrink-0" />
           <span className="min-w-0">
@@ -136,9 +192,9 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           <input type="file" className="hidden" accept={ACCEPT} onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; stashFile(file); onClose(); router.push("/importar"); }} />
         </label>
 
-        <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#262626]">
+        <div className={`grid grid-cols-2 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#262626]${voiceFields.includes("type") ? " ring-2 ring-brand-vivid/40" : ""}`}>
           {(["expense", "income"] as const).map((t) => (
-            <button key={t} type="button" onClick={() => setF({ ...f, type: t, category_id: "" })}
+            <button key={t} type="button" onClick={() => { setF({ ...f, type: t, category_id: "" }); unmark("type"); unmark("category"); }}
               className={`py-2.5 rounded-xl text-sm font-bold ${f.type === t ? (t === "income" ? "bg-emerald-500 text-white" : "bg-red-500 text-white") : "text-gray-500"}`}>
               {t === "expense" ? "Despesa" : "Receita"}
             </button>
@@ -154,15 +210,15 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           </div>
         )}
 
-        <div><Label>{useCard && f.installments > 1 ? "Valor total da compra" : "Valor"}</Label><input autoFocus className={inputCls + " !text-2xl !font-extrabold"} inputMode="decimal" placeholder="0,00" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></div>
-        <div><Label>Descrição</Label><input className={inputCls} placeholder={isIncome ? "Ex.: salário" : "Ex.: mercado"} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
+        <div><Label>{useCard && f.installments > 1 ? "Valor total da compra" : "Valor"}</Label><input autoFocus className={inputCls + " !text-2xl !font-extrabold" + hl("amount")} inputMode="decimal" placeholder="0,00" value={f.amount} onChange={(e) => { setF({ ...f, amount: e.target.value }); unmark("amount"); }} /></div>
+        <div><Label>Descrição</Label><input className={inputCls + hl("description")} placeholder={isIncome ? "Ex.: salário" : "Ex.: mercado"} value={f.description} onChange={(e) => { setF({ ...f, description: e.target.value }); unmark("description"); }} /></div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Categoria</Label>
-            <select className={inputCls} value={f.category_id} onChange={(e) => setF({ ...f, category_id: e.target.value })}>
+            <select className={inputCls + hl("category")} value={f.category_id} onChange={(e) => { setF({ ...f, category_id: e.target.value }); unmark("category"); }}>
               <option value="">Sem categoria</option>
               {categoryOptions(cats, f.type).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select></div>
-          <div><Label>{useCard ? "Data da compra" : f.paid ? "Data" : "Vencimento"}</Label><input type="date" className={inputCls} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></div>
+          <div><Label>{useCard ? "Data da compra" : f.paid ? "Data" : "Vencimento"}</Label><input type="date" className={inputCls + hl("date")} value={f.date} onChange={(e) => { setF({ ...f, date: e.target.value }); unmark("date"); }} /></div>
         </div>
 
         {useCard ? (
@@ -207,9 +263,9 @@ export function QuickAdd({ open, onClose, preset }: { open: boolean; onClose: ()
           </>
         )}
         {(isMei || f.biz) && (useCard || useDebit || f.paid) && (
-          <label className="flex items-center justify-between rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#1E1E1E] px-4 py-3 text-sm font-bold">
+          <label className={`flex items-center justify-between rounded-2xl border border-white/70 dark:border-white/5 bg-white/60 dark:bg-[#1E1E1E] px-4 py-3 text-sm font-bold${voiceFields.includes("biz") ? " ring-2 ring-brand-vivid/40" : ""}`}>
             <span>Da empresa (MEI)<span className="block text-xs font-normal text-gray-500">Entra na receita bruta e no limite do MEI</span></span>
-            <input type="checkbox" checked={f.biz} onChange={(e) => setF({ ...f, biz: e.target.checked })} className="h-5 w-5 accent-brand-dark" />
+            <input type="checkbox" checked={f.biz} onChange={(e) => { setF({ ...f, biz: e.target.checked }); unmark("biz"); }} className="h-5 w-5 accent-brand-dark" />
           </label>
         )}
         {f.biz && isIncome && f.paid && (

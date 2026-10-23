@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test:ios": "tsx --tsconfig tsconfig.json tests/ios-app.test.ts",
     "test:export": "tsx --tsconfig tsconfig.json tests/data-export.test.ts",
+    "test:voice": "tsx --tsconfig tsconfig.json tests/voice-parse.test.ts",
     "ios:prepare": "node scripts/ios-prepare.mjs",
     "ios:sync": "node scripts/ios-prepare.mjs && cap sync ios",
     "ios:assets": "capacitor-assets generate --ios"
@@ -26,6 +27,7 @@
     "@capacitor/share": "^8.0.3",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.4",
+    "@capgo/capacitor-speech-recognition": "8.4.4",
     "@capgo/native-purchases": "^8.9.6",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",

@@ -18,6 +18,7 @@ export default function PrivacidadePage() {
         <li><strong>Cadastro:</strong> nome, e-mail e, ao assinar, CPF ou CNPJ (necessário para emitir a cobrança).</li>
         <li><strong>Dados financeiros que você registra:</strong> lançamentos, categorias, contas, cartões, contas a pagar, limites, objetivos, dívidas, investimentos e arquivos que você importa.</li>
         <li><strong>Conversas com a Jaki:</strong> o texto que você escreve no Chat da Jaki, dentro do app, e as respostas.</li>
+        <li><strong>Lançamento por voz:</strong> ao tocar no microfone, a sua voz vira texto pelo reconhecimento de fala do seu aparelho ou navegador e o Jakash recebe só o texto. O áudio não é gravado nem guardado por nós. Só em navegadores sem reconhecimento de fala, um áudio de até 20 segundos é enviado para ser transcrito e descartado em seguida.</li>
         <li><strong>Pagamento:</strong> status da assinatura e histórico de cobranças. Dados de cartão são digitados na página segura do Asaas e <strong>não ficam armazenados no Jakash</strong>.</li>
         <li><strong>Dados técnicos:</strong> informações básicas de acesso e segurança (como registros de erro e horário de uso).</li>
       </ul>
@@ -42,9 +43,9 @@ export default function PrivacidadePage() {
         <li><strong>Supabase:</strong> banco de dados e autenticação.</li>
         <li><strong>Vercel:</strong> hospedagem do site e do aplicativo.</li>
         <li><strong>Asaas:</strong> processamento de pagamentos e assinaturas.</li>
-        <li><strong>OpenAI:</strong> respostas do Chat da Jaki e leitura de arquivos importados pela inteligência artificial e redação da explicação do plano de dívidas (ela recebe valores e nomes das dívidas que você cadastrou, nunca CPF).</li>
+        <li><strong>OpenAI:</strong> respostas do Chat da Jaki e leitura de arquivos importados pela inteligência artificial, frases do lançamento por voz que o app não conseguiu entender sozinho, transcrição de áudio nos navegadores sem reconhecimento de fala e redação da explicação do plano de dívidas (ela recebe valores e nomes das dívidas que você cadastrou, nunca CPF).</li>
         <li><strong>Resend:</strong> envio de e-mails do serviço.</li>
-        <li><strong>Apple:</strong> no app para iPhone, login com a Apple, assinatura pela App Store e avisos no aparelho (notificações). A Apple trata os pagamentos feitos na App Store; o Jakash não recebe os dados do seu cartão.</li>
+        <li><strong>Apple:</strong> no app para iPhone, login com a Apple, assinatura pela App Store, avisos no aparelho (notificações) e reconhecimento de fala do lançamento por voz (no próprio iPhone, quando possível). A Apple trata os pagamentos feitos na App Store; o Jakash não recebe os dados do seu cartão.</li>
       </ul>
       <p>Alguns desses prestadores ficam fora do Brasil, o que significa transferência internacional de dados, feita com as garantias previstas na LGPD. Também podemos compartilhar dados quando a lei ou uma ordem de autoridade exigir.</p>
       <p><strong>Gestão compartilhada:</strong> se você convidar alguém, essa pessoa verá os dados financeiros compartilhados (veja os <Link href="/termos-de-uso">Termos de uso</Link>). Perfil, assinatura e conversas do chat não são compartilhados.</p>

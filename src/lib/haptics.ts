@@ -10,3 +10,12 @@ export async function lightImpact(): Promise<void> {
     await Haptics.impact({ style: ImpactStyle.Light });
   } catch { /* sem vibração: tudo bem */ }
 }
+
+/** Vibração de "deu certo" (só no app iOS; no site não faz nada). */
+export async function successHaptic(): Promise<void> {
+  if (!isNativeApp()) return;
+  try {
+    const { Haptics, NotificationType } = await import("@capacitor/haptics");
+    await Haptics.notification({ type: NotificationType.Success });
+  } catch { /* sem vibração: tudo bem */ }
+}
