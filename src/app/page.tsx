@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import Link from "next/link";
 import { CTAButton } from "@/components/CTAButton";
 import { FAQItem } from "@/components/FAQItem";
 import { SectionBadge } from "@/components/SectionBadge";
@@ -68,6 +69,9 @@ export default function LandingPage() {
               
               <CTAButton text="Testar 7 dias grátis →" size="lg" className="h-16 px-10 text-lg w-full sm:w-auto" />
               <p className="text-sm text-gray-400 font-medium mt-4">Sem precisar cadastrar cartão de crédito</p>
+              <Link href="/login" className="mt-3 inline-flex items-center justify-center h-12 px-8 rounded-full border-2 border-brand-dark text-brand-dark font-bold hover:bg-brand-dark/5 transition-colors w-full sm:w-auto">
+                Já tenho conta: entrar no app
+              </Link>
             </div>
 
             <div className="lg:w-1/2 w-full relative h-[600px] fade-in-section">

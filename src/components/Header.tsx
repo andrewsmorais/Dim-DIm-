@@ -24,8 +24,8 @@ export function Header() {
           <Link href="#faq" className="text-gray-500 hover:text-brand-dark transition-colors">FAQ</Link>
         </nav>}
 
-        <div className="flex items-center gap-4">
-          <Link href="/login" className="hidden md:flex items-center justify-center h-10 px-6 rounded-full text-brand-dark font-bold hover:bg-brand-dark/5 transition-colors text-sm">
+        <div className="flex items-center gap-2 md:gap-4">
+          <Link href="/login" className="flex items-center justify-center h-10 px-3 md:px-6 rounded-full text-brand-dark font-bold hover:bg-brand-dark/5 transition-colors text-sm">
             Entrar
           </Link>
           {!native && <CTAButton text="Testar grátis →" size="sm" />}
