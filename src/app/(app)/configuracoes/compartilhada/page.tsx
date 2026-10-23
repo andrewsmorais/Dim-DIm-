@@ -82,7 +82,7 @@ export default function CompartilhadaPage() {
 
   return (
     <div className="max-w-xl mx-auto pb-20">
-      <BackTitle title="Gestão compartilhada" subtitle="Dividam as finanças da casa com quem você quiser (até 3 pessoas no plano Família)." href="/configuracoes" />
+      <BackTitle title="Gestão compartilhada" subtitle="Dividam as finanças da casa com quem você quiser (até 3 pessoas)." href="/configuracoes" />
 
       <Card className="mb-4">
         <p className="font-extrabold flex items-center gap-2 mb-2"><Heart size={18} className="text-brand-dark dark:text-brand-soft" /> Como funciona</p>
@@ -105,19 +105,11 @@ export default function CompartilhadaPage() {
 
       {data?.state === "none" && (
         <>
-          {data.limit <= 1 ? (
-            <Card className="mb-4">
-              <p className="font-extrabold mb-1">Convidar pessoas</p>
-              <p className="text-sm text-gray-500 mb-4">Seu plano é individual. Com o <b>plano Família</b> você divide as finanças com até 3 pessoas (casal, família ou sócios).</p>
-              <Link href="/configuracoes/planos" className={btnCls + " w-full"}>Ver o plano Família</Link>
-            </Card>
-          ) : (
-            <Card className="mb-4">
-              <p className="font-extrabold mb-1">Convidar alguém</p>
-              <p className="text-sm text-gray-500 mb-4">Você recebe um código para mandar à outra pessoa. Ela precisa ter (ou criar) uma conta no Jakash. Cabem até {data.limit} pessoas, contando com você.</p>
-              <button onClick={invite} disabled={busy} className={btnCls + " w-full"}><Users size={16} /> Gerar convite</button>
-            </Card>
-          )}
+          <Card className="mb-4">
+            <p className="font-extrabold mb-1">Convidar alguém</p>
+            <p className="text-sm text-gray-500 mb-4">Você recebe um código para mandar à outra pessoa. Ela precisa ter (ou criar) uma conta no Jakash. Cabem até {data.limit} pessoas, contando com você.</p>
+            <button onClick={invite} disabled={busy} className={btnCls + " w-full"}><Users size={16} /> Gerar convite</button>
+          </Card>
 
           <Card>
             <p className="font-extrabold mb-1">Recebi um código</p>
@@ -206,7 +198,7 @@ export default function CompartilhadaPage() {
               <button onClick={invite} disabled={busy} className={btnCls + " w-full"}><Users size={16} /> Gerar convite</button>
             </Card>
           ) : (
-            <Card><p className="text-sm text-gray-500">A casa está completa ({data.limit} pessoas). {data.limit < 3 && <>Para convidar mais gente, <Link href="/configuracoes/planos" className="font-bold text-brand-dark dark:text-brand-soft">veja o plano Família</Link>.</>}</p></Card>
+            <Card><p className="text-sm text-gray-500">A casa está completa ({data.limit} pessoas).</p></Card>
           )
         )}
         </>

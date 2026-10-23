@@ -70,7 +70,7 @@ const n = (v: unknown): number => {
 export const r2 = (x: number): number => Math.round(x * 100) / 100;
 
 export const PLAN_LABEL: Record<string, string> = {
-  cpf: 'Jakash Essencial', familia: 'Jakash Família', mei: 'Jakash MEI', cnpj: 'CNPJ (legado)', zap: 'Zap (teste)', piloto: 'Piloto',
+  cpf: 'Jakash Pessoal', mei: 'Jakash Empresarial', cnpj: 'CNPJ (legado)', zap: 'Zap (teste)', piloto: 'Piloto',
 };
 
 /** Prorate costs (Vercel, Supabase, etc.) to a fraction of a month. */

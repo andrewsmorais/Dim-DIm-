@@ -10,7 +10,7 @@ const labelDay = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
 const C_MEI = "#5B5BF0";
 const C_CPF = "#A78BFA";
-const C_FAM = "#38BDF8";
+const C_OLD = "#38BDF8";
 const C_OK = "#10B981";
 const C_BAD = "#EF4444";
 
@@ -18,11 +18,12 @@ export function RevenueChart({ series, grain }: { series: SeriesPoint[]; grain: 
   const labelFn = grain === 'day' ? labelDay : labelMonth;
   const data = series.map((m) => ({
     name: labelFn(m.from),
-    Essencial: m.revenue_cpf,
-    // O SQL separa só CPF e MEI; o que sobrar do total é do plano Família.
-    Família: Math.max(0, Math.round((m.revenue - m.revenue_cpf - m.revenue_mei) * 100) / 100),
-    MEI: m.revenue_mei,
+    Pessoal: m.revenue_cpf,
+    // O SQL separa só 'cpf' e 'mei'; o que sobrar do total vem de planos antigos (ex.: Família, que não é mais vendido).
+    Outros: Math.max(0, Math.round((m.revenue - m.revenue_cpf - m.revenue_mei) * 100) / 100),
+    Empresarial: m.revenue_mei,
   }));
+  const hasOld = data.some((d) => d.Outros > 0);
   return (
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
@@ -31,9 +32,9 @@ export function RevenueChart({ series, grain }: { series: SeriesPoint[]; grain: 
         <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <Tooltip formatter={(v) => brl(Number(v))} contentStyle={{ borderRadius: 12, fontSize: 12 }} />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="MEI" stackId="r" fill={C_MEI} />
-        <Bar dataKey="Família" stackId="r" fill={C_FAM} />
-        <Bar dataKey="Essencial" stackId="r" fill={C_CPF} radius={[6, 6, 0, 0]} />
+        <Bar dataKey="Empresarial" stackId="r" fill={C_MEI} />
+        {hasOld && <Bar dataKey="Outros" name="Planos antigos" stackId="r" fill={C_OLD} />}
+        <Bar dataKey="Pessoal" stackId="r" fill={C_CPF} radius={[6, 6, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

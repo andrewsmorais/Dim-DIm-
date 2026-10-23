@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/adminAuth';
 import { buildDashboard, PLAN_LABEL, type RawPeriod, type CurrentMetrics, type PlanRow } from '@/lib/adminMetrics';
-import { PLANS, PLAN_IDS, isPlanId } from '@/lib/plans';
+import { PLANS, PLAN_IDS, canonicalPlan, isPlanId } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,24 +42,27 @@ export async function GET(req: Request) {
 
   const canceled = profiles.filter((p) => p.subscription_status === 'canceled').length;
 
+  // 'familia' (plano antigo, não é mais vendido) entra como Pessoal; planos desconhecidos (zap, piloto...) ficam como estão.
+  const keyOf = (plan: string | null | undefined): string => canonicalPlan(plan) ?? plan ?? '';
+
   // Calculate MRR from paying + trial (valores dos planos vêm de lib/plans)
-  const mrr = PLAN_IDS.reduce((sum, id) => sum + PLANS[id].value * profiles.filter((p) => p.subscription_plan === id && live(p)).length, 0);
+  const mrr = PLAN_IDS.reduce((sum, id) => sum + PLANS[id].value * profiles.filter((p) => keyOf(p.subscription_plan) === id && live(p)).length, 0);
 
   // Receita do período por plano
   type EventRow = { plan: string | null; kind: string; amount: number | string | null };
   const revenueByPlan = new Map<string, number>();
   for (const e of (events.data || []) as EventRow[]) {
-    const key = e.plan ?? 'outro';
+    const key = keyOf(e.plan) || 'outro';
     revenueByPlan.set(key, (revenueByPlan.get(key) ?? 0) + (e.kind === 'refunded' ? -1 : 1) * Number(e.amount ?? 0));
   }
 
-  // Sempre mostra os 3 planos (mesmo zerados) para comparar A x B x MEI; planos antigos só se tiverem gente.
-  const planKeys = Array.from(new Set<string>([...PLAN_IDS, ...profiles.map((p) => p.subscription_plan ?? '').filter((k) => k && !isPlanId(k)), ...Array.from(revenueByPlan.keys())]));
+  // Sempre mostra os 2 planos (mesmo zerados); planos antigos só se tiverem gente.
+  const planKeys = Array.from(new Set<string>([...PLAN_IDS, ...profiles.map((p) => keyOf(p.subscription_plan)).filter((k) => k && !isPlanId(k)), ...Array.from(revenueByPlan.keys())]));
   const byPlan: PlanRow[] = planKeys.map((id) => ({
     plan: id,
     label: PLAN_LABEL[id] ?? id,
-    subscribers: profiles.filter((p) => p.subscription_plan === id && (p.subscription_status === 'active' || p.subscription_status === 'past_due')).length,
-    trial: profiles.filter((p) => p.subscription_plan === id && p.subscription_status === 'trial').length,
+    subscribers: profiles.filter((p) => keyOf(p.subscription_plan) === id && (p.subscription_status === 'active' || p.subscription_status === 'past_due')).length,
+    trial: profiles.filter((p) => keyOf(p.subscription_plan) === id && p.subscription_status === 'trial').length,
     revenuePeriod: Math.round((revenueByPlan.get(id) ?? 0) * 100) / 100,
   }));
 

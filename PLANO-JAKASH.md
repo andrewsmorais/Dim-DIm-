@@ -3,6 +3,8 @@
 > **23/10/2026 — decisão do fundador: o Jakash não terá assistente no WhatsApp (custo da Meta por resposta). Fases 1, 2 e a parte de WhatsApp da 6 foram canceladas; leitura de foto/PDF continua dentro do app (Importar).**
 > Tudo que este plano diz sobre WhatsApp (webhook, worker, vínculo do número, lembretes e respostas pela Meta, variáveis `WHATSAPP_*`) está **cancelado e removido do código** (branch `remove-whatsapp-agent`; passos do fundador em `docs/REMOVER-WHATSAPP.md`). Ficam: o Chat da Jaki dentro do app, os links `wa.me` de compartilhar e, se o fundador definir, um link de suporte. As seções antigas abaixo ficam só como histórico.
 
+> **Planos: Pessoal R$19,90 e Empresarial R$39,90 (23/10/2026).** O Jakash vende só dois planos: **Jakash Pessoal** (id `cpf`, R$ 19,90, até 3 pessoas, todas as telas pessoais) e **Jakash Empresarial** (id `mei`, R$ 39,90, Pessoal + pacote MEI). Os ids não mudaram. O plano Família deixou de ser vendido (um `familia` gravado vale como `cpf`) e não existe mais trava por plano nas telas pessoais (`FAMILY_ONLY_PATHS` e o `PlanGate` foram removidos). Produtos da App Store: `jakash.pessoal.mensal` e `jakash.empresarial.mensal`. Onde este plano fala de Essencial ou Família, leia como histórico.
+
 **Data:** 20/10/2026
 **Fontes juntadas:** auditoria do código feita pelo Claude (repositório lido arquivo por arquivo), relatório "Jakash: avaliação crítica e plano de evolução" e "Guia para Claude: conectar o Jakash à API oficial WhatsApp" (ambos da Manus, que **não** viu o código), e os pedidos do fundador.
 **Para quem é:** o agente que vai executar (Sonnet 5.5, esforço alto) e o fundador.

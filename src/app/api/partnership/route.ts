@@ -3,7 +3,7 @@ import { randomInt } from 'crypto';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { PLANS, isPlanId, memberLimit } from '@/lib/plans';
+import { memberLimit } from '@/lib/plans';
 
 // Gestão compartilhada (casa de até 3 pessoas, conforme o plano de quem convida). O convite vale 48h e é aceito com um código de uso único.
 // Quem aceita passa a ver e editar os dados financeiros de toda a casa, e vice-versa (políticas RLS household_user_ids()).
@@ -45,10 +45,9 @@ async function limitOf(admin: Admin, ownerId: string): Promise<number> {
   return memberLimit(data?.subscription_plan as string | null | undefined);
 }
 
-function upgradeMessage(limit: number): string {
-  return limit <= 1
-    ? `O plano ${PLANS.cpf.name} é individual. Para dividir as finanças com mais pessoas, faça upgrade para o ${PLANS.familia.name} (até ${PLANS.familia.members} pessoas) em Configurações › Planos.`
-    : `Sua casa já tem o máximo de ${limit} pessoas do seu plano.`;
+// Todos os planos comportam o mesmo número de pessoas, então não há upgrade que resolva: só avisa o limite.
+function houseFullMessage(limit: number): string {
+  return `Sua casa já tem o máximo de ${limit} pessoas do seu plano.`;
 }
 
 export async function GET() {
@@ -122,7 +121,7 @@ export async function POST(request: Request) {
       }
       const limit = await limitOf(admin, user.id);
       const members = mine.filter((r) => r.owner_id === user.id && r.status === 'accepted').length + 1;
-      if (members >= limit) return NextResponse.json({ error: upgradeMessage(limit), code: 'plan_limit' }, { status: 403 });
+      if (members >= limit) return NextResponse.json({ error: houseFullMessage(limit), code: 'plan_limit' }, { status: 403 });
 
       for (const r of mine) {
         if (r.owner_id === user.id && r.status === 'pending') {

@@ -16,7 +16,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Quais são os planos e os preços do Jakash?",
-    a: `Há três planos, todos com 7 dias grátis: ${PLAN_IDS.map((id) => `${PLANS[id].name} por ${planPrice(id)}/mês`).join(", ")}. O Essencial é para 1 pessoa. O Família divide as finanças com até ${PLANS.familia.members} pessoas e inclui planejamento, investimentos, dívidas, simulador e Chat IA. O MEI inclui tudo do Família mais as ferramentas para MEI.`,
+    a: `Há dois planos, os dois com 7 dias grátis: ${PLAN_IDS.map((id) => `${PLANS[id].name} por ${planPrice(id)}/mês`).join(" e ")}. O Pessoal tem tudo para as finanças pessoais (lançamentos, cartões, contas a pagar, limites, objetivos, dívidas, investimentos, planejamento, Chat da Jaki e Motorista de app) e permite dividir com até ${PLANS.cpf.members} pessoas. O Empresarial inclui tudo do Pessoal mais o pacote MEI.`,
   },
   {
     q: "O Jakash é gratuito?",
@@ -32,11 +32,11 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Posso dividir as finanças com minha família ou sócio?",
-    a: `Sim. Nos planos Família e MEI você convida até ${PLANS.familia.members - 1} pessoas para a mesma casa, e todos veem e editam contas, lançamentos, limites e objetivos compartilhados. Perfil, assinatura e conversas do chat continuam privados.`,
+    a: `Sim. Nos dois planos você convida até ${PLANS.cpf.members - 1} pessoas para a mesma casa, e todos veem e editam contas, lançamentos, limites e objetivos compartilhados. Perfil, assinatura e conversas do chat continuam privados.`,
   },
   {
     q: "O Jakash serve para MEI?",
-    a: "Sim. O plano MEI inclui controle do limite anual, DASN, recibos, relatório do MEI e contas recorrentes como o DAS, com lembrete. O Jakash não emite nota fiscal.",
+    a: "Sim. O plano Empresarial inclui o pacote MEI: controle do limite anual, DAS e DASN, clientes e valores a receber, cobrança por Pix, recibos e relatório mensal, calculadora de preço e acesso do contador. O Jakash não emite nota fiscal.",
   },
   {
     q: "Como cancelo minha assinatura?",

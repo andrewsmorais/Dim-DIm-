@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getEntitlement } from '@/lib/entitlements';
-import { hasFamilyFeatures, isPlanId } from '@/lib/plans';
+import { canonicalPlan } from '@/lib/plans';
 import { hasLiveAsaasSubscription } from '@/lib/appleIap';
 import { readBilling } from '@/lib/billingProfile';
 
@@ -14,18 +14,17 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Faça login' }, { status: 401 });
 
   const admin = createAdminClient();
-  const [ent, { data: me }, billing] = await Promise.all([
+  const [ent, billing] = await Promise.all([
     getEntitlement(admin, user.id),
-    admin.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
     readBilling(admin, user.id),
   ]);
 
-  const plan = ent && isPlanId(ent.plan) ? ent.plan : null;
+  // 'familia' (plano antigo, não é mais vendido) volta como 'cpf'.
+  const plan = canonicalPlan(ent?.plan);
   return NextResponse.json({
     plan,
     status: ent?.status ?? null,
     viaOwner: ent?.viaOwner ?? false,
-    familyFeatures: me?.is_admin === true || hasFamilyFeatures(plan),
     // Como a própria conta paga: 'apple' (App Store), 'asaas' (site) ou null. asaasLive = tem assinatura do site valendo (não oferece compra no app).
     billingProvider: billing?.billing_provider === 'apple' ? 'apple' : billing?.asaas_subscription_id ? 'asaas' : null,
     asaasLive: hasLiveAsaasSubscription(billing),

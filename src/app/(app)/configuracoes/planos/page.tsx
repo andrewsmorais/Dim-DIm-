@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Clock, ExternalLink, FileText, Receipt } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
-import { PLANS, PLAN_IDS, isPlanId, planPrice, type PlanId } from "@/lib/plans";
+import { PLANS, PLAN_FEATURES, PLAN_IDS, PLAN_TAGLINE, canonicalPlan, planPrice, type PlanId } from "@/lib/plans";
 import { brl, formatDateBR } from "@/lib/format";
 import { CheckoutButton } from "@/components/CheckoutButton";
 import { IapPaywall } from "@/components/IapPaywall";
@@ -26,16 +26,6 @@ const STATUS: Record<string, { label: string; tone: string }> = {
 };
 const INVOICE_STATUS: Record<string, string> = {
   PENDING: "Aguardando pagamento", RECEIVED: "Paga", CONFIRMED: "Paga", OVERDUE: "Vencida", REFUNDED: "Estornada", RECEIVED_IN_CASH: "Paga",
-};
-const FEATURES: Record<PlanId, string[]> = {
-  cpf: ["1 pessoa", "Lançamentos e importação de extrato", "Painel com gráficos, limites e objetivos", "Dívidas, reserva de emergência e contas a pagar", "Categorias e subcategorias personalizáveis"],
-  familia: ["Tudo do Essencial", `Até ${PLANS.familia.members} pessoas na mesma casa (gestão compartilhada)`, "Planejamento mensal e simulador", "Chat IA para perguntar sobre as suas finanças", "Investimentos e dívidas", "Relatórios e link para o seu contador"],
-  mei: ["Tudo do plano Família", "Controle do limite anual do MEI", "DASN, recibos e relatório do MEI", "Contas recorrentes (ex.: DAS) com lembrete"],
-};
-const SUBTITLE: Record<PlanId, string> = {
-  cpf: "Para organizar as suas finanças",
-  familia: "Para casal, família ou sócios",
-  mei: "Para MEI e autônomo",
 };
 
 export default function PlanosPage() {
@@ -74,7 +64,8 @@ export default function PlanosPage() {
   }
 
   const st = STATUS[profile?.subscription_status ?? ""] ?? { label: "Sem assinatura", tone: "bg-gray-500/15 text-gray-500" };
-  const planKey: PlanId | null = isPlanId(profile?.subscription_plan) ? profile.subscription_plan : null;
+  // 'familia' (plano antigo, não é mais vendido) aparece como Pessoal.
+  const planKey: PlanId | null = canonicalPlan(profile?.subscription_plan);
   const hasSub = Boolean(profile?.asaas_subscription_id);
   const canCancel = hasSub && profile?.subscription_status !== "canceled";
   const viaApple = planInfo?.billingProvider === "apple";
@@ -164,11 +155,11 @@ export default function PlanosPage() {
           {PLAN_IDS.map((id) => (
             <Card key={id} className={planKey === id ? "ring-2 ring-brand-dark" : ""}>
               <div className="flex items-start justify-between">
-                <div><p className="text-xl font-extrabold">{PLANS[id].name}</p><p className="text-sm text-gray-500">{SUBTITLE[id]}</p></div>
+                <div><p className="text-xl font-extrabold">{PLANS[id].name}</p><p className="text-sm text-gray-500">{PLAN_TAGLINE[id]}</p></div>
                 {hasSub ? null : <span className="text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-600 px-3 py-1">7 dias grátis</span>}
               </div>
               <p className="my-5"><span className="text-4xl font-extrabold">{planPrice(id)}</span><span className="text-gray-500"> / mês</span></p>
-              <ul className="space-y-2 mb-5">{FEATURES[id].map((f) => <li key={f} className="flex gap-2 text-sm"><Check size={16} className="text-emerald-500 shrink-0 mt-0.5" />{f}</li>)}</ul>
+              <ul className="space-y-2 mb-5">{PLAN_FEATURES[id].map((f) => <li key={f} className="flex gap-2 text-sm"><Check size={16} className="text-emerald-500 shrink-0 mt-0.5" />{f}</li>)}</ul>
               {planKey === id && profile?.subscription_status !== "canceled" ? <p className="text-center text-sm font-bold text-brand-dark dark:text-brand-soft">Seu plano atual</p> : <CheckoutButton plan={id} cpfCnpj={doc} switching={hasSub && profile?.subscription_status !== "canceled"} onChanged={() => { setMsg(`Plano alterado para ${PLANS[id].name}. A nova cobrança vale a partir da próxima renovação.`); setTab("sub"); load(); }} />}
             </Card>
           ))}

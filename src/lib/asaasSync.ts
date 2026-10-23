@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { planFromValue } from '@/lib/plans';
+import { canonicalPlan, planFromValue } from '@/lib/plans';
 
 // Sincroniza cobranças do Asaas -> public.billing_events (fonte da verdade do painel admin).
 // Só LÊ do Asaas (GET). Usa ASAAS_REPORTS_API_KEY (chave só do painel); se não existir, cai para ASAAS_API_KEY.
@@ -26,9 +26,10 @@ const ymd = (d: Date) => d.toISOString().slice(0, 10);
 // Data do Asaas (AAAA-MM-DD, horário de Brasília) -> instante ao meio-dia, para não cair no mês errado por fuso.
 const at = (date: string | null | undefined) => (date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00-03:00` : new Date().toISOString());
 
-// Descobre o plano pelo valor cobrado (CPF/MEI); se não bater (desconto, cupom), usa o plano atual do perfil.
+// Descobre o plano pelo valor cobrado (Pessoal/Empresarial); se não bater (desconto, cupom, cobrança antiga do Família),
+// usa o plano atual do perfil ('familia' vale como 'cpf').
 function planOf(value: number, profilePlan: string | null): string | null {
-  return planFromValue(value) ?? profilePlan;
+  return planFromValue(value) ?? canonicalPlan(profilePlan) ?? profilePlan;
 }
 
 async function fetchPage(status: string, offset: number, dueFrom: string | null): Promise<AsaasList> {

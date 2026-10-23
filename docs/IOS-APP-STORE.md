@@ -31,15 +31,14 @@ Team ID: `3V989HNC76` (já está no projeto).
 2. **Users and Access > Integrations > App Store Connect API > Team Keys**: crie uma chave com acesso **App Manager** (ou Admin). Anote **Issuer ID** e **Key ID** e baixe o `.p8`. Vai para o Codemagic (passo 1.5).
 3. **Users and Access > Integrations > In-App Purchase**: gere uma chave. Baixe o `.p8` e anote **Key ID** e **Issuer ID**. Vai para a Vercel como `APPLE_IAP_KEY_ID`, `APPLE_IAP_ISSUER_ID`, `APPLE_IAP_KEY_P8`.
 4. **Apps > "+" > Novo app**: plataforma iOS, nome **Jakash**, idioma principal **Português (Brasil)**, Bundle ID `com.jakash.app`, SKU `jakash-ios`. Depois de criado, copie o **Apple ID** numérico (Informações do app) para `APP_STORE_APPLE_ID` no `codemagic.yaml`.
-5. **Assinaturas** (menu Monetização > Assinaturas): crie o grupo **Jakash** e dentro dele 3 assinaturas de **1 mês**, com estes **IDs de produto exatos**:
+5. **Assinaturas** (menu Monetização > Assinaturas): crie o grupo **Jakash** e dentro dele 2 assinaturas de **1 mês**, com estes **IDs de produto exatos**:
 
    | Plano | ID do produto | Preço (BRL) | Nível no grupo |
    |---|---|---|---|
-   | Jakash Essencial | `jakash.essencial.mensal` | R$ 19,90 | 3 |
-   | Jakash Família | `jakash.familia.mensal` | R$ 29,90 | 2 |
-   | Jakash MEI | `jakash.mei.mensal` | R$ 39,90 | 1 (o mais alto) |
+   | Jakash Pessoal | `jakash.pessoal.mensal` | R$ 19,90 | 2 |
+   | Jakash Empresarial | `jakash.empresarial.mensal` | R$ 39,90 | 1 (o mais alto) |
 
-   Para cada uma: nome de exibição (ex.: "Jakash Família"), descrição curta, e a **captura de tela para revisão** (tela de planos do app, depois do primeiro build). Os níveis fazem a troca de plano valer na hora quando sobe e na renovação quando desce.
+   (Decisão de 23/10/2026: o Jakash vende só dois planos. Os produtos antigos `jakash.essencial.mensal`, `jakash.familia.mensal` e `jakash.mei.mensal` não devem ser criados: o app não os reconhece.) Para cada uma: nome de exibição (ex.: "Jakash Pessoal"), descrição curta, e a **captura de tela para revisão** (tela de planos do app, depois do primeiro build). Os níveis fazem a troca de plano valer na hora quando sobe e na renovação quando desce.
 6. **Notificações do Servidor (App Store Server Notifications) V2**: em Informações do app, preencha **URL de produção** e **URL de sandbox** com `https://www.jakash.app/api/apple/notifications` e escolha a **Versão 2**.
 7. Preencha a ficha do app com os textos da seção 2 (descrição, palavras-chave, URLs, categoria, classificação etária, Privacidade do app).
 
@@ -89,7 +88,7 @@ Instale o app pelo TestFlight e confira:
 
 ### 1.8 Enviar para revisão [VOCÊ]
 
-Na versão 1.0 do app: escolha o build do TestFlight, adicione as 3 assinaturas em "Compras no app e assinaturas", preencha as Notas para a revisão (seção 2.8), anexe as capturas de tela e envie.
+Na versão 1.0 do app: escolha o build do TestFlight, adicione as 2 assinaturas em "Compras no app e assinaturas", preencha as Notas para a revisão (seção 2.8), anexe as capturas de tela e envie.
 
 ## 2. Textos da App Store Connect (pt-BR, prontos para colar)
 
@@ -127,7 +126,7 @@ O QUE VOCÊ FAZ NO JAKASH
 • Orçamento do mês: defina limites por categoria e veja onde está gastando mais.
 • Relatórios: resumo do mês por categoria, com exportação em CSV.
 • MEI separado: quem tem MEI acompanha o limite anual, prepara a DASN-SIMEI, emite recibos e mantém as finanças da empresa separadas das pessoais.
-• Compartilhar com a família: divida as finanças com quem você confia (casal, família ou sócios), nos planos que incluem essa opção.
+• Compartilhar com a família: divida as finanças com quem você confia (casal, família ou sócios), com até 3 pessoas, em qualquer plano.
 
 SEGURANÇA E PRIVACIDADE
 
@@ -143,9 +142,8 @@ O Jakash é uma ferramenta de organização. Ele não é banco, não oferece cr�
 PLANOS E ASSINATURA
 
 O Jakash tem planos mensais com renovação automática:
-• Jakash Essencial: R$ 19,90 por mês (1 pessoa)
-• Jakash Família: R$ 29,90 por mês (até 3 pessoas, com planejamento, simulador, investimentos e Chat da Jaki)
-• Jakash MEI: R$ 39,90 por mês (tudo do Família, mais as ferramentas do MEI)
+• Jakash Pessoal: R$ 19,90 por mês (até 3 pessoas, com lançamentos, cartões, contas a pagar, limites, objetivos, dívidas, investimentos, planejamento, simulador, Chat da Jaki e Motorista de app)
+• Jakash Empresarial: R$ 39,90 por mês (tudo do Pessoal, mais o pacote MEI)
 
 O pagamento é cobrado na sua conta Apple na confirmação da compra. A assinatura renova automaticamente, pelo mesmo valor, a menos que seja cancelada pelo menos 24 horas antes do fim do período atual. Você gerencia e cancela em Ajustes do iPhone > seu nome > Assinaturas.
 
@@ -206,7 +204,7 @@ A conta já tem dados de exemplo e não exige nenhum serviço externo.
 
 COMO USAR
 - O app abre no login. Também é possível entrar com a Apple ou com o Google.
-- Assinatura: Configurações > Planos e assinatura > aba "Planos". A compra é feita pela App Store (compra no app) com 3 assinaturas mensais do grupo "Jakash": jakash.essencial.mensal, jakash.familia.mensal e jakash.mei.mensal. Há "Restaurar compras" e "Gerenciar assinatura".
+- Assinatura: Configurações > Planos e assinatura > aba "Planos". A compra é feita pela App Store (compra no app) com 2 assinaturas mensais do grupo "Jakash": jakash.pessoal.mensal e jakash.empresarial.mensal. Há "Restaurar compras" e "Gerenciar assinatura".
 - Chat da Jaki (menu): assistente com inteligência artificial para registrar gastos e tirar dúvidas. Não há contato entre usuários.
 - Lançamento por voz: botão + > microfone. O app pede Microfone e Reconhecimento de Fala só quando você toca no microfone. Nada é salvo sem você tocar em Salvar.
 - Notificações: Configurações > Notificações > "Avisos neste aparelho" (a permissão só é pedida aí).
