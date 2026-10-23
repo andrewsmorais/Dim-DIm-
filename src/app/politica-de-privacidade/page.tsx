@@ -16,7 +16,7 @@ export default function PrivacidadePage() {
       <h2>1. Quais dados coletamos</h2>
       <ul>
         <li><strong>Cadastro:</strong> nome, e-mail e, ao assinar, CPF ou CNPJ (necessário para emitir a cobrança).</li>
-        <li><strong>Dados financeiros que você registra:</strong> lançamentos, categorias, contas, cartões, contas a pagar, limites, objetivos, dívidas, investimentos e arquivos que você importa.</li>
+        <li><strong>Dados financeiros que você registra:</strong> lançamentos, categorias, contas, cartões, contas a pagar, limites, objetivos, dívidas, investimentos, arquivos que você importa, imagens que você escolhe para os selos de contas e cartões e, se usar o Motorista de app, seus carros e dias de trabalho (horários, km rodados, ganhos por plataforma e gastos).</li>
         <li><strong>Conversas com a Jaki:</strong> o texto que você escreve no Chat da Jaki, dentro do app, e as respostas.</li>
         <li><strong>Lançamento por voz:</strong> ao tocar no microfone, a sua voz vira texto pelo reconhecimento de fala do seu aparelho ou navegador e o Jakash recebe só o texto. O áudio não é gravado nem guardado por nós. Só em navegadores sem reconhecimento de fala, um áudio de até 20 segundos é enviado para ser transcrito e descartado em seguida.</li>
         <li><strong>Pagamento:</strong> status da assinatura e histórico de cobranças. Dados de cartão são digitados na página segura do Asaas e <strong>não ficam armazenados no Jakash</strong>.</li>

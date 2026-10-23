@@ -38,7 +38,7 @@ export default function TermosPage() {
       <p>Você pode cancelar a renovação quando quiser, sem multa, em Configurações › Planos, e continua com acesso até o fim do período já pago. As regras de reembolso estão na <Link href="/politica-de-reembolso">Política de reembolso</Link>.</p>
 
       <h2>5. Gestão compartilhada</h2>
-      <p>Nos planos que permitem, você pode convidar outras pessoas para dividir as finanças. Quem aceita o convite passa a ver e editar os dados financeiros compartilhados (contas, lançamentos, cartões, contas a pagar, limites, objetivos, dívidas e investimentos). Perfil, assinatura e conversas do chat continuam privados. Só convide quem você conhece e confia; qualquer participante pode encerrar o compartilhamento a qualquer momento.</p>
+      <p>Você pode convidar até 2 pessoas (3 no total, contando com você) para dividir as finanças. Quem aceita o convite passa a ver e editar os dados financeiros compartilhados (contas, lançamentos, cartões, contas a pagar, limites, objetivos, dívidas e investimentos). Perfil, assinatura e conversas do chat continuam privados. Só convide quem você conhece e confia; qualquer participante pode encerrar o compartilhamento a qualquer momento.</p>
 
       <h2>6. Assistente com inteligência artificial</h2>
       <ul>
