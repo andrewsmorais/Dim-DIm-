@@ -20,7 +20,7 @@ export default function PrivacidadePage() {
         <li><strong>Conversas com a Jaki:</strong> o texto que você escreve no Chat da Jaki, dentro do app, e as respostas.</li>
         <li><strong>Lançamento por voz:</strong> ao tocar no microfone, a sua voz vira texto pelo reconhecimento de fala do seu aparelho ou navegador e o Jakash recebe só o texto. O áudio não é gravado nem guardado por nós. Só em navegadores sem reconhecimento de fala, um áudio de até 20 segundos é enviado para ser transcrito e descartado em seguida.</li>
         <li><strong>Pagamento:</strong> status da assinatura e histórico de cobranças. Dados de cartão são digitados na página segura do Asaas e <strong>não ficam armazenados no Jakash</strong>.</li>
-        <li><strong>Dados técnicos:</strong> informações básicas de acesso e segurança (como registros de erro e horário de uso).</li>
+        <li><strong>Dados técnicos:</strong> informações básicas de acesso e segurança (como registros de erro e horário de uso). No app para iPhone, também o identificador de notificação do aparelho, usado para enviar avisos.</li>
       </ul>
 
       <h2>2. Para que usamos</h2>
@@ -45,6 +45,7 @@ export default function PrivacidadePage() {
         <li><strong>Asaas:</strong> processamento de pagamentos e assinaturas.</li>
         <li><strong>OpenAI:</strong> respostas do Chat da Jaki e leitura de arquivos importados pela inteligência artificial, frases do lançamento por voz que o app não conseguiu entender sozinho, transcrição de áudio nos navegadores sem reconhecimento de fala e redação da explicação do plano de dívidas (ela recebe valores e nomes das dívidas que você cadastrou, nunca CPF).</li>
         <li><strong>Resend:</strong> envio de e-mails do serviço.</li>
+        <li><strong>WhatsApp (Meta):</strong> só se você optar por falar com o suporte pelo WhatsApp. O Jakash não envia mensagens pelo WhatsApp; a conversa que você abre por lá segue as regras da Meta.</li>
         <li><strong>Apple:</strong> no app para iPhone, login com a Apple, assinatura pela App Store, avisos no aparelho (notificações) e reconhecimento de fala do lançamento por voz (no próprio iPhone, quando possível). A Apple trata os pagamentos feitos na App Store; o Jakash não recebe os dados do seu cartão.</li>
       </ul>
       <p>Alguns desses prestadores ficam fora do Brasil, o que significa transferência internacional de dados, feita com as garantias previstas na LGPD. Também podemos compartilhar dados quando a lei ou uma ordem de autoridade exigir.</p>
