@@ -8,7 +8,7 @@ import { loadStoreProducts, MANAGE_SUBSCRIPTIONS_URL, purchasePlan, restorePurch
 import { Card, ErrorNote, btnCls, btnGhostCls } from "@/components/ui/page";
 
 const FEATURES: Record<PlanId, string[]> = {
-  cpf: ["1 pessoa", "Lançamentos pelo WhatsApp com IA", "Painel com gráficos, limites e objetivos", "Dívidas, reserva de emergência e contas a pagar", "Categorias e subcategorias personalizáveis"],
+  cpf: ["1 pessoa", "Lançamentos e importação de extrato", "Painel com gráficos, limites e objetivos", "Dívidas, reserva de emergência e contas a pagar", "Categorias e subcategorias personalizáveis"],
   familia: ["Tudo do Essencial", `Até ${PLANS.familia.members} pessoas na mesma casa (gestão compartilhada)`, "Planejamento mensal e simulador", "Chat IA para perguntar sobre as suas finanças", "Investimentos e dívidas", "Relatórios e link para o seu contador"],
   mei: ["Tudo do plano Família", "Controle do limite anual do MEI", "DASN, recibos e relatório do MEI", "Contas recorrentes (ex.: DAS) com lembrete"],
 };
