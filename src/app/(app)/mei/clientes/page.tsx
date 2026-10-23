@@ -7,14 +7,18 @@ import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
 import { KIND_LABEL, type RevenueKind } from "@/lib/mei";
 import { buildPixPayload, validatePixKey, type PixKeyType } from "@/lib/pix";
 import { daysLate, receivableLevel, receivableTotals, waLink } from "@/lib/meiClients";
+import { UF_LIST, normalizeCep, normalizeUf, formatCep } from "@/lib/meiNota";
 import { BackTitle, Card, Empty, ErrorNote, Label, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
 
-type Client = { id: string; name: string; document: string | null; phone: string | null; email: string | null; notes: string | null; archived: boolean };
+type Client = {
+  id: string; name: string; document: string | null; phone: string | null; email: string | null; notes: string | null; archived: boolean;
+  cep: string | null; address: string | null; address_number: string | null; address_complement: string | null; neighborhood: string | null; city: string | null; uf: string | null;
+};
 type Bill = { id: string; description: string; amount: number; due_date: string; client_id: string | null; revenue_kind: RevenueKind | null };
 type Paid = { id: string; client_id: string; amount: number; date: string; description: string };
 type PixProf = { pix_key: string | null; pix_key_type: string | null; pix_name: string | null; pix_city: string | null; mei_activity: RevenueKind };
 
-const emptyClient = { name: "", document: "", phone: "", email: "", notes: "" };
+const emptyClient = { name: "", document: "", phone: "", email: "", notes: "", cep: "", address: "", address_number: "", address_complement: "", neighborhood: "", city: "", uf: "" };
 
 export default function ClientesPage() {
   const { supabase, userId, ready } = useSupabase();
@@ -35,7 +39,7 @@ export default function ClientesPage() {
 
   const load = useCallback(async () => {
     const [c, b, t, p] = await Promise.all([
-      supabase.from("mei_clients").select("id,name,document,phone,email,notes,archived").order("name"),
+      supabase.from("mei_clients").select("id,name,document,phone,email,notes,archived,cep,address,address_number,address_complement,neighborhood,city,uf").order("name"),
       supabase.from("bills").select("id,description,amount,due_date,client_id,revenue_kind").eq("user_id", userId!).eq("status", "pending").eq("type", "income").eq("is_business", true).order("due_date"),
       supabase.from("transactions").select("id,client_id,amount,date,description").eq("user_id", userId!).eq("is_business", true).eq("type", "income").not("client_id", "is", null).order("date", { ascending: false }).limit(2000),
       supabase.from("profiles").select("pix_key,pix_key_type,pix_name,pix_city,mei_activity").eq("id", userId!).maybeSingle(),
@@ -102,9 +106,14 @@ export default function ClientesPage() {
     e.preventDefault();
     setError(null);
     if (!cForm.name.trim()) { setError("Informe o nome do cliente."); return; }
+    // Endereço do cliente: serve à ficha da nota fiscal (tomador). CEP e UF precisam estar no formato certo.
+    if (cForm.cep.trim() && !normalizeCep(cForm.cep)) { setError("O CEP tem 8 números."); return; }
+    if (cForm.uf.trim() && !normalizeUf(cForm.uf)) { setError("O estado (UF) deve ter 2 letras, como SP."); return; }
     const row = {
       name: cForm.name.trim(), document: cForm.document.trim() || null, phone: cForm.phone.trim() || null,
       email: cForm.email.trim() || null, notes: cForm.notes.trim() || null,
+      cep: normalizeCep(cForm.cep), address: cForm.address.trim() || null, address_number: cForm.address_number.trim() || null,
+      address_complement: cForm.address_complement.trim() || null, neighborhood: cForm.neighborhood.trim() || null, city: cForm.city.trim() || null, uf: normalizeUf(cForm.uf),
     };
     const { error: err } = editing
       ? await supabase.from("mei_clients").update(row).eq("id", editing)
@@ -123,7 +132,11 @@ export default function ClientesPage() {
 
   function edit(c: Client) {
     setEditing(c.id);
-    setCForm({ name: c.name, document: c.document ?? "", phone: c.phone ?? "", email: c.email ?? "", notes: c.notes ?? "" });
+    setCForm({
+      name: c.name, document: c.document ?? "", phone: c.phone ?? "", email: c.email ?? "", notes: c.notes ?? "",
+      cep: c.cep ? formatCep(c.cep) : "", address: c.address ?? "", address_number: c.address_number ?? "", address_complement: c.address_complement ?? "",
+      neighborhood: c.neighborhood ?? "", city: c.city ?? "", uf: c.uf ?? "",
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -213,9 +226,27 @@ export default function ClientesPage() {
             <form onSubmit={saveClient} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2"><Label>Nome</Label><input className={inputCls} maxLength={120} value={cForm.name} onChange={(e) => setCForm({ ...cForm, name: e.target.value })} /></div>
               <div><Label>WhatsApp</Label><input className={inputCls} maxLength={20} inputMode="tel" value={cForm.phone} onChange={(e) => setCForm({ ...cForm, phone: e.target.value })} placeholder="(11) 99999-8888" /></div>
-              <div><Label>CPF ou CNPJ (opcional)</Label><input className={inputCls} maxLength={20} inputMode="numeric" value={cForm.document} onChange={(e) => setCForm({ ...cForm, document: e.target.value })} /></div>
+              <div><Label>CPF ou CNPJ (opcional)</Label><input className={inputCls} maxLength={20} value={cForm.document} onChange={(e) => setCForm({ ...cForm, document: e.target.value })} /></div>
               <div className="sm:col-span-2"><Label>E-mail (opcional)</Label><input type="email" className={inputCls} maxLength={120} value={cForm.email} onChange={(e) => setCForm({ ...cForm, email: e.target.value })} /></div>
               <div className="sm:col-span-2"><Label>Observações (opcional)</Label><input className={inputCls} maxLength={500} value={cForm.notes} onChange={(e) => setCForm({ ...cForm, notes: e.target.value })} /></div>
+              <details className="sm:col-span-2 rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-4" open={Boolean(cForm.cep || cForm.address || cForm.city)}>
+                <summary className="cursor-pointer text-sm font-bold">Endereço do cliente (para a ficha da nota fiscal)</summary>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  <div><Label>CEP</Label><input className={inputCls} maxLength={9} inputMode="numeric" value={cForm.cep} onChange={(e) => setCForm({ ...cForm, cep: e.target.value })} placeholder="00000-000" /></div>
+                  <div><Label>Logradouro</Label><input className={inputCls} maxLength={120} value={cForm.address} onChange={(e) => setCForm({ ...cForm, address: e.target.value })} placeholder="Rua, avenida..." /></div>
+                  <div><Label>Número</Label><input className={inputCls} maxLength={20} value={cForm.address_number} onChange={(e) => setCForm({ ...cForm, address_number: e.target.value })} /></div>
+                  <div><Label>Complemento (opcional)</Label><input className={inputCls} maxLength={60} value={cForm.address_complement} onChange={(e) => setCForm({ ...cForm, address_complement: e.target.value })} /></div>
+                  <div><Label>Bairro</Label><input className={inputCls} maxLength={80} value={cForm.neighborhood} onChange={(e) => setCForm({ ...cForm, neighborhood: e.target.value })} /></div>
+                  <div className="grid grid-cols-[1fr_5rem] gap-2">
+                    <div><Label>Município</Label><input className={inputCls} maxLength={80} value={cForm.city} onChange={(e) => setCForm({ ...cForm, city: e.target.value })} /></div>
+                    <div><Label>UF</Label>
+                      <select className={inputCls} value={cForm.uf} onChange={(e) => setCForm({ ...cForm, uf: e.target.value })}>
+                        <option value="">--</option>
+                        {UF_LIST.map((u) => <option key={u} value={u}>{u}</option>)}
+                      </select></div>
+                  </div>
+                </div>
+              </details>
               <div className="sm:col-span-2 flex gap-2">
                 <button className={btnCls} type="submit">{editing ? "Salvar" : "Cadastrar cliente"}</button>
                 {editing && <button type="button" className={btnGhostCls + " !py-2.5 !px-4"} onClick={() => { setEditing(null); setCForm(emptyClient); }}>Cancelar</button>}
@@ -256,6 +287,7 @@ export default function ClientesPage() {
                         <div className="mt-3 rounded-2xl bg-brand-dark/5 dark:bg-[#1E1E1E] p-4 text-sm space-y-3">
                           <p className="text-xs text-gray-500">{[c.phone, c.email, c.document].filter(Boolean).join(" · ") || "Sem contato cadastrado."}</p>
                           {c.notes && <p className="text-xs">{c.notes}</p>}
+                          {(c.address || c.city) && <p className="text-xs text-gray-500">{[c.address, c.address_number, c.neighborhood, c.city && c.uf ? `${c.city}/${c.uf}` : c.city, c.cep ? formatCep(c.cep) : ""].filter(Boolean).join(", ")}</p>}
                           {pending.length > 0 && (
                             <div><p className="text-xs font-bold text-gray-500 mb-1">Em aberto</p>
                               <ul className="space-y-1">{pending.map((b) => <li key={b.id} className="flex justify-between gap-3"><span className="truncate">{b.description} · {formatDateBR(b.due_date)}</span><span className="font-bold whitespace-nowrap">{brl(b.amount)}</span></li>)}</ul></div>

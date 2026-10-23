@@ -58,7 +58,7 @@ export const EXPORT_ITEMS: ExportItem[] = [
   { id: "categories", label: "Categorias e subcategorias", hint: "As do Jakash e as suas." },
   { id: "shopping", label: "Listas de compras e itens", hint: "Listas, itens e preços estimados." },
   { id: "driver", label: "Motorista de app", hint: "Cada dia trabalhado com ganho bruto, despesas e lucro líquido, e os seus carros." },
-  { id: "mei", label: "MEI: clientes, fornecedores e recibos", hint: "Clientes, fornecedores e recibos emitidos.", meiOnly: true },
+  { id: "mei", label: "MEI: clientes, fornecedores, recibos e produtos", hint: "Clientes, fornecedores, recibos emitidos e o catálogo de produtos e serviços.", meiOnly: true },
   { id: "profile", label: "Perfil", hint: "Só dados do seu cadastro. Sem senhas, cobrança ou chaves." },
 ];
 
@@ -255,6 +255,7 @@ const TABLE_META: Record<string, TableMeta> = {
   mei_clients: { owner: "user_id" },
   mei_suppliers: { owner: "user_id" },
   mei_invoices: { owner: "user_id", date: "invoice_date" },
+  mei_items: { owner: "user_id" },
 };
 
 /**
@@ -295,7 +296,7 @@ export function applyFilters<T extends Record<string, unknown>>(rows: T[], filte
 export type TaskId =
   | "transactions" | "installment_rows" | "accounts" | "account_balances" | "credit_cards" | "card_invoice_payments" | "bills"
   | "debts" | "debt_payments" | "goals" | "goal_contributions" | "budgets" | "investments" | "investment_movements"
-  | "categories" | "category_flags" | "shopping_lists" | "shopping_items" | "driver_vehicles" | "driver_shifts" | "mei_clients" | "mei_suppliers" | "mei_invoices" | "profile";
+  | "categories" | "category_flags" | "shopping_lists" | "shopping_items" | "driver_vehicles" | "driver_shifts" | "mei_clients" | "mei_suppliers" | "mei_invoices" | "mei_items" | "profile";
 
 export type PlanTask = {
   id: TaskId;
@@ -312,7 +313,7 @@ export type PlanTask = {
 };
 
 const PROFILE_BASE = ["full_name", "usage_type", "language", "currency", "birth_date", "accent", "notify_enabled", "notify_email", "notify_push", "notify_when", "created_at"];
-const PROFILE_MEI = ["business_name", "business_cnpj", "mei_activity", "mei_opened_on", "mei_annual_limit"];
+const PROFILE_MEI = ["business_name", "business_cnpj", "mei_activity", "mei_opened_on", "mei_annual_limit", "business_municipio", "business_uf", "business_im", "business_cep", "business_address"];
 /** Única lista de colunas do perfil que sai do app. Nada de cobrança, tokens, CPF, chave Pix ou permissões. */
 export const profileColumns = (isMei: boolean): string[] => (isMei ? [...PROFILE_BASE, ...PROFILE_MEI] : [...PROFILE_BASE]);
 /** Nomes que nunca podem aparecer no perfil exportado (usado nos testes e como trava). */
@@ -377,10 +378,16 @@ const TASKS: Record<Exclude<TaskId, "profile">, TaskDef> = {
   },
   driver_vehicles: { table: "driver_vehicles", label: "carros", entity: true, columns: "id,user_id,name,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived,created_at", order: [asc("created_at"), asc("id")] },
   driver_shifts: { table: "driver_shifts", label: "dias de motorista", columns: "user_id," + SHIFT_COLUMNS, order: [desc("date"), asc("id")] },
-  mei_clients: { table: "mei_clients", label: "clientes", entity: true, columns: "id,user_id,name,document,phone,email,notes,archived,created_at", order: [asc("created_at"), asc("id")] },
+  mei_clients: {
+    table: "mei_clients", label: "clientes", entity: true,
+    columns: "id,user_id,name,document,phone,email,notes,archived,created_at,cep,address,address_number,address_complement,neighborhood,city,uf", order: [asc("created_at"), asc("id")],
+  },
   mei_suppliers: { table: "mei_suppliers", label: "fornecedores", entity: true, columns: "id,user_id,name,document,phone,email,pix_key,category,notes,archived,created_at", order: [asc("created_at"), asc("id")] },
   mei_invoices: {
     table: "mei_invoices", label: "recibos", columns: "id,user_id,invoice_number,client_id,client_name,value,invoice_date,notes", order: [desc("invoice_date"), desc("invoice_number")],
+  },
+  mei_items: {
+    table: "mei_items", label: "produtos e serviços", columns: "id,user_id,kind,name,description,unit_price,unit,ctrib_nac,nbs,municipal_code,ncm,cfop,archived,created_at", order: [asc("created_at"), asc("id")],
   },
 };
 
@@ -393,7 +400,7 @@ const TASKS: Record<Exclude<TaskId, "profile">, TaskDef> = {
 export type DatasetId =
   | "transactions" | "accounts" | "cards" | "invoice_payments" | "installments" | "bills" | "debts" | "debt_payments" | "goals"
   | "goal_contributions" | "budgets" | "investments" | "investment_movements" | "categories" | "shopping_lists" | "shopping_items"
-  | "driver_shifts" | "driver_vehicles" | "mei_clients" | "mei_suppliers" | "mei_invoices" | "profile";
+  | "driver_shifts" | "driver_vehicles" | "mei_clients" | "mei_suppliers" | "mei_invoices" | "mei_items" | "profile";
 
 const c = (key: string, header: string, kind: CellKind = "text", flags: Pick<Column, "household" | "business"> = {}): Column => ({ key, header, kind, ...flags });
 const PESSOA = c("pessoa", "Pessoa", "text", { household: true });
@@ -543,7 +550,9 @@ export const DATASETS: DatasetDef[] = [
     id: "mei_clients", item: "mei", file: "mei-clientes.csv", jsonKey: "mei_clientes", title: "MEI: clientes",
     description: "Seus clientes (contatos que você cadastrou).",
     tasks: ["mei_clients"],
-    columns: [c("nome", "Cliente"), c("documento", "CPF/CNPJ"), c("telefone", "Telefone"), c("email", "E-mail"), c("observacoes", "Observações"), c("arquivado", "Arquivado", "bool"), c("criado_em", "Criado em", "date")],
+    columns: [c("nome", "Cliente"), c("documento", "CPF/CNPJ"), c("telefone", "Telefone"), c("email", "E-mail"),
+      c("cep", "CEP"), c("logradouro", "Logradouro"), c("numero", "Número"), c("complemento", "Complemento"), c("bairro", "Bairro"), c("municipio", "Município"), c("uf", "UF"),
+      c("observacoes", "Observações"), c("arquivado", "Arquivado", "bool"), c("criado_em", "Criado em", "date")],
   },
   {
     id: "mei_suppliers", item: "mei", file: "mei-fornecedores.csv", jsonKey: "mei_fornecedores", title: "MEI: fornecedores",
@@ -558,13 +567,24 @@ export const DATASETS: DatasetDef[] = [
     columns: [c("numero", "Número", "int"), c("data", "Data", "date"), c("cliente", "Cliente"), c("valor", "Valor", "money"), c("observacoes", "Observações")],
   },
   {
+    id: "mei_items", item: "mei", file: "mei-produtos-e-servicos.csv", jsonKey: "mei_produtos_e_servicos", title: "MEI: produtos e serviços",
+    description: "Seu catálogo, com valor padrão e os códigos que você cadastrou para a nota fiscal.",
+    tasks: ["mei_items"],
+    columns: [c("tipo", "Tipo"), c("nome", "Nome"), c("descricao", "Descrição"), c("valor_padrao", "Valor padrão", "money"), c("unidade", "Unidade"),
+      c("codigo_tributacao_nacional", "Código de tributação nacional (serviço)"), c("nbs", "Item da NBS (serviço)"), c("codigo_municipio", "Código complementar do município (serviço)"),
+      c("ncm", "NCM (produto)"), c("cfop", "CFOP (produto)"), c("arquivado", "Arquivado", "bool"), c("criado_em", "Criado em", "date")],
+  },
+  {
     id: "profile", item: "profile", file: "perfil.csv", jsonKey: "perfil", title: "Perfil",
     description: "Dados do seu cadastro. Sem senha, cobrança, chaves ou CPF.",
     tasks: ["profile"], single: true,
     columns: [c("nome", "Nome"), c("tipo_de_uso", "Como usa o Jakash"), c("idioma", "Idioma"), c("moeda", "Moeda"), c("data_nascimento", "Data de nascimento", "date"), c("cor_destaque", "Cor de destaque"),
       c("avisos_ativos", "Avisos ativos", "bool"), c("avisos_email", "Avisos por e-mail", "bool"), c("avisos_push", "Avisos no celular", "bool"), c("avisos_quando", "Quando avisar"), c("cadastro_em", "Cadastro em", "date"),
       c("negocio_nome", "Nome do negócio", "text", { business: true }), c("negocio_cnpj", "CNPJ do negócio", "text", { business: true }), c("mei_atividade", "Atividade do MEI", "text", { business: true }),
-      c("mei_abertura", "Abertura do MEI", "date", { business: true }), c("mei_limite_anual", "Limite anual do MEI", "money", { business: true })],
+      c("mei_abertura", "Abertura do MEI", "date", { business: true }), c("mei_limite_anual", "Limite anual do MEI", "money", { business: true }),
+      c("negocio_municipio", "Município do negócio", "text", { business: true }), c("negocio_uf", "UF do negócio", "text", { business: true }),
+      c("negocio_inscricao_municipal", "Inscrição municipal do negócio", "text", { business: true }), c("negocio_cep", "CEP do negócio", "text", { business: true }),
+      c("negocio_endereco", "Endereço do negócio", "text", { business: true })],
   },
 ];
 
@@ -579,7 +599,7 @@ export function columnsFor(ds: DatasetDef, opts: Pick<ExportOptions, "household"
 
 const TASK_ORDER: TaskId[] = [
   "categories", "category_flags", "accounts", "account_balances", "credit_cards", "mei_clients", "mei_suppliers", "debts", "goals", "investments", "shopping_lists",
-  "transactions", "installment_rows", "card_invoice_payments", "bills", "debt_payments", "goal_contributions", "budgets", "investment_movements", "shopping_items", "driver_vehicles", "driver_shifts", "mei_invoices", "profile",
+  "transactions", "installment_rows", "card_invoice_payments", "bills", "debt_payments", "goal_contributions", "budgets", "investment_movements", "shopping_items", "driver_vehicles", "driver_shifts", "mei_invoices", "mei_items", "profile",
 ];
 
 /**
@@ -958,7 +978,9 @@ export function buildDatasets(raw: Partial<Record<TaskId, TaskResult>>, plan: Pl
 
   if (wants("mei_clients") || wants("mei_invoices")) {
     push("mei_clients", rowsOf("mei_clients").map((r) => ({
-      nome: str(r.name), documento: str(r.document), telefone: str(r.phone), email: str(r.email), observacoes: str(r.notes), arquivado: bool(r.archived), criado_em: str(r.created_at),
+      nome: str(r.name), documento: str(r.document), telefone: str(r.phone), email: str(r.email),
+      cep: str(r.cep), logradouro: str(r.address), numero: str(r.address_number), complemento: str(r.address_complement), bairro: str(r.neighborhood), municipio: str(r.city), uf: str(r.uf),
+      observacoes: str(r.notes), arquivado: bool(r.archived), criado_em: str(r.created_at),
     })));
     push("mei_suppliers", rowsOf("mei_suppliers").map((r) => ({
       nome: str(r.name), fornece: str(r.category), documento: str(r.document), telefone: str(r.phone), email: str(r.email), chave_pix: str(r.pix_key),
@@ -966,6 +988,11 @@ export function buildDatasets(raw: Partial<Record<TaskId, TaskResult>>, plan: Pl
     })));
     push("mei_invoices", rowsOf("mei_invoices").map((r) => ({
       numero: int(r.invoice_number), data: str(r.invoice_date), cliente: nameOf(clients, r.client_id) ?? str(r.client_name), valor: money(r.value), observacoes: str(r.notes),
+    })));
+    push("mei_items", rowsOf("mei_items").map((r) => ({
+      tipo: r.kind === "produto" ? "Produto" : "Serviço", nome: str(r.name), descricao: str(r.description), valor_padrao: money(r.unit_price), unidade: str(r.unit),
+      codigo_tributacao_nacional: str(r.ctrib_nac), nbs: str(r.nbs), codigo_municipio: str(r.municipal_code), ncm: str(r.ncm), cfop: str(r.cfop),
+      arquivado: bool(r.archived), criado_em: str(r.created_at),
     })));
   }
 
@@ -983,6 +1010,7 @@ export function profileRow(p: RawRow): Row {
     nome: str(p.full_name), tipo_de_uso: label(USO, p.usage_type), idioma: label(IDIOMA, p.language), moeda: str(p.currency), data_nascimento: str(p.birth_date), cor_destaque: str(p.accent),
     avisos_ativos: bool(p.notify_enabled), avisos_email: bool(p.notify_email), avisos_push: bool(p.notify_push), avisos_quando: label(QUANDO, p.notify_when), cadastro_em: str(p.created_at),
     negocio_nome: str(p.business_name), negocio_cnpj: str(p.business_cnpj), mei_atividade: label(ATIVIDADE, p.mei_activity), mei_abertura: str(p.mei_opened_on), mei_limite_anual: money(p.mei_annual_limit),
+    negocio_municipio: str(p.business_municipio), negocio_uf: str(p.business_uf), negocio_inscricao_municipal: str(p.business_im), negocio_cep: str(p.business_cep), negocio_endereco: str(p.business_address),
   };
 }
 

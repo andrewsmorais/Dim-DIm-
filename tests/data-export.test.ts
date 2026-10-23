@@ -189,8 +189,8 @@ ok('plano: pacote MEI só para quem usa o app para a empresa', () => {
   assert.deepEqual(effectiveItems(baseOpts({ items: ['mei', 'goals'] }), ctx), ['goals']);
   assert.equal(buildQueryPlan(baseOpts({ items: ['mei'] }), ctx).length, 0);
   assert.equal(validateOptions(baseOpts({ items: ['mei'] }), ctx), 'Escolha ao menos um item.');
-  assert.equal(buildQueryPlan(baseOpts({ items: ['transactions'] }), ctx).some((p) => p.id === 'mei_clients' || p.id === 'mei_suppliers'), false);
-  assert.deepEqual(buildQueryPlan(baseOpts({ items: ['mei'] }), baseCtx).map((p) => p.id), ['mei_clients', 'mei_suppliers', 'mei_invoices']);
+  assert.equal(buildQueryPlan(baseOpts({ items: ['transactions'] }), ctx).some((p) => p.id === 'mei_clients' || p.id === 'mei_suppliers' || p.id === 'mei_items'), false);
+  assert.deepEqual(buildQueryPlan(baseOpts({ items: ['mei'] }), baseCtx).map((p) => p.id), ['mei_clients', 'mei_suppliers', 'mei_invoices', 'mei_items']);
 });
 ok('opções: validação em português', () => {
   assert.equal(validateOptions(baseOpts(), baseCtx), null);
@@ -214,6 +214,19 @@ ok('perfil: a consulta não pede nenhuma coluna sensível', () => {
   }
   const plan = buildQueryPlan(baseOpts({ items: ['profile'] }), baseCtx).find((p) => p.id === 'profile')!;
   for (const bad of PROFILE_FORBIDDEN) assert.equal(plan.columns.split(',').includes(bad), false, bad);
+});
+ok('perfil: os dados fiscais do negócio só saem para quem usa o app para a empresa', () => {
+  const novas = ['business_municipio', 'business_uf', 'business_im', 'business_cep', 'business_address'];
+  for (const col of novas) {
+    assert.equal(profileColumns(true).includes(col), true, col);
+    assert.equal(profileColumns(false).includes(col), false, col);
+  }
+  const dsCols = columnsFor(DATASETS.find((d) => d.id === 'profile')!, { household: false }, { isMei: false }).map((c) => c.key);
+  assert.equal(dsCols.some((k) => /negocio_(municipio|uf|inscricao|cep|endereco)/.test(k)), false);
+  const row = profileRow({ business_municipio: 'Campinas', business_uf: 'SP', business_im: '12345', business_cep: '13010000', business_address: 'Rua das Flores, 10', cpf: '123.456.789-00' });
+  assert.equal(row.negocio_municipio, 'Campinas');
+  assert.equal(row.negocio_endereco, 'Rua das Flores, 10');
+  assert.equal(JSON.stringify(row).includes('123.456.789-00'), false);
 });
 ok('perfil: mesmo que o banco devolva tudo, a linha exportada só tem campos seguros', () => {
   const dirty = {
@@ -342,8 +355,12 @@ const DATA: Record<string, Record<string, unknown>[]> = {
     { id: 't3', user_id: ME, category_id: 'c-alim', amount: 100, description: 'TV (1/3)', type: 'expense', date: '2026-08-12', is_recurring: false, account_id: null, card_id: 'k1', debit_card_id: null, invoice_month: '2026-09-01', installment_group: 'grp1', installment_number: 1, installment_total: 3, is_business: false, attachment_name: null, revenue_kind: null, client_id: null, is_owner_draw: false },
     { id: 't4', user_id: PARTNER, category_id: 'c-par', amount: 40, description: 'Do Bruno', type: 'expense', date: '2026-10-11', is_recurring: false, account_id: 'a3', card_id: null, debit_card_id: null, invoice_month: null, installment_number: null, installment_total: null, is_business: false, attachment_name: null, revenue_kind: null, client_id: null, is_owner_draw: false },
   ],
-  mei_clients: [{ id: 'm1', user_id: ME, name: 'Cliente Ltda', document: '12.345.678/0001-90', phone: '11 4000-0000', email: 'c@x.com', notes: null, archived: false, created_at: '2026-02-01T12:00:00Z' }],
+  mei_clients: [{ id: 'm1', user_id: ME, name: 'Cliente Ltda', document: '12.345.678/0001-90', phone: '11 4000-0000', email: 'c@x.com', notes: null, archived: false, created_at: '2026-02-01T12:00:00Z', cep: '01310100', address: 'Av. Paulista', address_number: '1000', address_complement: 'Sala 2', neighborhood: 'Bela Vista', city: 'São Paulo', uf: 'SP' }],
   mei_suppliers: [{ id: 'f1', user_id: ME, name: 'Embalagens Sul', document: '12345678000190', phone: '51 3000-0000', email: null, pix_key: '12345678000190', category: 'Embalagens', notes: null, archived: false, created_at: '2026-03-01T12:00:00Z' }],
+  mei_items: [
+    { id: 'p1', user_id: ME, kind: 'servico', name: 'Consultoria', description: 'Hora de consultoria', unit_price: 150, unit: 'h', ctrib_nac: '17.01.01', nbs: '1.1506.21.00', municipal_code: '001', ncm: null, cfop: null, archived: false, created_at: '2026-03-01T12:00:00Z' },
+    { id: 'p2', user_id: ME, kind: 'produto', name: '=Camiseta', description: null, unit_price: 49.9, unit: 'un', ctrib_nac: null, nbs: null, municipal_code: null, ncm: '61091000', cfop: '5102', archived: true, created_at: '2026-03-02T12:00:00Z' },
+  ],
   mei_invoices: [{ id: 'i1', user_id: ME, invoice_number: 7, client_id: 'm1', client_name: 'antigo', value: 500, invoice_date: '2026-09-15', notes: 'obs' }],
   bills: [{ id: 'b1', user_id: ME, description: 'Luz', amount: 150, due_date: '2026-10-20', type: 'expense', recurrence: 'monthly', status: 'pending', paid_at: null, is_business: false, revenue_kind: null, client_id: null, debt_id: null, created_at: '2026-10-01T10:00:00Z' }],
   debts: [{ id: 'd1', user_id: ME, name: 'Empréstimo', kind: 'emprestimo', balance: 900, monthly_rate: 2.5, min_payment: 80, archived: false, creditor: 'Banco', original_amount: 1000, status: 'atrasada', overdue_since: '2026-08-01', essential: false, cash_offer: null, agreement_installments: null, agreement_amount: null, agreement_first_due: null, created_at: '2026-01-01T10:00:00Z' }],
@@ -355,7 +372,7 @@ const DATA: Record<string, Record<string, unknown>[]> = {
   investment_movements: [{ id: 'im1', user_id: ME, investment_id: 'v1', kind: 'aporte', amount: 1000, moved_on: '2026-02-01', account_id: 'a1', note: null, value_after: 1000 }],
   shopping_lists: [{ id: 's1', user_id: ME, name: 'Mercado', is_business: false, status: 'done', transaction_id: 't1', created_at: '2026-10-09T10:00:00Z', finished_at: '2026-10-10T10:00:00Z' }],
   shopping_items: [{ id: 'si1', list_id: 's1', name: 'Arroz', quantity: 2, unit: 'kg', est_price: 12.9, checked: true, checked_at: '2026-10-10T09:00:00Z' }],
-  profiles: [{ id: ME, full_name: 'Ana Souza', usage_type: 'ambos', language: 'pt', currency: 'BRL', birth_date: null, accent: null, notify_enabled: true, notify_email: true, notify_push: false, notify_when: 'on_due', created_at: '2026-01-01T10:00:00Z', business_name: 'Ana ME', business_cnpj: '00.000.000/0001-00', mei_activity: 'servicos', mei_opened_on: '2025-01-01', mei_annual_limit: 81000 }],
+  profiles: [{ id: ME, full_name: 'Ana Souza', usage_type: 'ambos', language: 'pt', currency: 'BRL', birth_date: null, accent: null, notify_enabled: true, notify_email: true, notify_push: false, notify_when: 'on_due', created_at: '2026-01-01T10:00:00Z', business_name: 'Ana ME', business_cnpj: '00.000.000/0001-00', mei_activity: 'servicos', mei_opened_on: '2025-01-01', mei_annual_limit: 81000, business_municipio: 'Campinas', business_uf: 'SP', business_im: '12345', business_cep: '13010000', business_address: 'Rua das Flores, 10, Centro' }],
 };
 const RPCS = { account_balances: [{ id: 'a1', name: 'Nubank', kind: 'corrente', balance: 1234.56 }, { id: 'a2', name: 'Conta MEI', kind: 'corrente', balance: 3000 }] };
 
@@ -374,7 +391,7 @@ ok('CSV em .zip: um arquivo por item, BOM, ";" e LEIA-ME', async () => {
   const files = await unzip(r.data as Uint8Array);
   assert.deepEqual(Object.keys(files).sort(), [
     'LEIA-ME.txt', 'aportes-dos-objetivos.csv', 'cartoes.csv', 'categorias.csv', 'contas-a-pagar-e-receber.csv', 'contas-bancarias.csv', 'dividas.csv', 'investimentos.csv',
-    'itens-das-listas-de-compras.csv', 'lancamentos.csv', 'limites-do-mes.csv', 'listas-de-compras.csv', 'mei-clientes.csv', 'mei-fornecedores.csv', 'mei-recibos.csv', 'motorista-carros.csv', 'motorista-dias.csv', 'movimentacoes-de-investimentos.csv',
+    'itens-das-listas-de-compras.csv', 'lancamentos.csv', 'limites-do-mes.csv', 'listas-de-compras.csv', 'mei-clientes.csv', 'mei-fornecedores.csv', 'mei-produtos-e-servicos.csv', 'mei-recibos.csv', 'motorista-carros.csv', 'motorista-dias.csv', 'movimentacoes-de-investimentos.csv',
     'objetivos.csv', 'pagamentos-de-divida.csv', 'pagamentos-de-fatura.csv', 'parcelamentos.csv', 'perfil.csv',
   ]);
   for (const [name, text] of Object.entries(files)) assert.equal(text.charCodeAt(0), 0xfeff, `${name} sem BOM`);
@@ -403,8 +420,13 @@ ok('CSV em .zip: um arquivo por item, BOM, ";" e LEIA-ME', async () => {
   assert.match(files['movimentacoes-de-investimentos.csv'], /01\/02\/2026;Tesouro Selic;Aporte;1000,00;1000,00;Nubank/);
   assert.match(files['itens-das-listas-de-compras.csv'], /Mercado;Arroz;2;kg;12,90;Sim;10\/10\/2026/);
   assert.match(files['mei-recibos.csv'], /7;15\/09\/2026;Cliente Ltda;500,00;obs/);
-  assert.match(files['mei-clientes.csv'], /Cliente Ltda;12\.345\.678\/0001-90;11 4000-0000;c@x\.com/);
+  assert.match(files['mei-clientes.csv'], /Cliente Ltda;12\.345\.678\/0001-90;11 4000-0000;c@x\.com;01310100;Av\. Paulista;1000;Sala 2;Bela Vista;São Paulo;SP;/);
   assert.equal(files['mei-fornecedores.csv'], CSV_BOM + 'Fornecedor;O que fornece;CPF/CNPJ;Telefone;E-mail;Chave Pix;Observações;Arquivado;Criado em\r\nEmbalagens Sul;Embalagens;12345678000190;51 3000-0000;;12345678000190;;Não;01/03/2026\r\n');
+  // catálogo de produtos e serviços (arquivados também saem; fórmula protegida)
+  const cat = files['mei-produtos-e-servicos.csv'].split('\r\n');
+  assert.equal(cat[0], CSV_BOM + 'Tipo;Nome;Descrição;Valor padrão;Unidade;Código de tributação nacional (serviço);Item da NBS (serviço);Código complementar do município (serviço);NCM (produto);CFOP (produto);Arquivado;Criado em');
+  assert.equal(cat[1], 'Serviço;Consultoria;Hora de consultoria;150,00;h;17.01.01;1.1506.21.00;001;;;Não;01/03/2026');
+  assert.equal(cat[2], "Produto;'=Camiseta;;49,90;un;;;;61091000;5102;Sim;02/03/2026");
   assert.match(files['parcelamentos.csv'], /TV;Roxinho;100,00;3;300,00;/);
   assert.match(files['parcelamentos.csv'], /09\/2026/);
   // categorias: próprias e padrão; a do parceiro não entra com a casa desligada; fórmula protegida
@@ -450,6 +472,14 @@ ok('Empresa: só lançamentos da empresa, mas o nome da conta pessoal ainda apar
   assert.match(files['LEIA-ME.txt'], /Tipo: Só empresa/);
 });
 
+ok('perfil: a consulta e o arquivo do MEI trazem município, UF, inscrição municipal, CEP e endereço', async () => {
+  const plan = buildQueryPlan(baseOpts({ items: ['profile'] }), baseCtx).find((p) => p.id === 'profile')!;
+  for (const col of ['business_municipio', 'business_uf', 'business_im', 'business_cep', 'business_address']) assert.equal(plan.columns.split(',').includes(col), true, col);
+  const r = await runExport(fakeClient(DATA, RPCS), baseOpts({ items: ['profile'] }), baseCtx);
+  const files = await unzip(r.data as Uint8Array);
+  assert.match(files['perfil.csv'], /Município do negócio;UF do negócio;Inscrição municipal do negócio;CEP do negócio;Endereço do negócio/);
+  assert.match(files['perfil.csv'], /Campinas;SP;12345;13010000;"?Rua das Flores, 10, Centro"?/);
+});
 ok('período chega na consulta e filtra lançamentos, contas a pagar e recibos', async () => {
   const log: { table: string; ops: Op[] }[] = [];
   const r = await runExport(fakeClient(DATA, RPCS, log), baseOpts({ items: ['transactions', 'bills', 'mei'], from: '2026-10-01', to: '2026-10-31' }), baseCtx);
@@ -508,6 +538,8 @@ ok('quem não usa o app para a empresa não vê colunas nem arquivos de empresa'
   assert.equal('mei-clientes.csv' in files, false);
   assert.equal('mei-fornecedores.csv' in files, false);
   assert.equal(files['lancamentos.csv'].includes('Fornecedor'), false);
+  assert.equal('mei-produtos-e-servicos.csv' in files, false);
+  assert.equal(files['perfil.csv'].includes('Campinas'), false);
   assert.equal(files['lancamentos.csv'].includes('Pessoal/Empresa'), false);
   assert.equal(files['perfil.csv'].includes('Ana ME'), false);
   assert.equal(files['perfil.csv'].includes('00.000.000/0001-00'), false);

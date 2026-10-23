@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, CalendarClock, FileText, Users, ClipboardCheck, Calculator, Truck } from "lucide-react";
+import { AlertTriangle, CalendarClock, FileText, Users, ClipboardCheck, Calculator, Truck, Package, FileCheck } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useUsageType } from "@/lib/useUsageType";
 import { brl, formatDateBR, parseMoney, todayISO } from "@/lib/format";
@@ -171,6 +171,18 @@ export default function MeiPage() {
             <p className="text-sm text-gray-500 mt-1">Registre e imprima recibos simples das faturas emitidas.</p>
           </Card>
         </Link>
+        <Link href="/mei/produtos" className="block">
+          <Card className="h-full hover:shadow-lg transition-shadow">
+            <p className="font-extrabold flex items-center gap-2"><Package size={18} /> Produtos e serviços</p>
+            <p className="text-sm text-gray-500 mt-1">Seu catálogo com valor e códigos fiscais, reaproveitado em recibos e na nota.</p>
+          </Card>
+        </Link>
+        <Link href="/mei/nota" className="block">
+          <Card className="h-full hover:shadow-lg transition-shadow">
+            <p className="font-extrabold flex items-center gap-2"><FileCheck size={18} /> Ficha da nota fiscal</p>
+            <p className="text-sm text-gray-500 mt-1">Todos os dados prontos para copiar no emissor oficial da nota. O Jakash não emite.</p>
+          </Card>
+        </Link>
       </div>
 
       <Card>
@@ -310,7 +322,7 @@ export default function MeiPage() {
         <h2 className="font-extrabold text-lg mb-3">Dados do MEI</h2>
         <form onSubmit={saveProfile} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><Label>Nome da empresa</Label><input className={inputCls} maxLength={120} value={form.business_name} onChange={(e) => setForm({ ...form, business_name: e.target.value })} /></div>
-          <div><Label>CNPJ</Label><input className={inputCls} maxLength={20} inputMode="numeric" value={form.business_cnpj} onChange={(e) => setForm({ ...form, business_cnpj: e.target.value })} placeholder="00.000.000/0000-00" /></div>
+          <div><Label>CNPJ</Label><input className={inputCls} maxLength={20} value={form.business_cnpj} onChange={(e) => setForm({ ...form, business_cnpj: e.target.value })} placeholder="00.000.000/0000-00" /></div>
           <div><Label>Atividade principal</Label>
             <select className={inputCls} value={form.mei_activity} onChange={(e) => setForm({ ...form, mei_activity: e.target.value as MeiActivity })}>
               {(Object.keys(ACTIVITY_LABEL) as MeiActivity[]).map((k) => <option key={k} value={k}>{ACTIVITY_LABEL[k]}</option>)}
