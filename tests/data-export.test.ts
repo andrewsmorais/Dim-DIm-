@@ -372,7 +372,7 @@ ok('CSV em .zip: um arquivo por item, BOM, ";" e LEIA-ME', async () => {
   const files = await unzip(r.data as Uint8Array);
   assert.deepEqual(Object.keys(files).sort(), [
     'LEIA-ME.txt', 'aportes-dos-objetivos.csv', 'cartoes.csv', 'categorias.csv', 'contas-a-pagar-e-receber.csv', 'contas-bancarias.csv', 'dividas.csv', 'investimentos.csv',
-    'itens-das-listas-de-compras.csv', 'lancamentos.csv', 'limites-do-mes.csv', 'listas-de-compras.csv', 'mei-clientes.csv', 'mei-recibos.csv', 'movimentacoes-de-investimentos.csv',
+    'itens-das-listas-de-compras.csv', 'lancamentos.csv', 'limites-do-mes.csv', 'listas-de-compras.csv', 'mei-clientes.csv', 'mei-recibos.csv', 'motorista-carros.csv', 'motorista-dias.csv', 'movimentacoes-de-investimentos.csv',
     'objetivos.csv', 'pagamentos-de-divida.csv', 'pagamentos-de-fatura.csv', 'parcelamentos.csv', 'perfil.csv',
   ]);
   for (const [name, text] of Object.entries(files)) assert.equal(text.charCodeAt(0), 0xfeff, `${name} sem BOM`);

@@ -4,13 +4,15 @@
 import { buildPlans, type InstallmentRow } from "@/lib/installments";
 import { buildClassifier } from "@/lib/essentials";
 import { institutionByKey } from "@/lib/institutions";
+import { FUELS, SHIFT_COLUMNS, isFuel, normalizeShift, shiftMetrics } from "@/lib/driver";
+import { platformOf } from "@/lib/driverPlatforms";
 
 // ---------------------------------------------------------------------------
 // Opções
 // ---------------------------------------------------------------------------
 export type ExportItemId =
   | "transactions" | "accounts" | "cards" | "invoice_payments" | "installments" | "bills" | "debts" | "goals"
-  | "budgets" | "investments" | "categories" | "shopping" | "mei" | "profile";
+  | "budgets" | "investments" | "categories" | "shopping" | "driver" | "mei" | "profile";
 export type Scope = "pessoal" | "empresa" | "ambos";
 export type ExportFormat = "csv" | "json";
 
@@ -55,6 +57,7 @@ export const EXPORT_ITEMS: ExportItem[] = [
   { id: "investments", label: "Investimentos e movimentações", hint: "Carteira, aportes, resgates e valores." },
   { id: "categories", label: "Categorias e subcategorias", hint: "As do Jakash e as suas." },
   { id: "shopping", label: "Listas de compras e itens", hint: "Listas, itens e preços estimados." },
+  { id: "driver", label: "Motorista de app", hint: "Cada dia trabalhado com ganho bruto, despesas e lucro líquido, e os seus carros." },
   { id: "mei", label: "MEI: clientes e recibos", hint: "Clientes e recibos emitidos.", meiOnly: true },
   { id: "profile", label: "Perfil", hint: "Só dados do seu cadastro. Sem senhas, cobrança ou chaves." },
 ];
@@ -247,6 +250,8 @@ const TABLE_META: Record<string, TableMeta> = {
   categories: { ownerOrNull: "user_id" },
   shopping_lists: { owner: "user_id", business: "is_business" },
   shopping_items: {},
+  driver_vehicles: { owner: "user_id" },
+  driver_shifts: { owner: "user_id", date: "date" },
   mei_clients: { owner: "user_id" },
   mei_invoices: { owner: "user_id", date: "invoice_date" },
 };
@@ -289,7 +294,7 @@ export function applyFilters<T extends Record<string, unknown>>(rows: T[], filte
 export type TaskId =
   | "transactions" | "installment_rows" | "accounts" | "account_balances" | "credit_cards" | "card_invoice_payments" | "bills"
   | "debts" | "debt_payments" | "goals" | "goal_contributions" | "budgets" | "investments" | "investment_movements"
-  | "categories" | "category_flags" | "shopping_lists" | "shopping_items" | "mei_clients" | "mei_invoices" | "profile";
+  | "categories" | "category_flags" | "shopping_lists" | "shopping_items" | "driver_vehicles" | "driver_shifts" | "mei_clients" | "mei_invoices" | "profile";
 
 export type PlanTask = {
   id: TaskId;
@@ -369,6 +374,8 @@ const TASKS: Record<Exclude<TaskId, "profile">, TaskDef> = {
     table: "shopping_items", label: "itens das listas de compras",
     columns: "id,list_id,name,quantity,unit,est_price,checked,checked_at", order: [asc("list_id"), asc("position"), asc("id")],
   },
+  driver_vehicles: { table: "driver_vehicles", label: "carros", entity: true, columns: "id,user_id,name,fuel,efficiency,fuel_price,cost_per_km,daily_rent,archived,created_at", order: [asc("created_at"), asc("id")] },
+  driver_shifts: { table: "driver_shifts", label: "dias de motorista", columns: "user_id," + SHIFT_COLUMNS, order: [desc("date"), asc("id")] },
   mei_clients: { table: "mei_clients", label: "clientes", entity: true, columns: "id,user_id,name,document,phone,email,notes,archived,created_at", order: [asc("created_at"), asc("id")] },
   mei_invoices: {
     table: "mei_invoices", label: "recibos", columns: "id,user_id,invoice_number,client_id,client_name,value,invoice_date,notes", order: [desc("invoice_date"), desc("invoice_number")],
@@ -384,7 +391,7 @@ const TASKS: Record<Exclude<TaskId, "profile">, TaskDef> = {
 export type DatasetId =
   | "transactions" | "accounts" | "cards" | "invoice_payments" | "installments" | "bills" | "debts" | "debt_payments" | "goals"
   | "goal_contributions" | "budgets" | "investments" | "investment_movements" | "categories" | "shopping_lists" | "shopping_items"
-  | "mei_clients" | "mei_invoices" | "profile";
+  | "driver_shifts" | "driver_vehicles" | "mei_clients" | "mei_invoices" | "profile";
 
 const c = (key: string, header: string, kind: CellKind = "text", flags: Pick<Column, "household" | "business"> = {}): Column => ({ key, header, kind, ...flags });
 const PESSOA = c("pessoa", "Pessoa", "text", { household: true });
@@ -514,6 +521,22 @@ export const DATASETS: DatasetDef[] = [
     columns: [PESSOA, c("lista", "Lista"), c("item", "Item"), c("quantidade", "Quantidade", "number"), c("unidade", "Unidade"), c("preco_estimado", "Preço estimado", "money"), c("comprado", "Comprado", "bool"), c("comprado_em", "Comprado em", "date")],
   },
   {
+    id: "driver_shifts", item: "driver", file: "motorista-dias.csv", jsonKey: "motorista_dias", title: "Motorista de app: dias",
+    description: "Um dia trabalhado por linha, com ganho bruto, despesas e lucro líquido.",
+    tasks: ["driver_shifts", "driver_vehicles"],
+    columns: [c("data", "Data", "date"), c("carro", "Carro"), c("inicio", "Início"), c("fim", "Fim"), c("horas", "Horas", "number"), c("km", "Km", "number"),
+      c("plataformas", "Plataformas"), c("ganho_bruto", "Ganho bruto", "money"), c("gorjetas", "Gorjetas", "money"), c("combustivel", "Combustível", "money"),
+      c("custo_carro", "Custo do carro", "money"), c("outros_gastos", "Outros gastos", "money"), c("despesas", "Despesas", "money"), c("lucro_liquido", "Lucro líquido", "money"),
+      c("lucro_por_hora", "Lucro por hora", "money"), c("lucro_por_km", "Lucro por km", "money"), c("observacoes", "Observações")],
+  },
+  {
+    id: "driver_vehicles", item: "driver", file: "motorista-carros.csv", jsonKey: "motorista_carros", title: "Motorista de app: carros",
+    description: "Seus carros, com combustível, média e custos.",
+    tasks: ["driver_vehicles"],
+    columns: [c("nome", "Carro"), c("combustivel", "Combustível"), c("media", "Média (km por litro/m³/kWh)", "number"), c("preco_combustivel", "Preço do combustível", "money"),
+      c("custo_por_km", "Manutenção por km", "money"), c("aluguel_dia", "Aluguel por dia", "money"), c("arquivado", "Arquivado", "bool"), c("criado_em", "Criado em", "date")],
+  },
+  {
     id: "mei_clients", item: "mei", file: "mei-clientes.csv", jsonKey: "mei_clientes", title: "MEI: clientes",
     description: "Seus clientes (contatos que você cadastrou).",
     tasks: ["mei_clients"],
@@ -547,7 +570,7 @@ export function columnsFor(ds: DatasetDef, opts: Pick<ExportOptions, "household"
 
 const TASK_ORDER: TaskId[] = [
   "categories", "category_flags", "accounts", "account_balances", "credit_cards", "mei_clients", "debts", "goals", "investments", "shopping_lists",
-  "transactions", "installment_rows", "card_invoice_payments", "bills", "debt_payments", "goal_contributions", "budgets", "investment_movements", "shopping_items", "mei_invoices", "profile",
+  "transactions", "installment_rows", "card_invoice_payments", "bills", "debt_payments", "goal_contributions", "budgets", "investment_movements", "shopping_items", "driver_vehicles", "driver_shifts", "mei_invoices", "profile",
 ];
 
 /**
@@ -852,6 +875,24 @@ export function buildDatasets(raw: Partial<Record<TaskId, TaskResult>>, plan: Pl
     const kept = new Set(gs.map((g) => String(g.id)));
     push("goal_contributions", rowsOf("goal_contributions").filter((p) => kept.has(String(p.goal_id))).map((p) => ({
       pessoa: person(goals.get(String(p.goal_id))?.user_id), objetivo: nameOf(goals, p.goal_id), valor: money(p.amount), data: str(p.date),
+    })));
+  }
+
+  if (wants("driver_shifts")) {
+    const cars = byId(allRowsOf("driver_vehicles"));
+    push("driver_shifts", rowsOf("driver_shifts").map((r) => {
+      const sh = normalizeShift(r);
+      const m = shiftMetrics(sh);
+      return {
+        data: sh.date, carro: nameOf(cars, sh.vehicle_id), inicio: sh.start_time ? sh.start_time.slice(0, 5) : null, fim: sh.end_time ? sh.end_time.slice(0, 5) : null,
+        horas: m.hours || null, km: m.km, plataformas: sh.earnings.map((e) => `${platformOf(e.platform).name} ${e.amount.toFixed(2).replace(".", ",")}`).join(" | ") || null,
+        ganho_bruto: m.gross, gorjetas: m.tips, combustivel: m.fuel, custo_carro: m.vehicle, outros_gastos: m.extras, despesas: m.expenses, lucro_liquido: m.net,
+        lucro_por_hora: m.netPerHour, lucro_por_km: m.netPerKm, observacoes: sh.notes,
+      };
+    }));
+    push("driver_vehicles", rowsOf("driver_vehicles").map((r) => ({
+      nome: str(r.name), combustivel: isFuel(r.fuel) ? FUELS[r.fuel].label : str(r.fuel), media: num(r.efficiency), preco_combustivel: money(r.fuel_price),
+      custo_por_km: money(r.cost_per_km), aluguel_dia: money(r.daily_rent), arquivado: bool(r.archived), criado_em: str(r.created_at),
     })));
   }
 

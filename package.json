@@ -13,7 +13,8 @@
     "ios:prepare": "node scripts/ios-prepare.mjs",
     "ios:sync": "node scripts/ios-prepare.mjs && cap sync ios",
     "ios:assets": "capacitor-assets generate --ios",
-    "test:import": "tsx --tsconfig tsconfig.json tests/import-categories.test.ts"
+    "test:import": "tsx --tsconfig tsconfig.json tests/import-categories.test.ts",
+    "test:driver": "tsx --tsconfig tsconfig.json tests/driver.test.ts"
   },
   "dependencies": {
     "@aparajita/capacitor-biometric-auth": "^10.0.0",

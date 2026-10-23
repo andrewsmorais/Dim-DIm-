@@ -1,6 +1,6 @@
 // Fonte única da navegação: o menu lateral, a tela "Tudo" (/menu) e as abas das telas usam esta lista.
 import {
-  Home, Send, ShoppingCart, CalendarClock, Landmark, Wallet, PiggyBank, Gauge, FileText, Briefcase, Sparkles, Settings, type LucideIcon,
+  Home, Send, ShoppingCart, CalendarClock, Landmark, Wallet, PiggyBank, Gauge, FileText, Briefcase, Sparkles, Settings, Car, type LucideIcon,
 } from "lucide-react";
 
 export type NavItem = {
@@ -62,6 +62,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { icon: Gauge, label: "Orçamento do mês", href: "/limites", match: hrefs("orcamento") },
       { icon: FileText, label: "Relatórios", href: "/relatorios", match: ["/relatorios"] },
     ],
+  },
+  {
+    title: "TRABALHO",
+    items: [{ icon: Car, label: "Motorista de app", href: "/motorista", match: ["/motorista"] }],
   },
   {
     title: "EMPRESA",
