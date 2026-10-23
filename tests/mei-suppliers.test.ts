@@ -233,7 +233,7 @@ t("Migração: tabela com RLS do dono, sem acesso anônimo", () => {
 t("Migração: supplier_id em lançamentos e contas, com índice, e checagem de dono", () => {
   for (const tbl of ["transactions", "bills"]) {
     assert.match(up, new RegExp(`ALTER TABLE public\\.${tbl} ADD COLUMN IF NOT EXISTS supplier_id UUID REFERENCES public\\.mei_suppliers\\(id\\) ON DELETE SET NULL`));
-    assert.match(up, new RegExp(`CREATE TRIGGER trg_${tbl}_supplier_owner`));
+    assert.match(up, new RegExp(`CREATE OR REPLACE TRIGGER trg_${tbl}_supplier_owner`));
   }
   assert.match(up, /CREATE INDEX IF NOT EXISTS idx_transactions_supplier/);
   assert.match(up, /CREATE INDEX IF NOT EXISTS idx_bills_supplier/);

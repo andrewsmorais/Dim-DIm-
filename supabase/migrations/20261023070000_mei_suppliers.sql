@@ -54,12 +54,10 @@ END
 $$;
 REVOKE EXECUTE ON FUNCTION public.check_supplier_owner() FROM PUBLIC, anon, authenticated;
 
-DROP TRIGGER IF EXISTS trg_transactions_supplier_owner ON public.transactions;
-CREATE TRIGGER trg_transactions_supplier_owner
+CREATE OR REPLACE TRIGGER trg_transactions_supplier_owner
     BEFORE INSERT OR UPDATE OF supplier_id, user_id ON public.transactions
     FOR EACH ROW WHEN (NEW.supplier_id IS NOT NULL) EXECUTE FUNCTION public.check_supplier_owner();
-DROP TRIGGER IF EXISTS trg_bills_supplier_owner ON public.bills;
-CREATE TRIGGER trg_bills_supplier_owner
+CREATE OR REPLACE TRIGGER trg_bills_supplier_owner
     BEFORE INSERT OR UPDATE OF supplier_id, user_id ON public.bills
     FOR EACH ROW WHEN (NEW.supplier_id IS NOT NULL) EXECUTE FUNCTION public.check_supplier_owner();
 
