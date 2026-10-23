@@ -4,7 +4,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
-const FIELDS = ['vercel', 'supabase', 'ai', 'whatsapp', 'domain', 'payment_fees', 'taxes', 'other'] as const;
+const FIELDS = ['vercel', 'supabase', 'ai', 'domain', 'payment_fees', 'taxes', 'other'] as const;
 
 // Lança/atualiza os custos de um mês (um registro por mês).
 export async function PUT(request: Request) {

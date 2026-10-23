@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { data: profile } = await admin
     .from('profiles')
-    .select('asaas_subscription_id, whatsapp_number')
+    .select('asaas_subscription_id')
     .eq('id', user.id)
     .single();
 
@@ -35,13 +35,7 @@ export async function POST(request: Request) {
     }
   }
 
-  // 2. Mensagens do WhatsApp guardadas na fila
-  if (profile?.whatsapp_number) {
-    const { error } = await admin.from('whatsapp_inbox').delete().eq('phone_number', profile.whatsapp_number);
-    if (error) console.error('Delete account: falha ao limpar fila do WhatsApp', error);
-  }
-
-  // 3. Comprovantes anexados (arquivos no armazenamento; melhor esforço)
+  // 2. Comprovantes anexados (arquivos no armazenamento; melhor esforço)
   try {
     for (let i = 0; i < 50; i++) {
       const { data } = await admin.storage.from('receipts').list(user.id, { limit: 100 });
@@ -52,7 +46,7 @@ export async function POST(request: Request) {
     console.error('Delete account: falha ao apagar comprovantes', e);
   }
 
-  // 4. Remove o usuário (as tabelas ligadas ao usuário apagam em cascata)
+  // 3. Remove o usuário (as tabelas ligadas ao usuário apagam em cascata)
   const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error) {
     console.error('Delete account: falha ao excluir usuário', error);

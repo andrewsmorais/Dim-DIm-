@@ -9,7 +9,6 @@ const FIELDS: { key: keyof Omit<CostRow, "month" | "notes">; label: string; hint
   { key: "vercel", label: "Vercel" },
   { key: "supabase", label: "Supabase" },
   { key: "ai", label: "IA (OpenAI)" },
-  { key: "whatsapp", label: "WhatsApp (Meta)" },
   { key: "domain", label: "Domínio" },
   { key: "payment_fees", label: "Taxas Asaas (só se não vier do Asaas)" },
   { key: "taxes", label: "Impostos" },

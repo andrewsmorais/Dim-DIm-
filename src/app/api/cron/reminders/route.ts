@@ -10,7 +10,6 @@ import {
 } from '@/lib/reminders';
 import { pushConfigured, sendPush } from '@/lib/push';
 import { emailConfigured, reminderEmail, sendEmail } from '@/lib/email';
-import { sendWhatsAppReminder, whatsappConfigured } from '@/lib/whatsappSend';
 
 // Lembretes de vencimento. Chamada diária pelo Vercel Cron (vercel.json) com "Authorization: Bearer CRON_SECRET".
 // Por usuário: um aviso por canal por dia, com as contas a pagar/receber e faturas de cartão (as suas e as do parceiro, na gestão
@@ -25,10 +24,10 @@ const TIME_BUDGET_MS = 50_000;
 const ACTIVE_STATUS = ['trial', 'active', 'past_due'];
 
 type Admin = SupabaseClient;
-type Channel = 'push' | 'email' | 'whatsapp';
+type Channel = 'push' | 'email';
 type Prof = {
-  id: string; full_name: string | null; whatsapp_number: string | null;
-  notify_whatsapp: boolean; notify_email: boolean; notify_push: boolean; notify_when: string | null;
+  id: string; full_name: string | null;
+  notify_email: boolean; notify_push: boolean; notify_when: string | null;
   subscription_status: string; subscription_expires_at: string | null; usage_type: string | null;
 };
 type Counts = Record<Channel, { sent: number; failed: number }>;
@@ -71,9 +70,9 @@ export async function GET(request: Request) {
 
   const dry = new URL(request.url).searchParams.get('dry') === '1'; // só calcula, não envia nem registra
   const started = Date.now();
-  const channelsOn = { push: pushConfigured(), email: emailConfigured(), whatsapp: whatsappConfigured() };
-  if (!channelsOn.push && !channelsOn.email && !channelsOn.whatsapp) {
-    return NextResponse.json({ ok: true, note: 'Nenhum canal configurado (VAPID, Resend ou WhatsApp).', channelsOn });
+  const channelsOn = { push: pushConfigured(), email: emailConfigured() };
+  if (!channelsOn.push && !channelsOn.email) {
+    return NextResponse.json({ ok: true, note: 'Nenhum canal configurado (VAPID ou Resend).', channelsOn });
   }
 
   try {
@@ -84,14 +83,14 @@ export async function GET(request: Request) {
     // 1. Quem pode receber: notificações ligadas, assinatura em dia (ou teste ainda válido) e ao menos um canal utilizável.
     const profiles = (await readAll<Prof>((from, to) =>
       admin.from('profiles')
-        .select('id,full_name,whatsapp_number,notify_whatsapp,notify_email,notify_push,notify_when,subscription_status,subscription_expires_at,usage_type')
+        .select('id,full_name,notify_email,notify_push,notify_when,subscription_status,subscription_expires_at,usage_type')
         .eq('notify_enabled', true).in('subscription_status', ACTIVE_STATUS).order('id').range(from, to)
     )).filter((p) => {
       if (p.subscription_status === 'trial' && p.subscription_expires_at && new Date(p.subscription_expires_at).getTime() < now) return false;
-      return (channelsOn.push && p.notify_push) || (channelsOn.email && p.notify_email) || (channelsOn.whatsapp && p.notify_whatsapp && Boolean(p.whatsapp_number));
+      return (channelsOn.push && p.notify_push) || (channelsOn.email && p.notify_email);
     });
 
-    const counts: Counts = { push: { sent: 0, failed: 0 }, email: { sent: 0, failed: 0 }, whatsapp: { sent: 0, failed: 0 } };
+    const counts: Counts = { push: { sent: 0, failed: 0 }, email: { sent: 0, failed: 0 } };
     if (profiles.length === 0) return NextResponse.json({ ok: true, eligible: 0, counts });
 
     // 2. Casais: cada um recebe também os vencimentos do parceiro.
@@ -133,7 +132,7 @@ export async function GET(request: Request) {
     // 4. Um aviso por usuário.
     let withItems = 0;
     let timedOut = false;
-    const would: Record<Channel, number> = { push: 0, email: 0, whatsapp: 0 };
+    const would: Record<Channel, number> = { push: 0, email: 0 };
 
     const notify = async (p: Prof) => {
       const offset = offsetFor(p.notify_when);
@@ -155,8 +154,7 @@ export async function GET(request: Request) {
       const firstName = (p.full_name ?? '').trim().split(/\s+/)[0] || 'tudo bem';
       const wantPush = channelsOn.push && p.notify_push;
       const wantEmail = channelsOn.email && p.notify_email;
-      const wantWhats = channelsOn.whatsapp && p.notify_whatsapp && Boolean(p.whatsapp_number);
-      if (dry) { if (wantPush) would.push++; if (wantEmail) would.email++; if (wantWhats) would.whatsapp++; return; }
+      if (dry) { if (wantPush) would.push++; if (wantEmail) would.email++; return; }
 
       if (wantPush) {
         const { data: subs } = await admin.from('push_subscriptions').select('id,endpoint,p256dh,auth').eq('user_id', p.id);
@@ -180,12 +178,6 @@ export async function GET(request: Request) {
           ok = await sendEmail(to, `Jakash · ${reminder.title}`, mail.text, mail.html);
         }
         if (ok) counts.email.sent++; else { counts.email.failed++; await release(admin, p.id, 'email', today); }
-      }
-
-      if (wantWhats && (await claim(admin, p.id, 'whatsapp', today))) {
-        const text = [`Oi, ${firstName}! ${reminder.title}:`, ...reminder.lines.map((l) => `• ${l}`), ...(reminder.totalToPay > 0 ? [`Total a pagar: ${brl(reminder.totalToPay)}`] : [])].join('\n');
-        const ok = await sendWhatsAppReminder(p.whatsapp_number as string, { name: firstName, summary: reminder.summary, text });
-        if (ok) counts.whatsapp.sent++; else { counts.whatsapp.failed++; await release(admin, p.id, 'whatsapp', today); }
       }
     };
 

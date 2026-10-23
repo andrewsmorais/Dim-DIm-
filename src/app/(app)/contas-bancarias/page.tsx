@@ -129,7 +129,7 @@ export default function ContasBancariasPage() {
         })}
       </div>
 
-      <p className="text-xs text-gray-400 mt-6">Lançamentos feitos pelo WhatsApp entram na sua conta mais antiga. Você pode escolher outra conta ao lançar pelo botão +.</p>
+      <p className="text-xs text-gray-400 mt-6">Ao lançar pelo botão +, você escolhe em qual conta o lançamento entra.</p>
 
       {editing && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setEditing(null)}>

@@ -5,15 +5,12 @@ import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Contato | Jakash",
-  description: "Fale com o Jakash: Instagram, WhatsApp do assistente e canais de suporte.",
+  description: "Fale com o Jakash: Instagram, WhatsApp de suporte e outros canais.",
   alternates: { canonical: "/contato" },
 };
 
-// Lê no servidor a cada acesso, para refletir a variável da Vercel sem novo build.
-export const dynamic = "force-dynamic";
-
 export default function ContatoPage() {
-  const bot = (process.env.WHATSAPP_BOT_NUMBER || "").replace(/\D/g, "");
+  const support = (process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "").replace(/\D/g, "");
 
   return (
     <LegalPage path="/contato" title="Contato" subtitle="Dúvidas, suporte, pedidos sobre seus dados ou reembolso." updated={false}>
@@ -23,10 +20,10 @@ export default function ContatoPage() {
           <strong>Instagram:</strong>{" "}
           <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">@{INSTAGRAM_HANDLE}</a>, é só mandar uma mensagem direta.
         </li>
-        {bot && (
+        {support && (
           <li>
-            <strong>Assistente no WhatsApp:</strong>{" "}
-            <a href={`https://wa.me/${bot}`} target="_blank" rel="noopener noreferrer">abrir conversa</a>. Se você já conectou seu número, o assistente responde dúvidas de uso.
+            <strong>Suporte no WhatsApp:</strong>{" "}
+            <a href={`https://wa.me/${support}`} target="_blank" rel="noopener noreferrer">abrir conversa</a>. É uma conversa normal no seu WhatsApp, só para suporte.
           </li>
         )}
         <li><strong>Dentro do app:</strong> entre na sua conta e veja Configurações para ajustes de perfil, plano e dados.</li>

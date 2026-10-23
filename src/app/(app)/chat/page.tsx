@@ -214,7 +214,7 @@ export default function ChatPage() {
             />
             <button type="submit" disabled={busy || !enabled || !input.trim()} aria-label="Enviar" className="w-11 h-11 shrink-0 rounded-full bg-gradient-to-r from-brand-dark to-brand-accent dark:from-brand-vivid dark:to-brand-vivid text-white flex items-center justify-center disabled:opacity-40"><Send size={18} /></button>
           </form>
-          <p className="text-[11px] text-gray-400 text-center">{remaining !== null ? `${remaining} mensagens restantes hoje · ` : ""}O histórico inclui as conversas do WhatsApp.</p>
+          <p className="text-[11px] text-gray-400 text-center">{remaining !== null ? `${remaining} mensagens restantes hoje · ` : ""}A Jaki pode errar. Confira antes de salvar.</p>
         </div>
       </div>
       <Disclaimer />

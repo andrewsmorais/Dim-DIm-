@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     // Nada que a IA devolver é gravado aqui: só o que passa na validação chega à tela, e a pessoa confirma antes de salvar.
     const { reply, actions } = parseChatOutput(content);
 
-    // Histórico compartilhado com o WhatsApp (melhor esforço).
+    // Histórico da conversa (melhor esforço).
     await supabase.from('chat_history').insert([
       { user_id: user.id, message_role: 'user', content: message },
       { user_id: user.id, message_role: 'assistant', content: reply },

@@ -23,7 +23,7 @@ export default function IndicarPage() {
     try { await navigator.clipboard.writeText(info.link); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { setError("Não consegui copiar. Selecione o link e copie manualmente."); }
   }
 
-  const share = info ? `https://wa.me/?text=${encodeURIComponent(`Estou usando o Jakash para controlar minhas finanças pelo WhatsApp. Entra por aqui: ${info.link}`)}` : "#";
+  const share = info ? `https://wa.me/?text=${encodeURIComponent(`Estou usando o Jakash para organizar meu dinheiro. Entra por aqui: ${info.link}`)}` : "#";
 
   return (
     <div className="max-w-2xl mx-auto pb-20 space-y-6">

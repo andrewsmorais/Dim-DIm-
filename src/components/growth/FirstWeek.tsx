@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, CheckCircle2, Circle, FileUp, MessageCircle, PartyPopper, Plus, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Circle, FileUp, PartyPopper, Plus, X } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { parseMoney } from "@/lib/format";
 import { btnCls, Card, inputCls, Progress } from "@/components/ui/page";
@@ -39,14 +39,13 @@ export function FirstWeek() {
     };
     const [acc, tx, budget, bill, card, prof] = await Promise.all([
       has("accounts"), has("transactions"), has("budgets"), has("bills"), has("credit_cards"),
-      supabase.from("profiles").select("whatsapp_number,notify_enabled").eq("id", userId).maybeSingle(),
+      supabase.from("profiles").select("notify_enabled").eq("id", userId).maybeSingle(),
     ]);
     if (isOff()) return;
-    const p = prof.data as { whatsapp_number: string | null; notify_enabled: boolean | null } | null;
+    const p = prof.data as { notify_enabled: boolean | null } | null;
     const list: Step[] = [
       { key: "acc", label: "Cadastrar uma conta bancária", href: "/contas-bancarias", done: acc, title: "Comece criando sua conta", why: "É onde seu dinheiro fica: banco, carteira ou poupança. Leva 10 segundos.", cta: "Criar conta" },
       { key: "tx", label: "Fazer o primeiro lançamento", href: "/transacoes", done: tx, title: "Agora faça seu primeiro lançamento", why: "Anote um gasto ou ganho de hoje. O resumo e os gráficos já ganham vida com o primeiro.", cta: "Lançar agora" },
-      { key: "wa", label: "Conectar o WhatsApp para lançar por mensagem", href: "/configuracoes/whatsapp", done: Boolean(p?.whatsapp_number), title: "Lance pelo WhatsApp", why: "Mande “almoço 32” numa mensagem e o Jakash anota para você.", cta: "Conectar WhatsApp" },
       { key: "budget", label: "Definir um limite de gastos", href: "/limites", done: budget, title: "Defina um limite de gastos", why: "Escolha quanto quer gastar por categoria e acompanhe sem susto no fim do mês.", cta: "Definir limite" },
       { key: "bill", label: "Cadastrar uma conta a pagar ou um cartão", href: "/contas", done: bill || card, title: "Cadastre uma conta a pagar", why: "Aluguel, internet, cartão: o app avisa antes de vencer.", cta: "Cadastrar conta" },
       { key: "notif", label: "Ativar os lembretes de vencimento", href: "/configuracoes/notificacoes", done: Boolean(p?.notify_enabled), title: "Ligue os lembretes", why: "Receba um aviso antes de cada vencimento, no celular ou por e-mail.", cta: "Ativar lembretes" },
@@ -139,7 +138,6 @@ export function FirstWeek() {
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("jakash:quickadd"))} className={btnCls + " w-full sm:w-auto"}><Plus size={16} /> {next.cta}</button>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-bold text-gray-500">
               <Link href="/importar" className="inline-flex items-center gap-1.5 hover:text-brand-dark dark:hover:text-brand-soft"><FileUp size={14} /> Prefere enviar um extrato ou foto?</Link>
-              <Link href="/configuracoes/whatsapp" className="inline-flex items-center gap-1.5 hover:text-brand-dark dark:hover:text-brand-soft"><MessageCircle size={14} /> Lançar pelo WhatsApp</Link>
             </div>
           </div>
         )}

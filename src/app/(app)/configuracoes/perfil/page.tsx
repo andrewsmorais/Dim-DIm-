@@ -6,14 +6,6 @@ import { useSupabase } from "@/lib/useSupabase";
 import { formatDateBR } from "@/lib/format";
 import { BackTitle, Card, Label, ErrorNote, inputCls, btnCls } from "@/components/ui/page";
 
-function formatPhone(p: string | null): string {
-  if (!p) return "Não conectado";
-  const d = p.replace(/\D/g, "");
-  if (d.length === 13) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`;
-  if (d.length === 12) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}`;
-  return `+${d}`;
-}
-
 // yyyy-mm-dd (valor do <input type="date">) <-> "—"/formatado para exibição.
 function toInputDate(iso: string | null): string {
   return iso ? iso.slice(0, 10) : "";
@@ -24,7 +16,6 @@ export default function PerfilPage() {
   const [name, setName] = useState("");
   const [birth, setBirth] = useState<string | null>(null);
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [editingBirth, setEditingBirth] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -35,9 +26,8 @@ export default function PerfilPage() {
   useEffect(() => {
     if (!ready || !userId) return;
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
-    supabase.from("profiles").select("full_name,whatsapp_number,birth_date").maybeSingle().then(({ data }) => {
+    supabase.from("profiles").select("full_name,birth_date").maybeSingle().then(({ data }) => {
       setName(data?.full_name ?? "");
-      setPhone(data?.whatsapp_number ?? null);
       setBirth(data?.birth_date ?? null);
     });
   }, [ready, userId, supabase]);
@@ -85,7 +75,6 @@ export default function PerfilPage() {
           )}
         </div>
         <div className="py-4"><Label>E-mail <Lock size={11} className="inline ml-1" /></Label><p className="font-bold break-all">{email || "—"}</p><p className="text-xs text-gray-400 mt-1">Para alterar, entre em contato com o suporte.</p></div>
-        <div className="py-4"><Label>Telefone (WhatsApp) <Lock size={11} className="inline ml-1" /></Label><p className="font-bold">{formatPhone(phone)}</p><p className="text-xs text-gray-400 mt-1">Para alterar, entre em contato com o suporte.</p></div>
       </Card>
       <ErrorNote message={error} />
       {msg && <p className="text-sm text-emerald-600 font-bold mt-3">{msg}</p>}

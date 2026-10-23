@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { Eye, EyeOff, Landmark, PiggyBank, CircleDollarSign, CheckCircle2, Clock, TrendingUp, Scale, MessageCircle, ArrowUpRight, PlusCircle, CreditCard } from "lucide-react";
+import { Eye, EyeOff, Landmark, PiggyBank, CircleDollarSign, CheckCircle2, Clock, TrendingUp, Scale, ArrowUpRight, PlusCircle, CreditCard } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useHideValues } from "@/lib/useHideValues";
 import { useCards } from "@/lib/useCards";
@@ -320,10 +320,6 @@ export default function DashboardPage() {
           )}
         </Card>
       </div>
-
-      <Link href="/configuracoes/whatsapp" className="mt-6 flex items-center gap-3 rounded-[22px] bg-emerald-500/10 border border-emerald-500/20 px-5 py-4 text-sm font-bold text-emerald-700 dark:text-emerald-300">
-        <MessageCircle size={20} /> Registre gastos pelo WhatsApp: texto, áudio ou foto do comprovante.
-      </Link>
     </div>
   );
 }

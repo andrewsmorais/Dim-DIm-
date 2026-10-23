@@ -89,7 +89,7 @@ export default function CompartilhadaPage() {
         <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc pl-5">
           <li>Todos da casa passam a ver e editar <b>contas bancárias, lançamentos, cartões, contas a pagar, limites, objetivos, dívidas e investimentos</b> uns dos outros.</li>
           <li>Cada lançamento mostra quem fez. O saldo e os totais passam a somar todos.</li>
-          <li><b>Perfil, assinatura, WhatsApp e conversas do chat continuam privados.</b></li>
+          <li><b>Perfil, assinatura e conversas do chat continuam privados.</b></li>
           <li>Qualquer um pode encerrar a qualquer momento: cada um volta a ver só o que é seu.</li>
         </ul>
       </Card>

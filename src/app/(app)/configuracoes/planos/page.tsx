@@ -22,7 +22,7 @@ const INVOICE_STATUS: Record<string, string> = {
   PENDING: "Aguardando pagamento", RECEIVED: "Paga", CONFIRMED: "Paga", OVERDUE: "Vencida", REFUNDED: "Estornada", RECEIVED_IN_CASH: "Paga",
 };
 const FEATURES: Record<PlanId, string[]> = {
-  cpf: ["1 pessoa", "Lançamentos pelo WhatsApp com IA", "Painel com gráficos, limites e objetivos", "Dívidas, reserva de emergência e contas a pagar", "Categorias e subcategorias personalizáveis"],
+  cpf: ["1 pessoa", "Lançamentos e importação de extrato", "Painel com gráficos, limites e objetivos", "Dívidas, reserva de emergência e contas a pagar", "Categorias e subcategorias personalizáveis"],
   familia: ["Tudo do Essencial", `Até ${PLANS.familia.members} pessoas na mesma casa (gestão compartilhada)`, "Planejamento mensal e simulador", "Chat IA para perguntar sobre as suas finanças", "Investimentos e dívidas", "Relatórios e link para o seu contador"],
   mei: ["Tudo do plano Família", "Controle do limite anual do MEI", "DASN, recibos e relatório do MEI", "Contas recorrentes (ex.: DAS) com lembrete"],
 };

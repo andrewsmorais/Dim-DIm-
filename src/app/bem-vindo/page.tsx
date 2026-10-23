@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Bell, Building2, Briefcase, Check, Landmark, Mail, MessageCircle, Plus, Trash2, User, Users } from "lucide-react";
+import { ArrowRight, Bell, Building2, Briefcase, Check, Landmark, Plus, Trash2, User, Users } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { useSettings } from "@/contexts/SettingsContext";
 import { brl, parseMoney } from "@/lib/format";
-import { WhatsAppConfig } from "@/components/WhatsAppConfig";
 import { Label, Toggle, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
 type Lang = "pt" | "en" | "es";
@@ -32,7 +31,7 @@ const WHEN = [
   { id: "3_days", label: "3 dias antes" },
   { id: "7_days", label: "7 dias antes" },
 ];
-const TOTAL = 8;
+const TOTAL = 7;
 
 // Próxima data com o dia do mês informado (hoje ou depois).
 function nextDueDate(day: number): string {
@@ -73,7 +72,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { supabase, userId, ready } = useSupabase();
   const { language, setLanguage } = useSettings();
-  const [step, setStep] = useState(0); // 0 boas-vindas, 1..8 etapas, 9 revisão
+  const [step, setStep] = useState(0); // 0 boas-vindas, 1..7 etapas, 8 revisão
   const [usage, setUsage] = useState<Usage | null>(null);
   const [accounts, setAccounts] = useState<Acc[]>([{ name: "", kind: "corrente", balance: "" }]);
   const [incomes, setIncomes] = useState<Fixed[]>([]);
@@ -81,7 +80,7 @@ export default function OnboardingPage() {
   const [limit, setLimit] = useState("");
   const [catLimits, setCatLimits] = useState<{ category_id: string; amount: string }[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);
-  const [remind, setRemind] = useState({ enabled: true, whatsapp: true, email: true, when: "on_due" });
+  const [remind, setRemind] = useState({ enabled: true, email: true, when: "on_due" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -135,7 +134,7 @@ export default function OnboardingPage() {
         onboarding_completed: true,
         ...(skipAll ? {} : {
           usage_type: usage ?? "pessoal", language,
-          notify_enabled: remind.enabled, notify_whatsapp: remind.whatsapp, notify_email: remind.email, notify_when: remind.when,
+          notify_enabled: remind.enabled, notify_email: remind.email, notify_when: remind.when,
         }),
       }).eq("id", userId);
       if (p.error) throw p.error;
@@ -154,7 +153,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gradient-to-br from-[var(--bg-1)] via-[var(--bg-2)] to-[var(--bg-3)] dark:from-black dark:via-black dark:to-black text-gray-900 dark:text-white">
       <header className="flex items-center justify-between px-5 py-4 max-w-md mx-auto">
         <div className="flex items-center gap-2"><img src="/logo.png" alt="Jakash" className="w-9 h-9 rounded-xl object-cover" /><span className="font-extrabold">Jakash</span></div>
-        {step > 0 && step < 9 && <button onClick={() => finish(true)} disabled={busy} className="text-xs font-bold text-gray-500">Pular tudo</button>}
+        {step > 0 && step < 8 && <button onClick={() => finish(true)} disabled={busy} className="text-xs font-bold text-gray-500">Pular tudo</button>}
       </header>
 
       <main className={`${shell} px-5 pb-16`}>
@@ -219,7 +218,7 @@ export default function OnboardingPage() {
                 </div>
               ))}
               <button onClick={() => setAccounts([...accounts, { name: "", kind: "corrente", balance: "" }])} className={btnGhostCls + " w-full !py-3"}><Plus size={16} /> Adicionar conta</button>
-              <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#161616] p-4 flex gap-3 text-sm text-gray-500"><Landmark size={20} className="shrink-0 text-brand-dark dark:text-brand-soft" /><span>A conexão automática com o banco (Open Finance) ainda não está disponível. Por enquanto, você lança pelo app ou pelo WhatsApp.</span></div>
+              <div className="rounded-2xl bg-brand-dark/5 dark:bg-[#161616] p-4 flex gap-3 text-sm text-gray-500"><Landmark size={20} className="shrink-0 text-brand-dark dark:text-brand-soft" /><span>A conexão automática com o banco (Open Finance) ainda não está disponível. Por enquanto, você lança pelo app ou importa o extrato.</span></div>
             </div>
           </>
         )}
@@ -271,7 +270,6 @@ export default function OnboardingPage() {
               {remind.enabled && (
                 <>
                   <p className="font-bold text-sm pt-2">Como deseja receber:</p>
-                  <Toggle checked={remind.whatsapp} onChange={(v) => setRemind({ ...remind, whatsapp: v })} label="WhatsApp" />
                   <Toggle checked={remind.email} onChange={(v) => setRemind({ ...remind, email: v })} label="E-mail" />
                   <p className="font-bold text-sm pt-2 flex items-center gap-2"><Bell size={16} /> Quando lembrar?</p>
                   <select className={inputCls} value={remind.when} onChange={(e) => setRemind({ ...remind, when: e.target.value })}>
@@ -284,23 +282,6 @@ export default function OnboardingPage() {
         )}
 
         {step === 8 && (
-          <>
-            <h1 className="text-2xl font-extrabold mb-1">Integração com WhatsApp</h1>
-            <p className="text-gray-500 text-sm mb-5">Registre gastos e receitas de forma rápida direto pelo WhatsApp, sem abrir o app.</p>
-            <div className="space-y-2 mb-5">
-              {[
-                [MessageCircle, "Texto", "“gastei 45 no mercado”"],
-                [Mail, "Áudio e foto", "Em breve: fale o gasto ou fotografe o comprovante"],
-              ].map(([Icon, t, d]) => {
-                const I = Icon as typeof MessageCircle;
-                return <div key={t as string} className="flex items-center gap-3 rounded-2xl bg-white/60 dark:bg-[#161616] p-3"><I size={18} className="text-brand-dark dark:text-brand-soft" /><span className="text-sm"><b>{t as string}</b> · <span className="text-gray-500">{d as string}</span></span></div>;
-              })}
-            </div>
-            <WhatsAppConfig />
-          </>
-        )}
-
-        {step === 9 && (
           <>
             <h1 className="text-2xl font-extrabold mb-1">Revise sua configuração</h1>
             <p className="text-gray-500 text-sm mb-5">Ao entrar no painel, vamos salvar o que você informou.</p>
@@ -328,7 +309,7 @@ export default function OnboardingPage() {
             {[3, 6, 7].includes(step) && <button onClick={next} className="w-full text-sm font-bold text-gray-500 py-2">Configurar depois</button>}
           </div>
         )}
-        {step === 9 && <button onClick={back} className={btnGhostCls + " w-full mt-2 !py-3 !text-sm"}>Voltar</button>}
+        {step === 8 && <button onClick={back} className={btnGhostCls + " w-full mt-2 !py-3 !text-sm"}>Voltar</button>}
         {step === 0 && <p className="text-center text-xs text-gray-400 mt-6">Leva cerca de 2 minutos. <button onClick={() => finish(true)} className="underline">Pular configuração</button></p>}
       </main>
     </div>

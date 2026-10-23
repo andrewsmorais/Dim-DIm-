@@ -104,7 +104,7 @@ export default function TransacoesPage() {
 
   return (
     <div className="max-w-5xl mx-auto pb-20">
-      <PageHeader title="Transações" subtitle="Tudo que você registrou, aqui ou pelo WhatsApp"
+      <PageHeader title="Transações" subtitle="Tudo que você registrou"
         action={<Link href="/importar" className={btnGhostCls + " !py-2.5 !px-4 w-fit"}><FileUp size={14} /> Importar extrato</Link>} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

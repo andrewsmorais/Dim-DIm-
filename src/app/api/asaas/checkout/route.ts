@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const { data: profile } = await admin
       .from('profiles')
-      .select('full_name, whatsapp_number, asaas_customer_id, asaas_subscription_id, subscription_status, subscription_plan')
+      .select('full_name, asaas_customer_id, asaas_subscription_id, subscription_status, subscription_plan')
       .eq('id', user.id)
       .single();
 
@@ -98,7 +98,6 @@ export async function POST(request: Request) {
           name: profile.full_name,
           email: user.email,
           cpfCnpj,
-          mobilePhone: profile.whatsapp_number ?? undefined,
           externalReference: user.id,
         }),
       });

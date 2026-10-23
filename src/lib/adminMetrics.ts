@@ -2,13 +2,13 @@
 //
 // Definições (as mesmas mostradas no painel):
 //  - Receita            = pagamentos confirmados no período (eventos do webhook do Asaas)
-//  - Custos diretos     = taxas de pagamento + Vercel + Supabase + IA + WhatsApp
+//  - Custos diretos     = taxas de pagamento + Vercel + Supabase + IA
 //  - Lucro bruto        = receita - reembolsos - custos diretos
 //  - Custo operacional  = tudo que foi lançado, menos impostos (diretos + domínio + outros)
 //  - Lucro líquido      = lucro bruto - domínio - outros - impostos
 
 export type CostRow = {
-  month: string; vercel: number; supabase: number; ai: number; whatsapp: number;
+  month: string; vercel: number; supabase: number; ai: number;
   domain: number; payment_fees: number; taxes: number; other: number; notes: string | null;
 };
 
@@ -85,7 +85,6 @@ function prorateMonthCosts(cost: CostRow, fromDate: string, toDate: string): Par
     vercel: n(cost.vercel) * ratio,
     supabase: n(cost.supabase) * ratio,
     ai: n(cost.ai) * ratio,
-    whatsapp: n(cost.whatsapp) * ratio,
     payment_fees: n(cost.payment_fees) * ratio,
     taxes: n(cost.taxes) * ratio,
     domain: n(cost.domain) * ratio, // domain is fixed, prorate too
@@ -101,7 +100,6 @@ function finance(totals: PeriodTotals, costs: CostRow[], fromDate: string, toDat
     costSum.vercel = (costSum.vercel ?? 0) + (prorated.vercel ?? 0);
     costSum.supabase = (costSum.supabase ?? 0) + (prorated.supabase ?? 0);
     costSum.ai = (costSum.ai ?? 0) + (prorated.ai ?? 0);
-    costSum.whatsapp = (costSum.whatsapp ?? 0) + (prorated.whatsapp ?? 0);
     costSum.payment_fees = (costSum.payment_fees ?? 0) + (prorated.payment_fees ?? 0);
     costSum.taxes = (costSum.taxes ?? 0) + (prorated.taxes ?? 0);
     costSum.domain = (costSum.domain ?? 0) + (prorated.domain ?? 0);
@@ -110,7 +108,7 @@ function finance(totals: PeriodTotals, costs: CostRow[], fromDate: string, toDat
 
   // Taxa automática (vem do Asaas) tem prioridade sobre o valor lançado à mão.
   const fees = n(totals.fees_known) > 0 ? n(totals.fees) : n(costSum.payment_fees);
-  const direct = fees + n(costSum.vercel) + n(costSum.supabase) + n(costSum.ai) + n(costSum.whatsapp);
+  const direct = fees + n(costSum.vercel) + n(costSum.supabase) + n(costSum.ai);
   const other = n(costSum.domain) + n(costSum.other);
   const revenue = n(totals.revenue);
   const refunds = n(totals.refunds);

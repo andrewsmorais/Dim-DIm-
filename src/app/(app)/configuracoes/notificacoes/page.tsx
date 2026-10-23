@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { BellRing, Mail, MessageCircle, Save } from "lucide-react";
+import { BellRing, Mail, Save } from "lucide-react";
 import { useSupabase } from "@/lib/useSupabase";
 import { BackTitle, Card, Label, Toggle, ErrorNote, inputCls, btnCls, btnGhostCls } from "@/components/ui/page";
 
@@ -28,8 +27,7 @@ type Device = { supported: boolean; denied: boolean; on: boolean; needsInstall: 
 
 export default function NotificacoesPage() {
   const { supabase, userId, ready } = useSupabase();
-  const [n, setN] = useState({ enabled: true, whatsapp: true, email: true, when: "on_due" });
-  const [phone, setPhone] = useState<string | null>(null);
+  const [n, setN] = useState({ enabled: true, email: true, when: "on_due" });
   const [device, setDevice] = useState<Device | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -49,14 +47,14 @@ export default function NotificacoesPage() {
 
   useEffect(() => {
     if (!ready || !userId) return;
-    supabase.from("profiles").select("notify_enabled,notify_whatsapp,notify_email,notify_when,whatsapp_number").maybeSingle().then(({ data }) => {
-      if (data) { setN({ enabled: data.notify_enabled, whatsapp: data.notify_whatsapp, email: data.notify_email, when: data.notify_when }); setPhone(data.whatsapp_number ?? null); }
+    supabase.from("profiles").select("notify_enabled,notify_email,notify_when").maybeSingle().then(({ data }) => {
+      if (data) { setN({ enabled: data.notify_enabled, email: data.notify_email, when: data.notify_when }); }
     });
     refreshDevice();
   }, [ready, userId, supabase, refreshDevice]);
 
   async function save() {
-    const { error: err } = await supabase.from("profiles").update({ notify_enabled: n.enabled, notify_whatsapp: n.whatsapp, notify_email: n.email, notify_when: n.when }).eq("id", userId);
+    const { error: err } = await supabase.from("profiles").update({ notify_enabled: n.enabled, notify_email: n.email, notify_when: n.when }).eq("id", userId);
     if (err) { setError("Não foi possível salvar."); setMsg(null); return; }
     setError(null); setMsg("Configurações salvas.");
   }
@@ -104,13 +102,13 @@ export default function NotificacoesPage() {
     else setError(d?.error || "Não foi possível enviar o teste.");
   }
 
-  // Teste de e-mail e de WhatsApp: manda uma mensagem de verdade para o seu e-mail / número.
-  async function sendChannelTest(channel: "email" | "whatsapp") {
+  // Teste de e-mail: manda uma mensagem de verdade para o e-mail da sua conta.
+  async function sendEmailTest() {
     setError(null); setMsg(null); setBusy(true);
-    const res = await fetch("/api/notifications/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel }) }).catch(() => null);
+    const res = await fetch("/api/notifications/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel: "email" }) }).catch(() => null);
     const d = await res?.json().catch(() => ({}));
     setBusy(false);
-    if (res?.ok) setMsg(channel === "email" ? "E-mail de teste enviado. Olhe também a caixa de spam." : "Mensagem de teste enviada para o seu WhatsApp.");
+    if (res?.ok) setMsg("E-mail de teste enviado. Olhe também a caixa de spam.");
     else setError(d?.error || "Não foi possível enviar o teste.");
   }
 
@@ -132,17 +130,9 @@ export default function NotificacoesPage() {
         {device?.on && (
           <button onClick={sendTest} disabled={busy} className={btnGhostCls + " w-full"}><BellRing size={16} /> Enviar teste</button>
         )}
-        <Toggle checked={n.whatsapp} onChange={(v) => setN({ ...n, whatsapp: v })} label="Notificações via WhatsApp"
-          hint={phone ? "Enviadas para o número conectado ao Jakash." : undefined} />
-        {phone && n.whatsapp && (
-          <button onClick={() => sendChannelTest("whatsapp")} disabled={busy} className={btnGhostCls + " w-full"}><MessageCircle size={16} /> Enviar teste no WhatsApp</button>
-        )}
-        {!phone && n.whatsapp && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 px-1">Você ainda não conectou seu WhatsApp. <Link href="/configuracoes/whatsapp" className="font-bold underline">Conectar agora</Link></p>
-        )}
         <Toggle checked={n.email} onChange={(v) => setN({ ...n, email: v })} label="Notificações via e-mail" hint="Enviadas para o e-mail da sua conta." />
         {n.email && (
-          <button onClick={() => sendChannelTest("email")} disabled={busy} className={btnGhostCls + " w-full"}><Mail size={16} /> Enviar teste por e-mail</button>
+          <button onClick={sendEmailTest} disabled={busy} className={btnGhostCls + " w-full"}><Mail size={16} /> Enviar teste por e-mail</button>
         )}
         <div className="pt-2"><Label>Quando notificar</Label>
           <select className={inputCls} value={n.when} onChange={(e) => setN({ ...n, when: e.target.value })}>

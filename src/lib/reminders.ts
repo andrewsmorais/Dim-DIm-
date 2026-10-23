@@ -71,9 +71,9 @@ function whenLabel(offset: number, target: string): string {
 
 export type Reminder = {
   title: string;
-  /** Uma linha, sem quebras (cabe em notificação push e em variável de modelo do WhatsApp). */
+  /** Uma linha, sem quebras (cabe em notificação push). */
   summary: string;
-  /** Linhas para e-mail e mensagem de texto do WhatsApp. */
+  /** Linhas para o e-mail. */
   lines: string[];
   /** Total a pagar (contas + faturas), sem os recebimentos. */
   totalToPay: number;
