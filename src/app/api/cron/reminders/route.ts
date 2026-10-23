@@ -9,6 +9,7 @@ import {
   type BillLite, type CardDueRow, type DueItem, type InstallmentLite,
 } from '@/lib/reminders';
 import { pushConfigured, sendPush } from '@/lib/push';
+import { apnsConfigured, sendApns } from '@/lib/apns';
 import { emailConfigured, reminderEmail, sendEmail } from '@/lib/email';
 
 // Lembretes de vencimento. Chamada diária pelo Vercel Cron (vercel.json) com "Authorization: Bearer CRON_SECRET".
@@ -70,9 +71,9 @@ export async function GET(request: Request) {
 
   const dry = new URL(request.url).searchParams.get('dry') === '1'; // só calcula, não envia nem registra
   const started = Date.now();
-  const channelsOn = { push: pushConfigured(), email: emailConfigured() };
+  const channelsOn = { push: pushConfigured() || apnsConfigured(), email: emailConfigured() };
   if (!channelsOn.push && !channelsOn.email) {
-    return NextResponse.json({ ok: true, note: 'Nenhum canal configurado (VAPID ou Resend).', channelsOn });
+    return NextResponse.json({ ok: true, note: 'Nenhum canal configurado (VAPID, APNs ou Resend).', channelsOn });
   }
 
   try {
@@ -157,13 +158,23 @@ export async function GET(request: Request) {
       if (dry) { if (wantPush) would.push++; if (wantEmail) would.email++; return; }
 
       if (wantPush) {
-        const { data: subs } = await admin.from('push_subscriptions').select('id,endpoint,p256dh,auth').eq('user_id', p.id);
-        if (subs && subs.length > 0 && (await claim(admin, p.id, 'push', today))) {
+        // Push do navegador (web push) e do app iOS (APNs): mesmo aviso, mesmo canal "push" por dia.
+        const [{ data: subs }, { data: natives }] = await Promise.all([
+          pushConfigured() ? admin.from('push_subscriptions').select('id,endpoint,p256dh,auth').eq('user_id', p.id) : Promise.resolve({ data: [] }),
+          apnsConfigured() ? admin.from('native_push_tokens').select('id,token').eq('user_id', p.id) : Promise.resolve({ data: [] }),
+        ]);
+        if (((subs && subs.length > 0) || (natives && natives.length > 0)) && (await claim(admin, p.id, 'push', today))) {
           let ok = false;
-          for (const s of subs) {
-            const r = await sendPush(s, { title: `Jakash · ${reminder.title}`, body: reminder.summary.slice(0, 160), url: '/contas', tag: `jakash-${today}` });
+          const message = { title: `Jakash · ${reminder.title}`, body: reminder.summary.slice(0, 160), url: '/contas', tag: `jakash-${today}` };
+          for (const s of subs ?? []) {
+            const r = await sendPush(s, message);
             if (r === 'ok') ok = true;
             if (r === 'gone') await admin.from('push_subscriptions').delete().eq('id', s.id);
+          }
+          for (const n of natives ?? []) {
+            const r = await sendApns(n.token, message);
+            if (r === 'ok') ok = true;
+            if (r === 'gone') await admin.from('native_push_tokens').delete().eq('id', n.id);
           }
           if (ok) counts.push.sent++; else { counts.push.failed++; await release(admin, p.id, 'push', today); }
         }

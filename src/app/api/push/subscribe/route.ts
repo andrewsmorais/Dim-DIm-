@@ -63,6 +63,9 @@ export async function DELETE(request: Request) {
 
   const admin = createAdminClient();
   await admin.from('push_subscriptions').delete().eq('user_id', user.id).eq('endpoint', parsed.data.endpoint);
-  const { count } = await admin.from('push_subscriptions').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
-  return NextResponse.json({ ok: true, remaining: count ?? 0 });
+  const [{ count }, { count: native }] = await Promise.all([
+    admin.from('push_subscriptions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    admin.from('native_push_tokens').select('id', { count: 'exact', head: true }).eq('user_id', user.id), // app iOS (tabela pode não existir ainda: conta 0)
+  ]);
+  return NextResponse.json({ ok: true, remaining: (count ?? 0) + (native ?? 0) });
 }
