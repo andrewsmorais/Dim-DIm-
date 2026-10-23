@@ -1,11 +1,11 @@
 # AI Context for Jakash
 AppName: Jakash
 Website: https://www.jakash.app
-Category: Personal Finance, Household Budget, WhatsApp Assistant
+Category: Personal Finance, Household Budget, AI Assistant
 Language: pt-BR
 Audience: Brazilians who want to organize personal, family or MEI finances without spreadsheets.
 
-Summary: Jakash records expenses and income sent as WhatsApp messages (AI-assisted), and shows balances, spending limits, bills, debts and goals in a dashboard.
+Summary: Jakash is an app to organize money day to day: transactions, bills, cards and installments, shopping list, debt payoff, goals, separate MEI tools and shared household management, with an AI assistant (Jaki) inside the app.
 
 Plans (BRL/month, 7-day free trial, no card required):
 - Essencial: R$ 19.90, 1 user

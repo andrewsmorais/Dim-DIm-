@@ -7,12 +7,12 @@ export const INSTAGRAM_URL = "https://www.instagram.com/jakashfinancas/";
 // o dado estruturado nunca pode dizer algo que a página não mostra. Preços vêm de lib/plans.
 export const FAQS: { q: string; a: string }[] = [
   {
-    q: "O que é o Jakash e como funciona o controle financeiro pelo WhatsApp?",
-    a: "O Jakash é um aplicativo de organização financeira com um assistente de Inteligência Artificial no WhatsApp. Você manda uma mensagem como “gastei 45 no mercado” e ele registra e categoriza o lançamento. No painel você acompanha saldo, limites de gastos, contas a pagar, dívidas e objetivos.",
+    q: "O que é o Jakash e como funciona?",
+    a: "O Jakash é um aplicativo para organizar o dinheiro no dia a dia. Você faz seus lançamentos, cadastra contas a pagar, cartões e parcelas, monta a lista de compras, acompanha limites, objetivos e o plano para sair das dívidas, separa as finanças do MEI e divide tudo com a família. Dentro do app, a Jaki, assistente de Inteligência Artificial, responde dúvidas sobre as suas finanças.",
   },
   {
     q: "Como a Inteligência Artificial ajuda na minha organização financeira?",
-    a: "A IA entende suas mensagens no WhatsApp, identifica valor, categoria e data e lança tudo para você. Ela pode errar, por isso vale conferir os lançamentos no painel e corrigir quando precisar.",
+    a: "No Chat da Jaki, dentro do app, você pergunta sobre os seus gastos e limites e recebe respostas com base nos seus dados. A IA também ajuda a ler extratos, faturas e comprovantes na hora de importar. Ela pode errar, por isso vale conferir tudo antes de salvar.",
   },
   {
     q: "Quais são os planos e os preços do Jakash?",
@@ -24,7 +24,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Funciona com o meu banco?",
-    a: "Funciona com qualquer banco, porque você registra os lançamentos pelo WhatsApp ou pelo app, ou importa extratos, e informa o saldo das suas contas. A conexão automática com bancos (Open Finance) ainda não está disponível.",
+    a: "Funciona com qualquer banco, porque você registra os lançamentos pelo app ou importa extratos, e informa o saldo das suas contas. A conexão automática com bancos (Open Finance) ainda não está disponível.",
   },
   {
     q: "Meus dados financeiros estão seguros no Jakash?",
@@ -73,7 +73,7 @@ export function homeJsonLd() {
         applicationCategory: "FinanceApplication",
         operatingSystem: "Web",
         inLanguage: "pt-BR",
-        description: "Aplicativo de controle financeiro com assistente de Inteligência Artificial no WhatsApp: lançamentos por mensagem, limites, contas a pagar, objetivos e gestão compartilhada.",
+        description: "Aplicativo para organizar o dinheiro no dia a dia, com assistente de Inteligência Artificial dentro do app: lançamentos, contas a pagar, cartões e parcelas, lista de compras, saída das dívidas, objetivos, MEI separado e gestão compartilhada.",
         url: SITE_URL,
         publisher: { "@id": `${SITE_URL}/#organization` },
         offers: PLAN_IDS.map((id) => ({

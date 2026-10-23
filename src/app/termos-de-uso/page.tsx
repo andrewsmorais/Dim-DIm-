@@ -11,17 +11,17 @@ export const metadata: Metadata = {
 export default function TermosPage() {
   return (
     <LegalPage path="/termos-de-uso" title="Termos de uso" subtitle="As regras para usar o Jakash, em linguagem simples.">
-      <p>Ao criar uma conta ou usar o Jakash (site, aplicativo e assistente no WhatsApp), você concorda com estes termos. Se não concordar, não use o serviço.</p>
+      <p>Ao criar uma conta ou usar o Jakash (site e aplicativo), você concorda com estes termos. Se não concordar, não use o serviço.</p>
 
       <h2>1. O que é o Jakash</h2>
-      <p>O Jakash é uma ferramenta de organização financeira: você registra gastos e receitas pelo aplicativo ou conversando com o assistente no WhatsApp, e acompanha saldos, limites, contas a pagar, objetivos e relatórios.</p>
+      <p>O Jakash é uma ferramenta de organização financeira: você registra gastos e receitas no aplicativo, conta com a Jaki, assistente de inteligência artificial dentro do app, e acompanha saldos, limites, contas a pagar, objetivos e relatórios.</p>
       <p><strong>O Jakash não é consultoria financeira, contábil, jurídica, tributária ou de investimentos.</strong> As informações e simulações servem para sua organização pessoal e não substituem a orientação de um profissional. O Jakash também não emite nota fiscal e, por enquanto, não se conecta automaticamente ao seu banco (Open Finance): os lançamentos vêm de você ou de arquivos que você importa.</p>
 
       <h2>2. Cadastro e segurança da conta</h2>
       <ul>
         <li>Você precisa ter 18 anos ou mais e informar dados verdadeiros.</li>
         <li>Você é responsável por manter sua senha em segredo e por tudo o que acontece na sua conta.</li>
-        <li>O número de WhatsApp conectado deve ser seu. Se perceber uso indevido, avise-nos imediatamente.</li>
+        <li>Se perceber uso indevido da sua conta, avise-nos imediatamente.</li>
       </ul>
 
       <h2>3. Planos, teste grátis e pagamento</h2>
@@ -37,7 +37,7 @@ export default function TermosPage() {
       <p>Você pode cancelar a renovação quando quiser, sem multa, em Configurações › Planos, e continua com acesso até o fim do período já pago. As regras de reembolso estão na <Link href="/politica-de-reembolso">Política de reembolso</Link>.</p>
 
       <h2>5. Gestão compartilhada</h2>
-      <p>Nos planos que permitem, você pode convidar outras pessoas para dividir as finanças. Quem aceita o convite passa a ver e editar os dados financeiros compartilhados (contas, lançamentos, cartões, contas a pagar, limites, objetivos, dívidas e investimentos). Perfil, assinatura, WhatsApp e conversas do chat continuam privados. Só convide quem você conhece e confia; qualquer participante pode encerrar o compartilhamento a qualquer momento.</p>
+      <p>Nos planos que permitem, você pode convidar outras pessoas para dividir as finanças. Quem aceita o convite passa a ver e editar os dados financeiros compartilhados (contas, lançamentos, cartões, contas a pagar, limites, objetivos, dívidas e investimentos). Perfil, assinatura e conversas do chat continuam privados. Só convide quem você conhece e confia; qualquer participante pode encerrar o compartilhamento a qualquer momento.</p>
 
       <h2>6. Assistente com inteligência artificial</h2>
       <ul>
@@ -53,7 +53,7 @@ export default function TermosPage() {
       <p>A marca Jakash, o código, o design e os textos são nossos ou licenciados para nós. Os dados que você registra continuam sendo seus.</p>
 
       <h2>9. Disponibilidade e responsabilidade</h2>
-      <p>Trabalhamos para manter o serviço no ar e seguro, mas não garantimos funcionamento ininterrupto: pode haver manutenção, falhas de internet ou instabilidade de terceiros (como WhatsApp e provedores de pagamento). Na medida permitida pela lei, não respondemos por decisões financeiras tomadas com base nas informações do app, nem por danos indiretos. Nada aqui limita direitos que a lei de defesa do consumidor garante a você.</p>
+      <p>Trabalhamos para manter o serviço no ar e seguro, mas não garantimos funcionamento ininterrupto: pode haver manutenção, falhas de internet ou instabilidade de terceiros (como provedores de pagamento e de inteligência artificial). Na medida permitida pela lei, não respondemos por decisões financeiras tomadas com base nas informações do app, nem por danos indiretos. Nada aqui limita direitos que a lei de defesa do consumidor garante a você.</p>
 
       <h2>10. Privacidade</h2>
       <p>Tratamos seus dados conforme a <Link href="/politica-de-privacidade">Política de privacidade</Link> e a <Link href="/politica-de-cookies">Política de cookies</Link>.</p>

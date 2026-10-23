@@ -2,7 +2,7 @@
   "id": "/dashboard",
   "name": "Jakash",
   "short_name": "Jakash",
-  "description": "Seu assistente financeiro no WhatsApp",
+  "description": "Organize seu dinheiro no dia a dia, com assistente de IA",
   "lang": "pt-BR",
   "start_url": "/dashboard",
   "scope": "/",

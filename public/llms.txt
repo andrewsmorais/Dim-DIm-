@@ -1,13 +1,14 @@
 # Jakash
 
-> Aplicativo brasileiro de organização financeira com um assistente de Inteligência Artificial no WhatsApp. Você manda uma mensagem como "gastei 45 no mercado" e o Jakash registra e categoriza; no painel você acompanha saldo, limites, contas a pagar, dívidas e objetivos.
+> Aplicativo brasileiro para organizar o dinheiro no dia a dia, com um assistente de Inteligência Artificial (a Jaki) dentro do app. No painel você acompanha saldo, limites, contas a pagar, cartões e parcelas, lista de compras, plano para sair das dívidas, objetivos, MEI separado e finanças da família.
 
 Site: https://www.jakash.app
 Idioma: português (Brasil)
 Instagram: https://www.instagram.com/jakashfinancas/
 
 ## O que o Jakash faz
-- Lançamentos de receitas e despesas pelo WhatsApp (texto) com IA. A IA pode errar; os lançamentos podem ser conferidos e corrigidos no painel.
+- Lançamentos de receitas e despesas pelo app, com categorias e subcategorias editáveis.
+- Chat da Jaki, assistente de IA dentro do app (planos Família e MEI). A IA pode errar; confira antes de salvar.
 - Painel com contas, cartões, categorias, limites de gastos, contas a pagar e recorrentes, objetivos e reserva de emergência.
 - Importação de extratos e faturas.
 - Gestão compartilhada (casal, família ou sócio) nos planos Família e MEI.

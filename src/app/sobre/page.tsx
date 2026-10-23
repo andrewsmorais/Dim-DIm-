@@ -4,19 +4,19 @@ import { LegalPage } from "@/components/LegalPage";
 
 export const metadata: Metadata = {
   title: "Sobre o Jakash",
-  description: "Quem somos e por que criamos o Jakash: finanças simples, direto no WhatsApp.",
+  description: "Quem somos e por que criamos o Jakash: organizar o dinheiro no dia a dia, sem complicação.",
   alternates: { canonical: "/sobre" },
 };
 
 export default function SobrePage() {
   return (
-    <LegalPage path="/sobre" title="Sobre o Jakash" subtitle="Finanças simples, direto no WhatsApp." updated={false}>
-      <p>O Jakash nasceu de uma ideia simples: controlar o dinheiro não deveria dar trabalho. Em vez de abrir planilhas e preencher campos, você manda uma mensagem, tipo <em>&ldquo;gastei 45 no mercado&rdquo;</em>, e o assistente lança, categoriza e mostra no painel para onde o seu dinheiro está indo.</p>
+    <LegalPage path="/sobre" title="Sobre o Jakash" subtitle="Organizar o dinheiro no dia a dia, sem complicação." updated={false}>
+      <p>O Jakash nasceu de uma ideia simples: controlar o dinheiro não deveria dar trabalho. Em vez de abrir planilhas e se perder em campos, você lança seus gastos, acompanha contas e cartões e vê no painel para onde o seu dinheiro está indo. Dentro do app, a Jaki, nossa assistente de inteligência artificial, ajuda a tirar dúvidas sobre as suas finanças.</p>
 
       <h2>O que fazemos</h2>
       <ul>
-        <li><strong>Lançamentos pelo WhatsApp</strong> com inteligência artificial.</li>
-        <li><strong>Painel completo:</strong> saldos, limites de gastos, contas a pagar, objetivos, reserva de emergência, dívidas e investimentos.</li>
+        <li><strong>Assistente de IA dentro do app</strong> (Chat da Jaki) para perguntar sobre as suas finanças.</li>
+        <li><strong>Painel completo:</strong> saldos, limites de gastos, contas a pagar, cartões e parcelas, lista de compras, objetivos, reserva de emergência, plano para sair das dívidas e investimentos.</li>
         <li><strong>Gestão compartilhada</strong> para casal, família ou sócios.</li>
         <li><strong>Ferramentas para MEI:</strong> limite anual, DASN, recibos e relatórios.</li>
       </ul>

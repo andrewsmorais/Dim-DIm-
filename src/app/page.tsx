@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CTAButton } from "@/components/CTAButton";
 import { FAQItem } from "@/components/FAQItem";
 import { SectionBadge } from "@/components/SectionBadge";
 import { PLANS, planPrice, type PlanId } from "@/lib/plans";
-import { formatPhone } from "@/lib/phone";
 import { FAQS, homeJsonLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import {
@@ -23,7 +22,7 @@ const LANDING_PLANS: { id: PlanId; title: string; subtitle: string; highlight?: 
     subtitle: "Para organizar as suas finanças",
     features: [
       "1 pessoa",
-      "Lançamentos pelo WhatsApp com IA",
+      "Lançamentos e importação de extrato (OFX, CSV, PDF)",
       "Painel com gráficos, limites e objetivos",
       "Contas a pagar, dívidas e reserva de emergência",
       "Lista de compras (Comprar)",
@@ -58,11 +57,6 @@ const LANDING_PLANS: { id: PlanId; title: string; subtitle: string; highlight?: 
 ];
 
 export default function LandingPage() {
-  const [botNumber, setBotNumber] = useState<string | null>(null);
-  useEffect(() => {
-    fetch("/api/whatsapp/bot").then((r) => (r.ok ? r.json() : null)).then((j) => setBotNumber(j?.number ?? null)).catch(() => setBotNumber(null));
-  }, []);
-
   // Intersection Observer for fade-in animations on scroll
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -101,11 +95,11 @@ export default function LandingPage() {
               </div>
               
               <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]">
-                Controle financeiro com Inteligência Artificial, direto no <span className="text-brand-dark italic">WhatsApp</span>
+                Organize seu dinheiro <span className="text-brand-dark italic">todo dia</span>, com uma assistente de IA dentro do app
               </h1>
               
               <p className="text-lg md:text-xl text-gray-500 mb-10 leading-relaxed max-w-xl font-medium">
-                Seu assistente financeiro com Inteligência Artificial. Mande “gastei 45 no mercado” no WhatsApp e o Jakash lança, categoriza e mostra no painel para onde vai o seu dinheiro.
+                Lançamentos, contas a pagar, cartões e parcelas, lista de compras, dívidas, objetivos, MEI separado e família. Tudo num lugar só, com a Jaki, a assistente de IA do app, para tirar dúvidas sobre as suas finanças.
               </p>
               
               <CTAButton text="Testar 7 dias grátis →" size="lg" className="h-16 px-10 text-lg w-full sm:w-auto" />
@@ -116,22 +110,22 @@ export default function LandingPage() {
               {/* Fake Phone Mockup */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[650px] bg-white border-[8px] border-gray-100 rounded-[3rem] shadow-2xl animate-float z-10 flex flex-col overflow-hidden ring-1 ring-gray-200">
                  <div className="w-32 h-6 bg-gray-100 absolute top-0 left-1/2 -translate-x-1/2 rounded-b-3xl z-20"></div>
-                 {/* WhatsApp BG */}
+                 {/* Avisos do app */}
                  <div className="flex-1 bg-[#F5F5F5] p-4 flex flex-col gap-4 pt-16">
                     {/* Floating Notifications */}
                     <div className="bg-white border border-gray-100 p-3 rounded-2xl shadow-sm relative -left-8 w-[110%]">
-                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Jakash - agora</span></div>
+                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-brand-dark rounded-full flex items-center justify-center text-white text-[10px] font-bold">J</div><span className="text-xs text-gray-400 font-bold">Jakash - agora</span></div>
                       <p className="text-sm text-gray-700 font-medium">Sua conta de luz vence amanhã: <span className="font-bold text-brand-dark">R$ 187,40</span></p>
                     </div>
 
                     <div className="bg-white border border-gray-100 p-3 rounded-2xl shadow-sm relative left-4 w-[100%]">
-                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Jakash - há 12 min</span></div>
-                      <p className="text-sm text-gray-700 font-medium">Anotei ✅ Mercado, <span className="font-bold text-brand-dark">R$ 45,00</span> em Alimentação</p>
+                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-brand-dark rounded-full flex items-center justify-center text-white text-[10px] font-bold">J</div><span className="text-xs text-gray-400 font-bold">Jakash - há 12 min</span></div>
+                      <p className="text-sm text-gray-700 font-medium">Lançamento salvo: Mercado, <span className="font-bold text-brand-dark">R$ 45,00</span> em Alimentação</p>
                     </div>
 
                     <div className="bg-white border border-gray-100 p-3 rounded-2xl shadow-sm relative -left-4 w-[105%]">
-                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">W</div><span className="text-xs text-gray-400 font-bold">Jakash - há 1h</span></div>
-                      <p className="text-sm text-gray-700 font-medium">Entrada registrada ✅ Salário, <span className="font-bold text-emerald-600">R$ 4.200,00</span></p>
+                      <div className="flex items-center gap-2 mb-1"><div className="w-5 h-5 bg-brand-dark rounded-full flex items-center justify-center text-white text-[10px] font-bold">J</div><span className="text-xs text-gray-400 font-bold">Jakash - há 1h</span></div>
+                      <p className="text-sm text-gray-700 font-medium">Entrada registrada: Salário, <span className="font-bold text-emerald-600">R$ 4.200,00</span></p>
                     </div>
                  </div>
               </div>
@@ -162,10 +156,10 @@ export default function LandingPage() {
                 jakash
               </div>
               <div className="bg-white border border-gray-100 shadow-sm p-8 rounded-[24px] flex items-center justify-center font-bold text-xl h-32 text-gray-900">
-                WhatsApp
+                Contas e<br/>cartões
               </div>
               <div className="bg-white border border-gray-100 shadow-sm p-8 rounded-[24px] flex items-center justify-center font-bold text-lg text-center h-32 text-gray-900">
-                Inteligência<br/>Artificial
+                Assistente<br/>de IA no app
               </div>
               <div className="bg-white border border-gray-100 shadow-sm p-8 rounded-[24px] flex flex-col items-center justify-center h-32 text-gray-400">
                 <Lock size={24} className="mb-2" />
@@ -180,7 +174,7 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto fade-in-section">
             <SectionBadge text="✓ SOLUÇÃO" />
             <h2 className="text-4xl md:text-5xl font-bold mb-16 max-w-2xl">
-              Por que usar um Assistente Financeiro com Inteligência Artificial?
+              Por que usar o Jakash para organizar o seu dinheiro?
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -189,7 +183,7 @@ export default function LandingPage() {
                   <CalendarDays size={32} />
                 </div>
                 <h3 className="text-xl font-bold mb-4">Lembretes de contas e vencimentos</h3>
-                <p className="text-gray-500 font-medium leading-relaxed">Contas a pagar, boletos e faturas de cartão no painel, com lembrete no WhatsApp para você não pagar juros.</p>
+                <p className="text-gray-500 font-medium leading-relaxed">Contas a pagar, boletos e faturas de cartão no painel, com lembrete por aviso no aparelho ou e-mail para você não pagar juros.</p>
               </div>
               
               <div className="bg-[var(--bg-1)] p-10 rounded-[2rem] hover:-translate-y-2 transition-transform duration-300">
@@ -217,11 +211,11 @@ export default function LandingPage() {
             <div className="lg:w-1/2">
               <SectionBadge text="✓ AUTOMAÇÃO" />
               <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-                Organização Financeira pelo WhatsApp, <br/>
-                <span className="text-brand-dark">sem anotar nada.</span>
+                Organização financeira no dia a dia, <br/>
+                <span className="text-brand-dark">sem complicação.</span>
               </h2>
               <p className="text-lg text-gray-500 font-medium mb-10 leading-relaxed">
-                Você manda a mensagem e ele lança e categoriza. Nas contas a pagar, o Jakash lembra você no WhatsApp antes do vencimento. Você só decide.
+                Cadastre suas contas a pagar e seus cartões. O Jakash lembra você antes do vencimento, por aviso no aparelho ou e-mail. Você só decide.
               </p>
               <CTAButton text="Testar 7 dias grátis →" />
             </div>
@@ -290,12 +284,12 @@ export default function LandingPage() {
                 Registro rápido, <span className="text-brand-dark">sem planilha</span>
               </h2>
               <p className="text-lg text-gray-500 font-medium mb-8 leading-relaxed">
-                Você conta o que gastou ou recebeu e o Jakash organiza: categoria, data e valor no lugar certo, com saldo, limites e objetivos sempre atualizados.
+                Você lança o que gastou ou recebeu e o Jakash organiza: categoria, data e valor no lugar certo, com saldo, limites e objetivos sempre atualizados.
               </p>
               <ul className="space-y-4 mb-10">
                 {[
-                  'Lançamentos pelo WhatsApp, em texto',
-                  'IA que categoriza para você',
+                  'Lançamentos rápidos pelo app',
+                  'Importação de extrato em OFX, CSV, planilha ou PDF',
                   'Categorias e subcategorias que você edita',
                   'Painel com saldo, limites e objetivos'
                 ].map((item, i) => (
@@ -347,8 +341,8 @@ export default function LandingPage() {
                 {/* Floating Chat Bubble */}
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white p-6 rounded-3xl shadow-2xl animate-float text-gray-900">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center text-white font-bold text-xs">W</div>
-                    <span className="font-bold text-sm text-gray-500">Jakash - agora</span>
+                    <div className="w-8 h-8 rounded-full bg-brand-dark flex items-center justify-center text-white font-bold text-xs">J</div>
+                    <span className="font-bold text-sm text-gray-500">Jaki - agora</span>
                   </div>
                   <p className="text-gray-900 text-[15px] font-medium leading-relaxed">
                     Você gastou R$ 312 em delivery este mês. Ainda está abaixo do orçamento: sobram R$ 88 para usar. 🍔
@@ -364,19 +358,19 @@ export default function LandingPage() {
           <div className="max-w-6xl mx-auto fade-in-section">
             <SectionBadge text="✓ INÍCIO" />
             <h2 className="text-4xl md:text-5xl font-bold mb-20">
-              Como funciona a <span className="text-brand-dark">Gestão Financeira no WhatsApp</span> em 3 passos
+              Como funciona o <span className="text-brand-dark">Jakash</span> em 3 passos
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
               <div className="bg-white rounded-[2rem] p-8 flex flex-col items-center shadow-sm">
                 <div className="h-32 flex items-center justify-center mb-6">
                   <div className="bg-gray-50 px-6 py-3 rounded-full font-mono font-bold text-lg border border-gray-100 flex items-center gap-3 text-gray-700">
-                    <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center">W</div>
-                    {botNumber ? formatPhone(botNumber) : "Assistente no WhatsApp"}
+                    <div className="w-8 h-8 rounded-full bg-brand-dark text-white flex items-center justify-center">J</div>
+                    Crie sua conta
                   </div>
                 </div>
                 <h3 className="font-bold text-xl mb-2 text-brand-dark">Passo 1</h3>
-                <p className="text-gray-500 font-medium">Cadastro rápido com seu WhatsApp.</p>
+                <p className="text-gray-500 font-medium">Cadastro rápido, com 7 dias grátis e sem cartão.</p>
               </div>
 
               <div className="bg-white rounded-[2rem] p-8 flex flex-col items-center shadow-sm">
@@ -398,7 +392,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <h3 className="font-bold text-xl mb-2 text-brand-dark">Passo 3</h3>
-                <p className="text-gray-500 font-medium">Pronto! Mande suas mensagens e o Jakash lança e categoriza para você.</p>
+                <p className="text-gray-500 font-medium">Pronto! Lance seus gastos e acompanhe tudo no painel.</p>
               </div>
             </div>
             
