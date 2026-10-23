@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
     let content: string | null | undefined;
     try {
-      const context = await buildChatContext(supabase, today);
+      const context = await buildChatContext(supabase, today, { userId: user.id, createdAt: user.created_at });
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       const completion = await openai.chat.completions.create({
         model: process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',

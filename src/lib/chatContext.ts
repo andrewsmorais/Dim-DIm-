@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cardUsed, dueDateFor, invoiceMonthFor, type InvoiceRow } from '@/lib/cards';
 import { limitForYear, limitStatus, planLimit, profitSummary, toSummary } from '@/lib/mei';
+import { coreOnlyFor, hiddenIds, type CatFull, type VisibilityRow } from '@/lib/categoryVisibility';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -22,10 +23,11 @@ type Cat = { id: string; name: string; type: 'income' | 'expense'; parent_id: st
 type Tx = { description: string; amount: number | string; type: 'income' | 'expense'; date: string; category_id: string | null };
 
 // Resumo compacto das finanças do usuário (com a sessão dele, então respeita o RLS e a gestão compartilhada).
-export async function buildChatContext(db: SupabaseClient, today: string) {
+// `who` (opcional): para a Jaki só sugerir as categorias que a pessoa deixou à mostra em Categorias.
+export async function buildChatContext(db: SupabaseClient, today: string, who?: { userId: string; createdAt?: string | null }) {
   const { start, end, prevStart, in30 } = bounds(today);
-  const [c, t, a, b, bd, g, d, k, s, iv, pf] = await Promise.all([
-    db.from('categories').select('id,name,type,parent_id'),
+  const [c, t, a, b, bd, g, d, k, s, iv, pf, vis] = await Promise.all([
+    db.from('categories').select('id,name,type,parent_id,is_default,user_id'),
     db.from('transactions').select('description,amount,type,date,category_id').gte('date', prevStart).lt('date', end).order('date', { ascending: false }).limit(1500),
     db.rpc('account_balances'),
     db.from('bills').select('description,amount,due_date,type').eq('status', 'pending').lte('due_date', in30).order('due_date').limit(15),
@@ -36,6 +38,7 @@ export async function buildChatContext(db: SupabaseClient, today: string) {
     db.rpc('card_invoice_summary'),
     db.from('investments').select('name,kind,invested,current_value').eq('archived', false).limit(15),
     db.from('profiles').select('usage_type,mei_activity,mei_opened_on,mei_annual_limit').maybeSingle(),
+    who ? db.from('category_visibility').select('category_id,hidden') : Promise.resolve({ data: [], error: null }),
   ]);
 
   const cats = (c.data ?? []) as Cat[];
@@ -88,7 +91,11 @@ export async function buildChatContext(db: SupabaseClient, today: string) {
     nome: x.name, tipo: x.kind, aportado: r2(Number(x.invested)), valor_atual: r2(Number(x.current_value)),
   }));
 
-  const roots = (type: 'income' | 'expense') => cats.filter((x) => x.type === type && !x.parent_id).map((x) => x.name);
+  // Categorias escondidas pela pessoa não entram na lista que a Jaki usa para sugerir (os nomes antigos continuam no histórico).
+  const hidden = who && !vis.error
+    ? hiddenIds(cats as CatFull[], (vis.data ?? []) as VisibilityRow[], coreOnlyFor(who.createdAt), who.userId)
+    : new Set<string>();
+  const roots = (type: 'income' | 'expense') => cats.filter((x) => x.type === type && !x.parent_id && !hidden.has(x.id)).map((x) => x.name);
 
   const prof = pf.data as { usage_type: string; mei_activity: string; mei_opened_on: string | null; mei_annual_limit: number | string } | null;
   const isMei = prof?.usage_type === 'empresarial' || prof?.usage_type === 'ambos';
