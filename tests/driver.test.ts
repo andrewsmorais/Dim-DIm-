@@ -111,3 +111,12 @@ t("Planilha: resumo com ganho bruto, despesas e lucro líquido no topo; sem fór
 });
 
 console.log(`ok: ${pass} testes`);
+
+// Pacote MEI só no Empresarial (teste grátis libera tudo).
+import { meiLocked } from "../src/lib/plans";
+assert.equal(meiLocked({ plan: "cpf", status: "active" }), true);
+assert.equal(meiLocked({ plan: "familia", status: "active" }), true);
+assert.equal(meiLocked({ plan: "mei", status: "active" }), false);
+assert.equal(meiLocked({ plan: "cpf", status: "trial" }), false);
+assert.equal(meiLocked(null), false);
+console.log("ok: pacote MEI por plano");

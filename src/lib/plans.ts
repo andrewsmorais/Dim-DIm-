@@ -93,3 +93,8 @@ export function aiDailyLimit(plan?: string | null): number {
   const id = canonicalPlan(plan);
   return id ? PLANS[id].aiDaily : PLANS.cpf.aiDaily;
 }
+
+// Pacote MEI: só no Empresarial (e no teste grátis). Quem assina o Pessoal vê o convite para mudar de plano.
+export function meiLocked(info: { plan?: string | null; status?: string | null } | null): boolean {
+  return Boolean(info && canonicalPlan(info.plan) === 'cpf' && info.status !== 'trial');
+}
