@@ -65,6 +65,14 @@ async function release(admin: Admin, userId: string, channel: Channel, refDate: 
   await admin.from('notification_log').delete().eq('user_id', userId).eq('channel', channel).eq('ref_date', refDate);
 }
 
+function withDeadline<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    p,
+    new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('tempo esgotado')), ms); }),
+  ]).finally(() => { if (timer) clearTimeout(timer); });
+}
+
 export async function GET(request: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ error: 'CRON_SECRET não configurada.' }, { status: 503 });
   if (!authorized(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -194,7 +202,9 @@ export async function GET(request: Request) {
 
     for (let i = 0; i < profiles.length; i += BATCH) {
       if (Date.now() - started > TIME_BUDGET_MS) { timedOut = true; break; }
-      await Promise.all(profiles.slice(i, i + BATCH).map((p) => notify(p).catch((e) => console.error('[reminders] usuário', (e as Error).message))));
+      // Prazo por usuário: um envio travado não segura o lote nem os lotes seguintes.
+      const left = Math.max(1000, TIME_BUDGET_MS - (Date.now() - started));
+      await Promise.all(profiles.slice(i, i + BATCH).map((p) => withDeadline(notify(p), left).catch((e) => console.error('[reminders] usuário', (e as Error).message))));
     }
 
     // Registros antigos não servem mais (a deduplicação só olha o dia).

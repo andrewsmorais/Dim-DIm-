@@ -16,7 +16,8 @@
     "test:import": "tsx --tsconfig tsconfig.json tests/import-categories.test.ts",
     "test:driver": "tsx --tsconfig tsconfig.json tests/driver.test.ts",
     "test:suppliers": "tsx --tsconfig tsconfig.json tests/mei-suppliers.test.ts",
-    "test:nota": "tsx --tsconfig tsconfig.json tests/mei-nota.test.ts"
+    "test:nota": "tsx --tsconfig tsconfig.json tests/mei-nota.test.ts",
+    "test:security": "tsx --tsconfig tsconfig.json tests/security-fixes.test.ts"
   },
   "dependencies": {
     "@aparajita/capacitor-biometric-auth": "^10.0.0",

@@ -131,9 +131,12 @@ export async function POST(request: Request) {
       if (existingUrl) return NextResponse.json({ success: true, paymentUrl: existingUrl });
     }
 
-    // 5. Assinatura mensal com 7 dias de teste
+    // 5. Assinatura mensal. Teste grátis só uma vez por conta: quem já teve assinatura no Asaas
+    //    (o cancelamento mantém asaas_subscription_id) ou pela App Store paga desde o primeiro dia.
+    const trialUsed = Boolean(profile.asaas_subscription_id) || Boolean(billing?.billing_provider === 'apple');
+    const trialDays = trialUsed ? 0 : 7;
     const nextDueDate = new Date();
-    nextDueDate.setDate(nextDueDate.getDate() + 7);
+    nextDueDate.setDate(nextDueDate.getDate() + trialDays);
     const subscription = await asaas('/subscriptions', apiKey, {
       method: 'POST',
       body: JSON.stringify({
@@ -150,15 +153,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: subscription.errors?.[0]?.description || 'Não foi possível criar a assinatura' }, { status: 400 });
     }
 
-    // Guarda a assinatura e marca o período de teste (o webhook muda para "active" quando pagar)
-    await admin
+    // Guarda a assinatura. Primeiro teste: 'trial' até a data da cobrança. Sem teste: 'unpaid' (sem acesso)
+    // até o webhook marcar 'active' no pagamento.
+    const { error: subSaveError } = await admin
       .from('profiles')
       .update({
         asaas_subscription_id: subscription.id,
-        subscription_status: 'trial',
+        subscription_status: trialDays > 0 ? 'trial' : 'unpaid',
         subscription_expires_at: nextDueDate.toISOString(),
       })
       .eq('id', user.id);
+    if (subSaveError) {
+      console.error('Checkout: assinatura criada mas não salva no perfil', subSaveError);
+      await fetch(`${ASAAS_URL}/subscriptions/${encodeURIComponent(subscription.id as string)}`, {
+        method: 'DELETE',
+        headers: { access_token: apiKey },
+      }).catch(() => undefined);
+      return NextResponse.json({ error: 'Erro interno ao processar assinatura.' }, { status: 500 });
+    }
 
     // 6. Link real da primeira cobrança (invoiceUrl)
     const payments = await asaas(`/subscriptions/${subscription.id}/payments`, apiKey);

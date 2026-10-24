@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { aiDailyLimit } from '@/lib/plans';
-import { getEntitlement } from '@/lib/entitlements';
+import { getEntitlement, isEntitled } from '@/lib/entitlements';
 import { CHAT_SYSTEM_PROMPT } from '@/lib/chatPrompt';
 import { buildChatContext } from '@/lib/chatContext';
 import { parseChatOutput, type ChatAction } from '@/lib/chatActions';
@@ -12,7 +12,6 @@ import { parseChatOutput, type ChatAction } from '@/lib/chatActions';
 export const maxDuration = 30;
 
 // Quem pode usar o chat (cada mensagem tem custo): assinatura em teste, ativa ou com pagamento atrasado.
-const ALLOWED_STATUS = ['trial', 'active', 'past_due'];
 
 function todayInSaoPaulo(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
@@ -52,7 +51,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const ent = await getEntitlement(admin, user.id);
     if (!ent) return NextResponse.json({ error: 'Perfil não encontrado.' }, { status: 404 });
-    if (!ALLOWED_STATUS.includes(String(ent.status))) {
+    if (!isEntitled(ent)) {
       return NextResponse.json({ error: 'Sua assinatura não está ativa. Renove em Configurações › Planos para usar o chat.' }, { status: 402 });
     }
 

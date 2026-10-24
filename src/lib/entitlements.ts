@@ -14,7 +14,12 @@ export type Entitlement = {
 type ProfileRow = { subscription_status: string | null; subscription_plan: string | null; subscription_expires_at: string | null };
 const COLS = 'subscription_status, subscription_plan, subscription_expires_at';
 
-const isLive = (p: ProfileRow | null | undefined) => Boolean(p && LIVE_STATUS.includes(String(p.subscription_status)));
+// Teste grátis que já passou do prazo não vale (status continua 'trial' no banco depois de vencer).
+const trialExpired = (status: string | null, expiresAt: string | null, now: number) =>
+  status === 'trial' && Boolean(expiresAt) && new Date(expiresAt as string).getTime() < now;
+
+const isLive = (p: ProfileRow | null | undefined, now = Date.now()) =>
+  Boolean(p && LIVE_STATUS.includes(String(p.subscription_status)) && !trialExpired(p.subscription_status, p.subscription_expires_at, now));
 
 // Plano e status que valem para o usuário: o próprio; se ele não tem assinatura ativa mas é membro
 // de uma casa cujo dono tem, vale a do dono (o convidado não paga de novo). Só servidor (service role).
@@ -37,6 +42,5 @@ export async function getEntitlement(admin: SupabaseClient, userId: string): Pro
 // Acesso válido agora: status pago e, se for teste, ainda dentro do prazo.
 export function isEntitled(ent: Entitlement | null | undefined, now = Date.now()): boolean {
   if (!ent || !LIVE_STATUS.includes(String(ent.status))) return false;
-  if (ent.status === 'trial' && ent.expiresAt && new Date(ent.expiresAt).getTime() < now) return false;
-  return true;
+  return !trialExpired(ent.status, ent.expiresAt, now);
 }

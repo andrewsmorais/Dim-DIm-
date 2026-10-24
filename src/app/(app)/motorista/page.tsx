@@ -174,7 +174,7 @@ function LaunchDialog({ supabase, userId, shift, onClose }: { supabase: ReturnTy
     if (inc.error || !inc.data) { setBusy(false); setError("Não foi possível lançar o ganho."); return; }
     let expenseId: string | null = null;
     if (withFuel && fuel > 0) {
-      const cat = await supabase.from("categories").select("id").eq("is_default", true).ilike("name", "Combustível").limit(1).maybeSingle();
+      const cat = await supabase.from("categories").select("id").eq("is_default", true).is("user_id", null).ilike("name", "Combustível").limit(1).maybeSingle();
       const exp = await supabase.from("transactions").insert({
         user_id: userId, description: `Combustível ${dm} (estimado)`, amount: fuel, type: "expense", date: shift.date,
         category_id: (cat.data as { id: string } | null)?.id ?? null, account_id: accountId || null, origin: "manual", is_business: false,

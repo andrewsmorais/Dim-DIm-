@@ -5,7 +5,7 @@ import { extractText } from 'unpdf';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { aiDailyLimit } from '@/lib/plans';
-import { getEntitlement } from '@/lib/entitlements';
+import { getEntitlement, isEntitled } from '@/lib/entitlements';
 
 // Lê PDF (com texto) e foto de extrato, fatura, nota ou comprovante e devolve uma lista de lançamentos para a pessoa CONFERIR.
 // Nada é salvo aqui: quem grava é a tela de importação, depois da confirmação. O conteúdo do arquivo é tratado só como dado.
@@ -17,7 +17,6 @@ export const maxDuration = 60;
 const MAX_BYTES = 4 * 1024 * 1024; // limite de corpo das funções da Vercel é 4,5 MB
 const MAX_PDF_PAGES = 30;
 const MAX_TEXT = 24_000;
-const ALLOWED_STATUS = ['trial', 'active', 'past_due'];
 
 function todayInSaoPaulo(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
@@ -60,7 +59,7 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
   const profile = await getEntitlement(admin, user.id);
-  if (!profile || !ALLOWED_STATUS.includes(String(profile.status))) {
+  if (!profile || !isEntitled(profile)) {
     return NextResponse.json({ error: 'Sua assinatura não está ativa. Renove em Configurações › Planos.' }, { status: 402 });
   }
 
