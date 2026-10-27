@@ -19,9 +19,9 @@ function FlexTip({ v }: { v: Vehicle }) {
   return <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Com esses preços, {a.best} compensa: {brl(a[a.best])}/km contra {brl(a[a.best === "etanol" ? "gasolina" : "etanol"])}/km.</p>;
 }
 
-export function VehiclesPanel({ supabase, userId, vehicles, onChanged }: { supabase: unknown; userId: string; vehicles: Vehicle[]; onChanged: () => void }) {
+export function VehiclesPanel({ supabase, userId, vehicles, onChanged, startNew = false }: { supabase: unknown; userId: string; vehicles: Vehicle[]; onChanged: () => void; startNew?: boolean }) {
   const db = supabase as Db;
-  const [editing, setEditing] = useState<string | "new" | null>(vehicles.length ? null : "new");
+  const [editing, setEditing] = useState<string | "new" | null>(startNew || !vehicles.length ? "new" : null);
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

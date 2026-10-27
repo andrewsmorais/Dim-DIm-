@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, FileDown, Pencil, Printer, Send, Trash2 } from "lucide-react";
 import { brl, formatDateBR } from "@/lib/format";
 import { hoursLabel, shiftMetrics, summarize, type Shift, type Vehicle } from "@/lib/driver";
-import { platformOf } from "@/lib/driverPlatforms";
+import { platformOf, quantityLabel } from "@/lib/driverPlatforms";
 import { driverCsv, driverFileName } from "@/lib/driverExport";
 import { saveOrShareText } from "@/lib/nativeShare";
 import { PlatformBadge } from "@/components/driver/PlatformBadge";
@@ -50,7 +50,7 @@ export function ResultsPanel({ shifts, vehicles, period, platform, vehicleId, on
         </div>
       )}
 
-      {sum.days === 0 ? <Card><Empty>Nenhum dia registrado neste período{platform ? " nesta plataforma" : ""}.</Empty></Card> : (
+      {sum.days === 0 ? <Card><Empty>Nenhum turno registrado neste período{platform ? " nesta plataforma" : ""}.</Empty></Card> : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Card className="!p-4 !bg-emerald-50 dark:!bg-emerald-500/10"><p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Ganho bruto</p><p className="text-2xl font-extrabold">{brl(t.gross)}</p><p className="text-xs text-gray-500">{perH(t.grossPerHour)} · {perKm(t.grossPerKm)}</p></Card>
@@ -63,7 +63,7 @@ export function ResultsPanel({ shifts, vehicles, period, platform, vehicleId, on
               <div><dt className="text-xs text-gray-500">Dias</dt><dd className="font-extrabold">{sum.days}</dd></div>
               <div><dt className="text-xs text-gray-500">Horas</dt><dd className="font-extrabold">{t.hours ? hoursLabel(t.hours) : "—"}</dd></div>
               <div><dt className="text-xs text-gray-500">Km rodados</dt><dd className="font-extrabold">{t.km.toLocaleString("pt-BR")} km</dd></div>
-              <div><dt className="text-xs text-gray-500">Corridas</dt><dd className="font-extrabold">{t.trips || "—"}</dd></div>
+              <div><dt className="text-xs text-gray-500">Corridas/entregas</dt><dd className="font-extrabold">{t.trips || "—"}</dd></div>
               <div><dt className="text-xs text-gray-500">Combustível</dt><dd className="font-extrabold">{brl(t.fuel)}</dd></div>
               <div><dt className="text-xs text-gray-500">Custo do carro</dt><dd className="font-extrabold">{brl(t.vehicle)}</dd></div>
               <div><dt className="text-xs text-gray-500">Outros gastos</dt><dd className="font-extrabold">{brl(t.extras)}</dd></div>
@@ -79,7 +79,7 @@ export function ResultsPanel({ shifts, vehicles, period, platform, vehicleId, on
                 {all.byPlatform.map((p) => (
                   <button key={p.platform} type="button" onClick={() => onPlatform(p.platform)} className="w-full flex items-center gap-3 py-2.5 text-left">
                     <PlatformBadge platform={p.platform} size={32} />
-                    <span className="flex-1 min-w-0"><span className="block font-bold text-sm truncate">{platformOf(p.platform).name}</span><span className="block text-xs text-gray-500">{p.days} {p.days === 1 ? "dia" : "dias"}{p.metrics.trips ? ` · ${p.metrics.trips} corridas` : ""}</span></span>
+                    <span className="flex-1 min-w-0"><span className="block font-bold text-sm truncate">{platformOf(p.platform).name}</span><span className="block text-xs text-gray-500">{p.days} {p.days === 1 ? "dia" : "dias"}{p.metrics.trips ? ` · ${p.metrics.trips} ${quantityLabel(p.platform, p.metrics.trips)}` : ""}</span></span>
                     <span className="text-right"><span className="block font-extrabold text-sm">{brl(p.metrics.gross)}</span><span className="block text-[11px] text-gray-500">{p.estimatedHours ? "≈ " : ""}{perH(p.metrics.grossPerHour)} · {perKm(p.metrics.grossPerKm)}</span></span>
                   </button>
                 ))}

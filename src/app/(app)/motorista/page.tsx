@@ -8,9 +8,10 @@ import { platformOf } from "@/lib/driverPlatforms";
 import { ShiftForm, type LastUsed } from "@/components/driver/ShiftForm";
 import { ResultsPanel, type Period } from "@/components/driver/ResultsPanel";
 import { VehiclesPanel } from "@/components/driver/VehiclesPanel";
+import { TurnosPanel } from "@/components/driver/TurnosPanel";
 import { BackTitle, Card, Empty, ErrorNote, Label, Toggle, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
 
-type Tab = "dia" | "resultados" | "carros";
+type Tab = "turnos" | "resultados" | "carros";
 type Preset = "7d" | "mes" | "mes_passado" | "30d" | "custom";
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -28,7 +29,12 @@ type Acc = { id: string; name: string };
 
 export default function MotoristaPage() {
   const { supabase, userId, ready } = useSupabase();
-  const [tab, setTab] = useState<Tab>("dia");
+  const [tab, setTab] = useState<Tab>("turnos");
+  const [formOpen, setFormOpen] = useState(false);
+  const [day, setDay] = useState("");
+  const [turnos, setTurnos] = useState<Shift[]>([]);
+  const [turnosLoading, setTurnosLoading] = useState(true);
+  const [newVehicle, setNewVehicle] = useState(0);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,9 +64,20 @@ export default function MotoristaPage() {
     setShifts(((data ?? []) as Record<string, unknown>[]).map(normalizeShift));
   }, [supabase, period.from, period.to]);
 
-  // Carro e combustível do último dia registrado: o próximo dia já começa com eles.
+  // Histórico do menu Turnos: o dia escolhido ou os mais recentes.
+  const loadTurnos = useCallback(async () => {
+    setTurnosLoading(true);
+    let q = supabase.from("driver_shifts").select(SHIFT_COLUMNS);
+    q = day ? q.eq("date", day) : q;
+    const { data, error: err } = await q.order("date", { ascending: false }).order("created_at", { ascending: false }).limit(day ? 50 : 60);
+    setTurnosLoading(false);
+    if (err) { setError("Não foi possível carregar os turnos."); return; }
+    setTurnos(((data ?? []) as Record<string, unknown>[]).map(normalizeShift));
+  }, [supabase, day]);
+
+  // Veículo, combustível e KM final do último turno: o próximo já começa com eles.
   const loadLast = useCallback(async () => {
-    const { data } = await supabase.from("driver_shifts").select("vehicle_id,fuel").order("date", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data } = await supabase.from("driver_shifts").select("vehicle_id,fuel,km_end").order("date", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle();
     setLastUsed((data as LastUsed) ?? null);
   }, [supabase]);
 
@@ -69,43 +86,53 @@ export default function MotoristaPage() {
     Promise.all([loadVehicles(), loadShifts(), loadLast()]).then(() => setLoading(false));
   }, [ready, userId, loadVehicles, loadShifts, loadLast]);
 
+  useEffect(() => { if (ready && userId) loadTurnos(); }, [ready, userId, loadTurnos]);
+
   async function remove(s: Shift) {
-    if (!window.confirm(`Excluir o dia ${formatDateBR(s.date)}?${s.income_tx_id ? " Os lançamentos que você mandou para o financeiro continuam lá." : ""}`)) return;
+    if (!window.confirm(`Excluir o turno de ${formatDateBR(s.date)}?${s.income_tx_id ? " Os lançamentos que você mandou para o financeiro continuam lá." : ""}`)) return;
     const { error: err } = await supabase.from("driver_shifts").delete().eq("id", s.id);
-    if (err) setError("Não foi possível excluir."); else loadShifts();
+    if (err) setError("Não foi possível excluir."); else { loadShifts(); loadTurnos(); }
   }
 
   async function afterSave() {
-    setSaved(editing ? "Dia atualizado." : "Dia salvo! Veja o resumo em Resultados.");
-    if (editing) setTab("resultados");
+    setSaved(editing ? "Turno atualizado." : "Turno salvo!");
     setEditing(null);
+    setFormOpen(false);
+    setTab("turnos");
     await loadLast();
     setFormKey((k) => k + 1);
     loadShifts();
+    loadTurnos();
   }
+
+  function openNew() { setEditing(null); setSaved(null); setFormKey((k) => k + 1); setFormOpen(true); setTab("turnos"); }
+  function openEdit(s: Shift) { setEditing(s); setSaved(null); setFormOpen(true); setTab("turnos"); }
+  function addVehicle() { setNewVehicle((n) => n + 1); setFormOpen(false); setTab("carros"); }
 
   if (loading) return <div className="max-w-3xl mx-auto"><BackTitle title="Motorista de app" /><Empty>Carregando…</Empty></div>;
 
   return (
     <div className="max-w-3xl mx-auto pb-24">
-      <BackTitle title="Motorista de app" subtitle="Registre o dia e veja quanto sobrou: ganho por hora, por km e o lucro de verdade." />
+      <BackTitle title="Motorista de app" subtitle="Registre cada turno: quanto rodou, quanto ganhou e quanto gastou. Os resultados usam só os turnos." />
 
       {setupNeeded ? <Card><Empty>Esta área fica disponível depois da próxima atualização do app.</Empty></Card> : (
         <>
           <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4">
-            {([["dia", editing ? "Editar dia" : "Registrar dia"], ["resultados", "Resultados"], ["carros", "Meus carros"]] as const).map(([k, l]) => (
-              <button key={k} onClick={() => { setTab(k); setSaved(null); }} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+            {([["turnos", "Turnos"], ["resultados", "Resultados"], ["carros", "Meus carros"]] as const).map(([k, l]) => (
+              <button key={k} onClick={() => { setTab(k); setSaved(null); if (k !== "turnos") { setFormOpen(false); setEditing(null); } }} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
             ))}
           </div>
 
-          {tab === "dia" && (
+          {tab === "turnos" && (
             <>
-              {saved && <p className="text-sm font-bold text-emerald-600 mb-3">{saved}</p>}
-              {vehicles.filter((v) => !v.archived).length === 0 && !editing && (
-                <Card className="mb-4 !p-4"><p className="text-sm">Cadastre seu carro em <button className="font-bold text-brand-dark dark:text-brand-soft underline" onClick={() => setTab("carros")}>Meus carros</button> para o app calcular o combustível. Dá para registrar o dia sem carro também.</p></Card>
+              {saved && !formOpen && <p className="text-sm font-bold text-emerald-600 mb-3">{saved}</p>}
+              {formOpen ? (
+                <ShiftForm key={`${formKey}-${editing?.id ?? "novo"}`} supabase={supabase} userId={userId!} vehicles={vehicles} editing={editing} lastUsed={lastUsed}
+                  onSaved={afterSave} onCancel={() => { setFormOpen(false); setEditing(null); }} onAddVehicle={addVehicle} />
+              ) : (
+                <TurnosPanel shifts={turnos} vehicles={vehicles} day={day} onDay={setDay} onNew={openNew} onAddVehicle={addVehicle}
+                  onEdit={openEdit} onDelete={remove} onLaunch={setLaunching} loading={turnosLoading} error={error} />
               )}
-              <ShiftForm key={`${formKey}-${editing?.id ?? "novo"}`} supabase={supabase} userId={userId!} vehicles={vehicles} editing={editing} lastUsed={lastUsed}
-                onSaved={afterSave} onCancel={editing ? () => { setEditing(null); setTab("resultados"); } : undefined} />
             </>
           )}
 
@@ -132,15 +159,15 @@ export default function MotoristaPage() {
                 <p className="text-xs text-gray-400">{formatDateBR(period.from)} a {formatDateBR(period.to)}</p>
               </Card>
               <ResultsPanel shifts={shifts} vehicles={vehicles} period={period} platform={platform} vehicleId={vehicleId} onPlatform={setPlatform}
-                onEdit={(s) => { setEditing(s); setTab("dia"); setSaved(null); }} onDelete={remove} onLaunch={setLaunching} error={error} />
+                onEdit={openEdit} onDelete={remove} onLaunch={setLaunching} error={error} />
             </>
           )}
 
-          {tab === "carros" && <VehiclesPanel supabase={supabase} userId={userId!} vehicles={vehicles} onChanged={loadVehicles} />}
+          {tab === "carros" && <VehiclesPanel key={newVehicle} supabase={supabase} userId={userId!} vehicles={vehicles} onChanged={loadVehicles} startNew={newVehicle > 0} />}
         </>
       )}
 
-      {launching && <LaunchDialog supabase={supabase} userId={userId!} shift={launching} onClose={(done) => { setLaunching(null); if (done) loadShifts(); }} />}
+      {launching && <LaunchDialog supabase={supabase} userId={userId!} shift={launching} onClose={(done) => { setLaunching(null); if (done) { loadShifts(); loadTurnos(); } }} />}
     </div>
   );
 }

@@ -1,15 +1,15 @@
 // Testes offline do Motorista de app: horas, combustível, ganho por hora/km, divisão por plataforma e exportação.
 // Rodar: npm run test:driver
 import assert from "node:assert/strict";
-import { flexAdvice, fuelCost, normalizeVehicle, vehicleFuelFor, normalizeShift, platformShare, shiftMetrics, summarize, workedHours, type Shift } from "../src/lib/driver";
-import { platformKeyFromName, platformOf } from "../src/lib/driverPlatforms";
+import { flexAdvice, fuelCost, normalizeVehicle, vehicleFuelFor, normalizeShift, platformShare, shiftMetrics, summarize, workedHours, turnoSummary, turnoMissing, kmOf, type Shift } from "../src/lib/driver";
+import { platformKeyFromName, platformOf, quantityLabel } from "../src/lib/driverPlatforms";
 import { driverCsv } from "../src/lib/driverExport";
 
 let pass = 0;
 const t = (name: string, fn: () => void) => { try { fn(); pass++; } catch (e) { console.error(`FALHOU: ${name}`); throw e; } };
 
 const base: Shift = {
-  id: "s1", date: "2026-10-20", vehicle_id: "v1", start_time: "08:00", end_time: "18:00", break_minutes: 60, km: 200,
+  id: "s1", date: "2026-10-20", vehicle_id: "v1", start_time: "08:00", end_time: "18:00", break_minutes: 60, km_start: null, km_end: null, km: 200,
   fuel: "gasolina", efficiency: 12.5, fuel_price: 6, cost_per_km: 0.1, rent: 0,
   earnings: [{ platform: "uber", amount: 300 }, { platform: "99", amount: 100 }], tips: 20,
   tolls: 10, parking: 0, wash: 0, food: 25, other_cost: 0, notes: null, income_tx_id: null, expense_tx_id: null,
@@ -135,3 +135,35 @@ assert.equal(meiLocked({ plan: "mei", status: "active" }), false);
 assert.equal(meiLocked({ plan: "cpf", status: "trial" }), false);
 assert.equal(meiLocked(null), false);
 console.log("ok: pacote MEI por plano");
+
+// Menu Turnos: contas e campos obrigatórios.
+{
+  const turno: Shift = {
+    ...base, km_start: 45210, km_end: 45390, km: 180, efficiency: 12, fuel_price: 6, cost_per_km: 0, rent: 0, tips: 0,
+    earnings: [{ platform: "uber", amount: 250, trips: 14 }, { platform: "ifood", amount: 90, trips: 6 }],
+    tolls: 10, parking: 0, wash: 15, food: 25, other_cost: 0,
+  };
+  const r = turnoSummary(turno);
+  assert.equal(kmOf(turno), 180); // KM final − KM inicial
+  assert.equal(r.liters, 15); // 180 ÷ 12
+  assert.equal(r.fuel, 90); // 15 × 6
+  assert.equal(r.other, 50);
+  assert.equal(r.expenses, 140); // combustível + outras
+  assert.equal(r.earnings, 340);
+  assert.equal(r.net, 200); // ganhos − despesas
+  assert.equal(r.netPerKm, 1.11);
+  assert.equal(r.fuelPerKm, 0.5);
+  assert.deepEqual(turnoMissing(turno), []);
+  const vazio: Shift = { ...turno, vehicle_id: null, km_start: null, km_end: null, start_time: null, end_time: null, fuel: null, fuel_price: null, efficiency: null, earnings: [] };
+  assert.deepEqual(turnoMissing(vazio), ["veículo", "KM inicial", "KM final", "hora de início", "hora de fim", "tipo de combustível", "preço do combustível", "consumo (km/L)", "pelo menos uma fonte de ganho"]);
+  assert.deepEqual(turnoMissing({ ...turno, earnings: [{ platform: "uber", amount: 100 }] }), ["valor ganho e quantidade em cada fonte"]);
+  assert.equal(quantityLabel("ifood"), "Entregas");
+  assert.equal(quantityLabel("keeta"), "Entregas");
+  assert.equal(quantityLabel("shopee", 1), "entrega");
+  assert.equal(quantityLabel("mercadolivre", 3), "entregas");
+  assert.equal(quantityLabel("uber"), "Corridas");
+  assert.equal(quantityLabel("99", 2), "corridas");
+  // dia antigo sem hodômetro continua usando o km gravado
+  assert.equal(kmOf({ km: 200, km_start: null, km_end: null }), 200);
+  console.log("ok: turnos");
+}

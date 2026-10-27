@@ -9,6 +9,9 @@ export const PLATFORMS: Platform[] = [
   { key: "indrive", name: "inDrive", color: "#C1F11D", fg: "#141414", initials: "iD" },
   { key: "blablacar", name: "BlaBlaCar", color: "#00AFF5", fg: "#FFFFFF", initials: "Bla" },
   { key: "ifood", name: "iFood", color: "#EA1D2C", fg: "#FFFFFF", initials: "iF" },
+  { key: "keeta", name: "Keeta", color: "#FFD100", fg: "#111111", initials: "Ke" },
+  { key: "shopee", name: "Shopee", color: "#EE4D2D", fg: "#FFFFFF", initials: "Sh" },
+  { key: "mercadolivre", name: "Mercado Livre", color: "#FFE600", fg: "#2D3277", initials: "ML" },
   { key: "ubereats", name: "Uber Eats", color: "#06C167", fg: "#FFFFFF", initials: "UE" },
   { key: "rappi", name: "Rappi", color: "#FF441F", fg: "#FFFFFF", initials: "Ra" },
   { key: "lalamove", name: "Lalamove", color: "#F16622", fg: "#FFFFFF", initials: "La" },
@@ -32,4 +35,14 @@ export function platformKeyFromName(name: string): string {
   const n = name.trim().toLowerCase().replace(/\s+/g, "");
   const hit = PLATFORMS.find((p) => p.key === n || p.name.toLowerCase().replace(/\s+/g, "") === n);
   return hit ? hit.key : `outra:${name.trim().slice(0, 30)}`;
+}
+
+// Entregas (iFood, Keeta, Shopee, Mercado Livre e os outros apps de entrega); o resto conta corridas.
+const DELIVERY = new Set(["ifood", "keeta", "shopee", "mercadolivre", "ubereats", "rappi", "lalamove"]);
+export const isDelivery = (key: string) => DELIVERY.has(key);
+/** "Entregas" ou "Corridas" (singular com n = 1). */
+export function quantityLabel(key: string, n?: number | null): string {
+  const d = isDelivery(key);
+  if (n === 1) return d ? "entrega" : "corrida";
+  return n == null ? (d ? "Entregas" : "Corridas") : d ? "entregas" : "corridas";
 }

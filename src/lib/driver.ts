@@ -42,6 +42,8 @@ export type Earning = { platform: string; amount: number; hours?: number | null;
 export type Shift = {
   id: string; date: string; vehicle_id: string | null;
   start_time: string | null; end_time: string | null; break_minutes: number;
+  /** Hodômetro no início e no fim do turno (dias antigos podem não ter). km = final − inicial. */
+  km_start: number | null; km_end: number | null;
   km: number; fuel: FuelKind | null; efficiency: number | null; fuel_price: number | null;
   cost_per_km: number; rent: number;
   earnings: Earning[]; tips: number;
@@ -182,7 +184,8 @@ export function normalizeShift(r: Record<string, unknown>): Shift {
   return {
     id: String(r.id), date: String(r.date), vehicle_id: (r.vehicle_id as string | null) ?? null,
     start_time: (r.start_time as string | null) ?? null, end_time: (r.end_time as string | null) ?? null,
-    break_minutes: num(r.break_minutes), km: num(r.km),
+    break_minutes: num(r.break_minutes),
+    km_start: r.km_start == null ? null : num(r.km_start), km_end: r.km_end == null ? null : num(r.km_end), km: num(r.km),
     fuel: isFuel(r.fuel) ? r.fuel : null, efficiency: r.efficiency == null ? null : num(r.efficiency), fuel_price: r.fuel_price == null ? null : num(r.fuel_price),
     cost_per_km: num(r.cost_per_km), rent: num(r.rent),
     earnings: earnings.filter((e) => typeof e?.platform === "string").map((e) => ({
@@ -194,7 +197,7 @@ export function normalizeShift(r: Record<string, unknown>): Shift {
   };
 }
 
-export const SHIFT_COLUMNS = "id,date,vehicle_id,start_time,end_time,break_minutes,km,fuel,efficiency,fuel_price,cost_per_km,rent,earnings,tips,tolls,parking,wash,food,other_cost,notes,income_tx_id,expense_tx_id";
+export const SHIFT_COLUMNS = "id,date,vehicle_id,start_time,end_time,break_minutes,km_start,km_end,km,fuel,efficiency,fuel_price,cost_per_km,rent,earnings,tips,tolls,parking,wash,food,other_cost,notes,income_tx_id,expense_tx_id";
 export const VEHICLE_COLUMNS = "id,name,fuel,efficiency,fuel_price,efficiency_alt,fuel_price_alt,cost_per_km,daily_rent,archived";
 
 export function normalizeVehicle(r: Record<string, unknown>): Vehicle {
@@ -211,4 +214,51 @@ export function hoursLabel(h: number): string {
   const total = Math.round(h * 60);
   const hh = Math.floor(total / 60), mm = total % 60;
   return hh && mm ? `${hh}h ${mm}min` : hh ? `${hh}h` : `${mm}min`;
+}
+
+/** Km rodados: hodômetro final − inicial; dias antigos sem hodômetro usam o km gravado. */
+export function kmOf(s: Pick<Shift, "km" | "km_start" | "km_end">): number {
+  if (s.km_start != null && s.km_end != null && s.km_end >= s.km_start) return Math.round((s.km_end - s.km_start) * 10) / 10;
+  return num(s.km);
+}
+
+export type TurnoSummary = {
+  km: number; liters: number; fuel: number; fuelPerKm: number | null;
+  /** Outras despesas do turno: pedágio, alimentação, lavagem… (+ manutenção/aluguel do carro, se cadastrados). */
+  other: number; expenses: number; earnings: number; net: number; netPerKm: number | null;
+};
+
+/**
+ * Contas de um turno (menu Turnos):
+ * KM rodados = final − inicial · Litros = km ÷ consumo · Combustível = litros × preço
+ * Despesas = combustível + outras · Lucro líquido = ganhos − despesas · Lucro por km e combustível por km.
+ */
+export function turnoSummary(s: Shift): TurnoSummary {
+  const km = kmOf(s);
+  const eff = num(s.efficiency);
+  const liters = km > 0 && eff > 0 ? Math.round((km / eff) * 100) / 100 : 0;
+  const fuel = fuelCost(km, s.efficiency, s.fuel_price);
+  const other = r2(extrasOf(s) + km * num(s.cost_per_km) + num(s.rent));
+  const expenses = r2(fuel + other);
+  const earnings = r2(earningsTotal(s) + num(s.tips));
+  const net = r2(earnings - expenses);
+  return { km, liters, fuel, fuelPerKm: div(fuel, km), other, expenses, earnings, net, netPerKm: div(net, km) };
+}
+
+/** O que falta para salvar um turno (lista vazia = pode salvar). */
+export function turnoMissing(s: Shift): string[] {
+  const miss: string[] = [];
+  if (!s.vehicle_id) miss.push("veículo");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) miss.push("data");
+  if (s.km_start == null || Number.isNaN(s.km_start)) miss.push("KM inicial");
+  if (s.km_end == null || Number.isNaN(s.km_end)) miss.push("KM final");
+  if (minutesOf(s.start_time) === null) miss.push("hora de início");
+  if (minutesOf(s.end_time) === null) miss.push("hora de fim");
+  if (!s.fuel) miss.push("tipo de combustível");
+  if (!(num(s.fuel_price) > 0)) miss.push("preço do combustível");
+  if (!(num(s.efficiency) > 0)) miss.push("consumo (km/L)");
+  const ok = s.earnings.filter((e) => num(e.amount) > 0 && num(e.trips) > 0);
+  if (!s.earnings.length) miss.push("pelo menos uma fonte de ganho");
+  else if (ok.length !== s.earnings.length) miss.push("valor ganho e quantidade em cada fonte");
+  return miss;
 }
