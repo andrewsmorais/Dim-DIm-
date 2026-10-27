@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSupabase } from "@/lib/useSupabase";
 import { brl, formatDateBR, todayISO } from "@/lib/format";
 import { SHIFT_COLUMNS, VEHICLE_COLUMNS, fuelCost, normalizeShift, normalizeVehicle, shiftMetrics, type Shift, type Vehicle } from "@/lib/driver";
@@ -34,6 +34,9 @@ export default function MotoristaPage() {
   const [day, setDay] = useState("");
   const [turnos, setTurnos] = useState<Shift[]>([]);
   const [turnosLoading, setTurnosLoading] = useState(true);
+  const [turnosError, setTurnosError] = useState<string | null>(null);
+  const [turnosLimit, setTurnosLimit] = useState(60);
+  const turnosReq = useRef(0);
   const [newVehicle, setNewVehicle] = useState(0);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -66,14 +69,17 @@ export default function MotoristaPage() {
 
   // Histórico do menu Turnos: o dia escolhido ou os mais recentes.
   const loadTurnos = useCallback(async () => {
+    const req = ++turnosReq.current; // resposta de um filtro antigo não sobrescreve a do filtro atual
     setTurnosLoading(true);
     let q = supabase.from("driver_shifts").select(SHIFT_COLUMNS);
     q = day ? q.eq("date", day) : q;
-    const { data, error: err } = await q.order("date", { ascending: false }).order("created_at", { ascending: false }).limit(day ? 50 : 60);
+    const { data, error: err } = await q.order("date", { ascending: false }).order("created_at", { ascending: false }).limit(day ? 100 : turnosLimit);
+    if (req !== turnosReq.current) return;
     setTurnosLoading(false);
-    if (err) { setError("Não foi possível carregar os turnos."); return; }
+    if (err) { setTurnosError("Não foi possível carregar os turnos."); return; }
+    setTurnosError(null);
     setTurnos(((data ?? []) as Record<string, unknown>[]).map(normalizeShift));
-  }, [supabase, day]);
+  }, [supabase, day, turnosLimit]);
 
   // Veículo, combustível e KM final do último turno: o próximo já começa com eles.
   const loadLast = useCallback(async () => {
@@ -119,7 +125,7 @@ export default function MotoristaPage() {
         <>
           <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-brand-dark/10 dark:bg-[#161616] mb-4">
             {([["turnos", "Turnos"], ["resultados", "Resultados"], ["carros", "Meus carros"]] as const).map(([k, l]) => (
-              <button key={k} onClick={() => { setTab(k); setSaved(null); if (k !== "turnos") { setFormOpen(false); setEditing(null); } }} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
+              <button key={k} onClick={() => { setTab(k); setSaved(null); setNewVehicle(0); if (k !== "turnos") { setFormOpen(false); setEditing(null); } }} className={`py-2.5 rounded-xl text-sm font-bold ${tab === k ? "bg-white dark:bg-[#262626] shadow-sm" : "text-gray-500"}`}>{l}</button>
             ))}
           </div>
 
@@ -131,7 +137,8 @@ export default function MotoristaPage() {
                   onSaved={afterSave} onCancel={() => { setFormOpen(false); setEditing(null); }} onAddVehicle={addVehicle} />
               ) : (
                 <TurnosPanel shifts={turnos} vehicles={vehicles} day={day} onDay={setDay} onNew={openNew} onAddVehicle={addVehicle}
-                  onEdit={openEdit} onDelete={remove} onLaunch={setLaunching} loading={turnosLoading} error={error} />
+                  onEdit={openEdit} onDelete={remove} onLaunch={setLaunching} loading={turnosLoading} error={turnosError}
+                  canLoadMore={!day && turnos.length >= turnosLimit} onLoadMore={() => setTurnosLimit((n) => n + 60)} />
               )}
             </>
           )}

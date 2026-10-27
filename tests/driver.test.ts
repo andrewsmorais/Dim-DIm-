@@ -165,5 +165,9 @@ console.log("ok: pacote MEI por plano");
   assert.equal(quantityLabel("99", 2), "corridas");
   // dia antigo sem hodômetro continua usando o km gravado
   assert.equal(kmOf({ km: 200, km_start: null, km_end: null }), 200);
+  // dois turnos no mesmo dia: 1 dia trabalhado, 2 turnos
+  const dois = summarize([{ ...turno, id: "a" }, { ...turno, id: "b" }]);
+  assert.equal(dois.days, 1);
+  assert.equal(dois.shifts, 2);
   console.log("ok: turnos");
 }

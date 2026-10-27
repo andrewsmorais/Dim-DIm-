@@ -50,7 +50,7 @@ export function ResultsPanel({ shifts, vehicles, period, platform, vehicleId, on
         </div>
       )}
 
-      {sum.days === 0 ? <Card><Empty>Nenhum turno registrado neste período{platform ? " nesta plataforma" : ""}.</Empty></Card> : (
+      {sum.shifts === 0 ? <Card><Empty>Nenhum turno registrado neste período{platform ? " nesta plataforma" : ""}.</Empty></Card> : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Card className="!p-4 !bg-emerald-50 dark:!bg-emerald-500/10"><p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Ganho bruto</p><p className="text-2xl font-extrabold">{brl(t.gross)}</p><p className="text-xs text-gray-500">{perH(t.grossPerHour)} · {perKm(t.grossPerKm)}</p></Card>
@@ -60,7 +60,7 @@ export function ResultsPanel({ shifts, vehicles, period, platform, vehicleId, on
 
           <Card className="!p-4">
             <dl className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <div><dt className="text-xs text-gray-500">Dias</dt><dd className="font-extrabold">{sum.days}</dd></div>
+              <div><dt className="text-xs text-gray-500">Dias / turnos</dt><dd className="font-extrabold">{sum.days} / {sum.shifts}</dd></div>
               <div><dt className="text-xs text-gray-500">Horas</dt><dd className="font-extrabold">{t.hours ? hoursLabel(t.hours) : "—"}</dd></div>
               <div><dt className="text-xs text-gray-500">Km rodados</dt><dd className="font-extrabold">{t.km.toLocaleString("pt-BR")} km</dd></div>
               <div><dt className="text-xs text-gray-500">Corridas/entregas</dt><dd className="font-extrabold">{t.trips || "—"}</dd></div>

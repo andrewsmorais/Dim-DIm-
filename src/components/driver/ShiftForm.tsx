@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { brl, parseMoney, todayISO } from "@/lib/format";
 import { FUELS, flexAdvice, hoursLabel, kmOf, turnoMissing, turnoSummary, vehicleFuelFor, workedHours, type DayFuel, type Earning, type Shift, type Vehicle } from "@/lib/driver";
@@ -9,11 +9,17 @@ import { PlatformBadge } from "@/components/driver/PlatformBadge";
 import { Card, ErrorNote, Label, btnCls, btnGhostCls, inputCls } from "@/components/ui/page";
 
 type Db = { from: (t: string) => { insert: (v: object) => PromiseLike<{ error: unknown }>; update: (v: object) => { eq: (c: string, v: string) => PromiseLike<{ error: unknown }> } } };
+// Consultas de apoio (turno do mesmo dia, último KM do veículo); tipadas de forma solta.
+type Query = PromiseLike<{ data: unknown }> & { eq: (c: string, v: string) => Query; neq: (c: string, v: string) => Query; order: (c: string, o: { ascending: boolean }) => Query; limit: (n: number) => Query; not: (c: string, op: string, v: null) => Query };
+type DbRead = { from: (t: string) => { select: (c: string) => Query } };
 
 type EarnDraft = { amount: string; hours: string; trips: string };
 const str = (n: number | null | undefined) => (n ? String(n).replace(".", ",") : "");
 const money = (s: string) => (s.trim() ? parseMoney(s) : 0);
 const optNum = (s: string) => (s.trim() ? parseMoney(s) : null);
+/** Hodômetro: aceita "45.210" (ponto de milhar) e "45210,5". */
+const kmNum = (s: string) => (s.trim() ? parseMoney(s.replace(/\./g, "")) : null);
+const MAX_ODOMETER = 9_999_999;
 
 // Combustível do turno (o carro flex escolhe gasolina ou etanol).
 const DAY_FUELS: DayFuel[] = ["gasolina", "etanol", "diesel", "gnv", "eletrico"];
@@ -55,6 +61,9 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
   const [pause, setPause] = useState(editing?.break_minutes ? String(editing.break_minutes) : "");
   const lastKm = !editing && lastUsed?.vehicle_id === vehicleId && lastUsed?.km_end != null ? Number(lastUsed.km_end) : null;
   const [kmStart, setKmStart] = useState(editing ? str(editing.km_start) : lastKm ? str(lastKm) : "");
+  const [kmStartTouched, setKmStartTouched] = useState(Boolean(editing));
+  // Aluguel do carro conta uma vez por dia: se já existe outro turno deste veículo nesta data, este não cobra de novo.
+  const [rentTaken, setRentTaken] = useState(false);
   const [kmEnd, setKmEnd] = useState(str(editing?.km_end));
 
   const [earn, setEarn] = useState<Record<string, EarnDraft>>(() => Object.fromEntries((editing?.earnings ?? []).map((e) => [e.platform, { amount: str(e.amount), hours: str(e.hours), trips: str(e.trips) }])));
@@ -79,7 +88,36 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
     setFuel(f);
     refill(v, f);
   }
-  function pickFuel(f: DayFuel) { setFuel(f); refill(vehicle, f); }
+  // Combustível que não é o do veículo (ex.: diesel num flex): pede preço e consumo de novo.
+  function pickFuel(f: DayFuel) {
+    setFuel(f);
+    if (suggest(vehicle, f)) refill(vehicle, f);
+    else { setPrice(""); setEfficiency(""); }
+  }
+
+  // Turno novo: KM inicial = KM final do último turno deste veículo (até a pessoa digitar outro).
+  useEffect(() => {
+    if (editing || kmStartTouched || !vehicleId) return;
+    let alive = true;
+    (supabase as DbRead).from("driver_shifts").select("km_end").eq("vehicle_id", vehicleId).not("km_end", "is", null)
+      .order("date", { ascending: false }).order("created_at", { ascending: false }).limit(1)
+      .then(({ data }) => {
+        if (!alive) return;
+        const row = Array.isArray(data) ? (data[0] as { km_end?: number | string | null } | undefined) : undefined;
+        setKmStart(row?.km_end != null ? str(Number(row.km_end)) : "");
+      });
+    return () => { alive = false; };
+  }, [supabase, editing, kmStartTouched, vehicleId]);
+
+  // Outro turno do mesmo veículo no mesmo dia já cobra o aluguel diário.
+  useEffect(() => {
+    if (!vehicleId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { setRentTaken(false); return; }
+    let alive = true;
+    let q = (supabase as DbRead).from("driver_shifts").select("id").eq("vehicle_id", vehicleId).eq("date", date);
+    if (editing) q = q.neq("id", editing.id);
+    q.limit(1).then(({ data }) => { if (alive) setRentTaken(Array.isArray(data) && data.length > 0); });
+    return () => { alive = false; };
+  }, [supabase, vehicleId, date, editing]);
 
   function toggle(key: string) {
     if (earn[key]) {
@@ -107,9 +145,10 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
   const draft: Shift = {
     id: editing?.id ?? "novo", date, vehicle_id: vehicleId || null,
     start_time: start || null, end_time: end || null, break_minutes: Math.round(money(pause)) || 0,
-    km_start: optNum(kmStart), km_end: optNum(kmEnd), km: 0,
+    km_start: kmNum(kmStart), km_end: kmNum(kmEnd), km: 0,
     fuel, efficiency: optNum(efficiency), fuel_price: optNum(price),
-    cost_per_km: sameCar ? editing!.cost_per_km : vehicle?.cost_per_km ?? 0, rent: sameCar ? editing!.rent : vehicle?.daily_rent ?? 0,
+    cost_per_km: sameCar ? editing!.cost_per_km : vehicle?.cost_per_km ?? 0,
+    rent: sameCar && editing!.rent > 0 ? editing!.rent : rentTaken ? 0 : vehicle?.daily_rent ?? 0,
     earnings, tips: money(tips),
     tolls: money(costs.tolls), parking: money(costs.parking), wash: money(costs.wash), food: money(costs.food), other_cost: money(costs.other_cost),
     notes: notes.trim() || null, income_tx_id: editing?.income_tx_id ?? null, expense_tx_id: editing?.expense_tx_id ?? null,
@@ -124,8 +163,11 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
     const miss = turnoMissing(draft);
     setMissing(miss);
     if (miss.length) { setError(`Preencha: ${miss.join(", ")}.`); return; }
-    const nums = [draft.km_start!, draft.km_end!, draft.efficiency!, draft.fuel_price!, draft.tips, draft.tolls, draft.parking, draft.wash, draft.food, draft.other_cost, draft.break_minutes, ...earnings.map((x) => x.amount)];
+    const nums = [draft.km_start!, draft.km_end!, draft.efficiency!, draft.fuel_price!, draft.tips, draft.tolls, draft.parking, draft.wash, draft.food, draft.other_cost, draft.break_minutes, ...earnings.map((x) => x.amount), ...earnings.map((x) => x.hours ?? 0)];
     if (nums.some((n) => Number.isNaN(n) || n < 0)) { setError("Confira os valores: use só números (ex.: 150,50)."); return; }
+    if (date > todayISO()) { setError("A data do turno não pode ser no futuro."); return; }
+    if (draft.km_start! > MAX_ODOMETER || draft.km_end! > MAX_ODOMETER) { setError("Confira o KM: o hodômetro vai até 9.999.999."); return; }
+    if (earnings.some((x) => (x.hours ?? 0) > 24)) { setError("Confira as horas de cada plataforma (no máximo 24)."); return; }
     if (draft.km_end! < draft.km_start!) { setError("O KM final precisa ser maior que o KM inicial."); return; }
     if (draft.km > 3000) { setError("Mais de 3.000 km no turno. Confira o KM inicial e o final."); return; }
     if (draft.efficiency! > 100) { setError("Confira o consumo (km por litro)."); return; }
@@ -136,7 +178,7 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
     const payload = { ...row, updated_at: new Date().toISOString() };
     const res = editing ? await db.from("driver_shifts").update(payload).eq("id", editing.id) : await db.from("driver_shifts").insert({ ...payload, user_id: userId });
     setBusy(false);
-    if (res.error) { setError("Não foi possível salvar o turno. Tente de novo."); return; }
+    if (res.error) { setError("Não foi possível salvar o turno. Confira os valores e tente de novo."); return; }
     onSaved();
   }
 
@@ -171,7 +213,7 @@ export function ShiftForm({ supabase, userId, vehicles, editing, lastUsed, onSav
           <div><Label>Data *</Label><input type="date" className={inputCls + ring("data")} value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} /></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div><Label>KM inicial *</Label><input className={inputCls + ring("KM inicial")} inputMode="decimal" value={kmStart} onChange={(e) => setKmStart(e.target.value)} placeholder="Ex.: 45210" /></div>
+          <div><Label>KM inicial *</Label><input className={inputCls + ring("KM inicial")} inputMode="decimal" value={kmStart} onChange={(e) => { setKmStart(e.target.value); setKmStartTouched(true); }} placeholder="Ex.: 45210" /></div>
           <div><Label>KM final *</Label><input className={inputCls + ring("KM final")} inputMode="decimal" value={kmEnd} onChange={(e) => setKmEnd(e.target.value)} placeholder="Ex.: 45390" /></div>
         </div>
         {editing && editing.km_start == null && <p className="text-[11px] text-gray-400">Turno antigo: informe o KM inicial e o final do hodômetro ({editing.km} km rodados).</p>}

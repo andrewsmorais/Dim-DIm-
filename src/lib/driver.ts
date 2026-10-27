@@ -145,37 +145,40 @@ const add = (a: Acc, m: Metrics): Acc => ({
   fuel: a.fuel + m.fuel, vehicle: a.vehicle + m.vehicle, extras: a.extras + m.extras,
 });
 
-export type PlatformRow = { platform: string; days: number; metrics: Metrics; estimatedHours: boolean };
-export type Summary = { days: number; total: Metrics; byPlatform: PlatformRow[] };
+export type PlatformRow = { platform: string; days: number; shifts: number; metrics: Metrics; estimatedHours: boolean };
+/** days = dias diferentes trabalhados; shifts = turnos (um dia pode ter mais de um turno). */
+export type Summary = { days: number; shifts: number; total: Metrics; byPlatform: PlatformRow[] };
 
-/** Resumo do período. Com plataforma escolhida, conta só a parte dela em cada dia. */
+/** Resumo do período. Com plataforma escolhida, conta só a parte dela em cada turno. */
 export function summarize(shifts: Shift[], platform?: string | null): Summary {
   let acc: Acc = { ...ZERO };
-  let days = 0;
-  const per = new Map<string, { acc: Acc; days: number; est: boolean }>();
+  const dates = new Set<string>();
+  let count = 0;
+  const per = new Map<string, { acc: Acc; dates: Set<string>; shifts: number; est: boolean }>();
   for (const s of shifts) {
     if (platform) {
       const part = platformShare(s, platform);
       if (!part) continue;
       acc = add(acc, part.metrics);
-      days++;
     } else {
       acc = add(acc, shiftMetrics(s));
-      days++;
     }
+    dates.add(s.date);
+    count++;
     const keys = Array.from(new Set(s.earnings.map((e) => e.platform)));
     for (const k of keys) {
       if (platform && k !== platform) continue;
       const part = platformShare(s, k);
       if (!part) continue;
-      const cur = per.get(k) ?? { acc: { ...ZERO }, days: 0, est: false };
-      per.set(k, { acc: add(cur.acc, part.metrics), days: cur.days + 1, est: cur.est || part.estimatedHours });
+      const cur = per.get(k) ?? { acc: { ...ZERO }, dates: new Set<string>(), shifts: 0, est: false };
+      cur.dates.add(s.date);
+      per.set(k, { acc: add(cur.acc, part.metrics), dates: cur.dates, shifts: cur.shifts + 1, est: cur.est || part.estimatedHours });
     }
   }
   const byPlatform = Array.from(per.entries())
-    .map(([k, v]) => ({ platform: k, days: v.days, metrics: finish(v.acc), estimatedHours: v.est }))
+    .map(([k, v]) => ({ platform: k, days: v.dates.size, shifts: v.shifts, metrics: finish(v.acc), estimatedHours: v.est }))
     .sort((a, b) => b.metrics.gross - a.metrics.gross);
-  return { days, total: finish(acc), byPlatform };
+  return { days: dates.size, shifts: count, total: finish(acc), byPlatform };
 }
 
 /** Linha do banco -> Shift com números (o Postgres devolve numeric como texto). */

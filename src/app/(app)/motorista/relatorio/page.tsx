@@ -67,7 +67,7 @@ function Report() {
           <table className="w-full mt-5 border-collapse">
             <tbody>
               {[
-                ["Dias trabalhados", String(sum.days)], ["Horas", t.hours ? hoursLabel(t.hours) : "—"], ["Km rodados", `${t.km.toLocaleString("pt-BR")} km`],
+                ["Dias trabalhados", String(sum.days)], ["Turnos", String(sum.shifts)], ["Horas", t.hours ? hoursLabel(t.hours) : "—"], ["Km rodados", `${t.km.toLocaleString("pt-BR")} km`],
                 ["Combustível", brl(t.fuel)], ["Custo do carro (manutenção/aluguel)", brl(t.vehicle)], ["Outros gastos", brl(t.extras)], ["Gorjetas", brl(t.tips)],
                 ["Ganho por hora (bruto / líquido)", `${perH(t.grossPerHour)} / ${perH(t.netPerHour)}`], ["Ganho por km (bruto / líquido)", `${perKm(t.grossPerKm)} / ${perKm(t.netPerKm)}`], ["Despesa por km", perKm(t.costPerKm)],
               ].map(([a, b]) => <tr key={a}><td className="border border-gray-300 px-3 py-1.5">{a}</td><td className="border border-gray-300 px-3 py-1.5 text-right font-bold">{b}</td></tr>)}

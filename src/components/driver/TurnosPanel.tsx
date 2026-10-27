@@ -11,10 +11,10 @@ const km = (n: number | null) => (n == null ? "—" : n.toLocaleString("pt-BR"))
 const dec = (n: number | null) => (n == null ? "—" : String(n).replace(".", ","));
 
 /** Menu Turnos: botões, filtro por dia e o histórico (mais recente primeiro). */
-export function TurnosPanel({ shifts, vehicles, day, onDay, onNew, onAddVehicle, onEdit, onDelete, onLaunch, loading, error }: {
+export function TurnosPanel({ shifts, vehicles, day, onDay, onNew, onAddVehicle, onEdit, onDelete, onLaunch, loading, error, canLoadMore, onLoadMore }: {
   shifts: Shift[]; vehicles: Vehicle[]; day: string; onDay: (d: string) => void;
   onNew: () => void; onAddVehicle: () => void; onEdit: (s: Shift) => void; onDelete: (s: Shift) => void; onLaunch: (s: Shift) => void;
-  loading: boolean; error: string | null;
+  loading: boolean; error: string | null; canLoadMore?: boolean; onLoadMore?: () => void;
 }) {
   const vName = new Map(vehicles.map((v) => [v.id, v.name]));
   const list = [...shifts].sort((a, b) => b.date.localeCompare(a.date) || (b.start_time ?? "").localeCompare(a.start_time ?? ""));
@@ -40,6 +40,7 @@ export function TurnosPanel({ shifts, vehicles, day, onDay, onNew, onAddVehicle,
       {loading ? <Card><Empty>Carregando…</Empty></Card> : list.length === 0 ? (
         <Card><Empty>{day ? "Nenhum turno nesta data." : "Nenhum turno ainda. Toque em Novo turno para registrar o primeiro."}</Empty></Card>
       ) : list.map((s) => <TurnoCard key={s.id} s={s} vehicle={s.vehicle_id ? vName.get(s.vehicle_id) ?? null : null} onEdit={onEdit} onDelete={onDelete} onLaunch={onLaunch} />)}
+      {!loading && canLoadMore && onLoadMore && <button type="button" onClick={onLoadMore} className={btnGhostCls + " w-full !py-3"}>Ver turnos mais antigos</button>}
     </div>
   );
 }

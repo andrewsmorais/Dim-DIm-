@@ -32,6 +32,7 @@ export function driverCsv(shifts: Shift[], vehicles: Vehicle[], opts: DriverExpo
   out.push(line(["LUCRO LÍQUIDO", money(t.net)]));
   out.push("");
   out.push(line(["Dias trabalhados", String(summary.days)]));
+  out.push(line(["Turnos", String(summary.shifts)]));
   out.push(line(["Horas", hoursLabel(t.hours)]));
   out.push(line(["Km rodados", dec(t.km, 1)]));
   out.push(line(["Combustível", money(t.fuel)]));
