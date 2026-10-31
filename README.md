@@ -1,36 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jakash - Plataforma de Finanças Pessoais e MEI
 
-## Getting Started
+Jakash é uma plataforma brasileira de gestão financeira para pessoas físicas (CPF) e microempreendedores (MEI), com suporte para planejamento, investimentos, análise de gastos e gestão compartilhada.
 
-First, run the development server:
+## Stack Tecnológico
+
+- **Frontend**: Next.js 15.5.28 com React 19 (App Router)
+- **Backend**: Supabase (PostgreSQL + RLS)
+- **Autenticação**: Supabase Auth com OAuth (Google, Apple) e email/senha
+- **UI**: Tailwind CSS + Lucide React
+- **Design**: Impeccable Design System v4.5.2
+
+## Features
+
+✅ Autenticação com Google OAuth, Apple Sign-In, e email/senha  
+✅ Gestão de contas bancárias e cartões  
+✅ Lançamentos de transações (receitas/despesas)  
+✅ Planejamento de gastos com limites por categoria  
+✅ Acompanhamento de investimentos  
+✅ Metas financeiras com tipos customizáveis  
+✅ Gestão de dívidas com taxa de juros  
+✅ Reserva de emergência  
+✅ Relatórios e análise de categorias  
+✅ Gestão compartilhada (casal, parceiros)  
+✅ Chat com IA (Claude)  
+✅ Planos de assinatura (CPF/MEI)  
+
+## Começando
+
+### Desenvolvimento Local
 
 ```bash
+# Instalar dependências
+npm install
+
+# Variáveis de ambiente
+cp .env.local.example .env.local
+# Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Rodar servidor de desenvolvimento
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Banco de Dados (Supabase Local)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Iniciar stack local
+supabase start
 
-## Learn More
+# Executar migrações
+supabase db push
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Autenticação Google OAuth
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+A plataforma suporta login/cadastro via Google OAuth. Para configurar:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Setup Simples (Teste)**: Use `LOGIN_BYPASS=true` em `.env.local`
+2. **Setup Produção**: Veja [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md)
 
-## Deploy on Vercel
+Fluxo:
+- Usuário clica "Continuar com Google"
+- Autentica no Google
+- Supabase cria `auth.users` + `profiles`
+- Redirecionado a `/dashboard`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Estrutura do Projeto
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/                  # Páginas (Next.js App Router)
+│   ├── login/           # Login com OAuth
+│   ├── cadastro/        # Cadastro com OAuth
+│   ├── auth/callback/   # PKCE callback handler
+│   └── (app)/           # Rotas autenticadas
+├── components/          # Componentes React
+│   └── auth/            # Componentes de autenticação
+├── lib/                 # Utilidades
+│   ├── supabase/        # Cliente Supabase
+│   └── authUtil.ts      # Helpers de autenticação
+├── contexts/            # Context API (SettingsContext, etc)
+└── styles/              # Tailwind config
+
+supabase/
+├── migrations/          # Migrações SQL
+│   └── 20261015120000_oauth_profile_trigger.sql  # Trigger para criar perfil
+└── schema.sql           # Snapshot atual do schema
+```
+
+## Deploy
+
+### Vercel
+
+```bash
+git push origin main
+```
+
+Vercel detecta Next.js e faz deploy automático.
+
+### Variáveis de Produção
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
+NEXT_PUBLIC_REQUIRE_LOGIN=1
+```
+
+## Documentação
+
+- [Google OAuth Setup](docs/GOOGLE_OAUTH_SETUP.md) - Configurar autenticação Google
+- [Supabase Docs](https://supabase.com/docs) - Backend
+- [Next.js Docs](https://nextjs.org/docs) - Frontend
+
+## Contribuindo
+
+1. Crie branch: `git checkout -b feature/sua-feature`
+2. Commit com mensagem: `git commit -m "Add: sua feature"`
+3. Push: `git push origin feature/sua-feature`
+4. Abra PR
+
+## Licença
+
+MIT
